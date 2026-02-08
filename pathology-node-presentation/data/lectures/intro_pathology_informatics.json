@@ -116,11 +116,11 @@
       "transition": "fade",
       "title": "Learning Objectives",
       "numberedItems": [
-        "Describe lab workflow as a system of <strong>events and decisions</strong>",
-        "Explain why automation should <strong>reduce cognitive load</strong>, not create it",
-        "Identify how <strong>data representation and quality</strong> drive safety, analytics, and AI performance",
-        "Understand how <strong>LLMs and computer vision AI</strong> are reshaping pathology practice",
-        "Ask better questions of vendors/IT: <em>\"show me how exceptions work\"</em>"
+        "Differentiate pathology informatics from IT, and explain why optimization depends on informatics logic",
+        "Interpret AP workflow as information flow (states, handoffs, exceptions) using the three-phase frame",
+        "Explain what \"good automation\" looks like in pathology: reduce cognitive load, surface exceptions, preserve judgment",
+        "Identify representation and data-quality problems that drive safety risk and limit analytics/AI",
+        "Describe current capabilities and limits of AI (vision + LLMs), and why validation and governance matter"
       ]
     },
     {
