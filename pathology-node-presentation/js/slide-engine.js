@@ -13,6 +13,9 @@ var SlideEngine = (function () {
         fetch(jsonUrl)
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                // Extract lectureId from URL (e.g., 'data/lectures/intro_pathology_informatics.json' → 'intro_pathology_informatics')
+                var match = jsonUrl.match(/([^\/]+)\.json$/);
+                if (match && data.meta) data.meta.lectureId = match[1];
                 renderLecture(data);
                 if (callback) callback(data);
             })
@@ -104,10 +107,23 @@ var SlideEngine = (function () {
         section.setAttribute('data-badge', badge);
     }
 
-    function addTakeaway(parent, text) {
-        if (!text) return;
-        var div = el('div', 'takeaway-accent');
+    function addTakeaway(parent, takeaway) {
+        if (!takeaway) return;
+        var text = typeof takeaway === 'string' ? takeaway : takeaway.text;
+        var comment = typeof takeaway === 'object' ? takeaway.comment : null;
+
+        var div = el('div', 'takeaway-accent' + (comment ? ' has-comment' : ''));
         div.innerHTML = '<strong>Takeaway:</strong> ' + text;
+
+        if (comment) {
+            var icon = el('span', 'takeaway-info', ' &#9432;');
+            icon.setAttribute('aria-label', 'More info');
+            div.appendChild(icon);
+            var tip = el('div', 'takeaway-comment');
+            tip.innerHTML = comment;
+            div.appendChild(tip);
+        }
+
         parent.appendChild(div);
     }
 
@@ -228,7 +244,7 @@ var SlideEngine = (function () {
         _vizQueue.push({
             type: 'poll',
             elementId: 'poll-' + slide.id,
-            config: { prompt: slide.prompt, options: slide.options }
+            config: { prompt: slide.prompt, options: slide.options, lectureId: meta.lectureId || '', slideId: slide.id }
         });
 
         if (slide.note) {

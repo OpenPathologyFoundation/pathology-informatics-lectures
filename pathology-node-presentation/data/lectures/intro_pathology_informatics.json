@@ -4,7 +4,7 @@
     "shortTitle": "Introduction to Pathology Informatics",
     "presenter": "Peter Gershkovich, MD. MHA",
     "institution": "Yale University School of Medicine",
-    "date": "2025",
+    "date": "2026",
     "theme": {
       "primary": "#1e3a5f",
       "secondary": "#2980b9",
@@ -20,24 +20,25 @@
       "subtitle": "Logic, Workflow, and the Future of Practice",
       "presenter": "Peter Gershkovich, MD. MHA",
       "institution": "Yale University School of Medicine",
-      "date": "2025"
+      "date": "2026"
     },
-
     {
       "id": "hook",
       "type": "content",
       "transition": "fade",
       "badge": "workflow",
-      "title": "You Already Do Informatics Every Day",
+      "title": "The Work Is Clinical — The Optimization Is Informatics",
       "bullets": [
         "Case assembly and \"what belongs together\"",
         "Stain ordering logic (rules + exceptions)",
         "Report distribution (who must know, when)",
         "Amendments (error detection + correction propagation)"
       ],
-      "takeaway": "The clinical work is inseparable from information flow."
+      "takeaway": {
+        "text": "The clinical work is inseparable from information flow. Technology makes optimization possible; informatics makes it correct.",
+        "comment": "You don’t ‘do informatics’ by clicking buttons. You face informatics problems whenever you have to reason about identity, meaning, and downstream consequences before you act. Informatics is how we redesign that information flow so the system carries more of the cognitive burden — enabling safe, measurable optimization."
+      }
     },
-
     {
       "id": "poll-systems",
       "type": "poll",
@@ -45,18 +46,17 @@
       "title": "Poll: Where Do Systems Help vs Hurt You?",
       "prompt": "Where do your current systems most help — and most hurt — your work? (click to tally responses)",
       "options": [
-        "Accessioning / specimen labeling",
-        "Grossing / cassette & block tracking",
-        "Slide ordering / special stains",
-        "Case assembly / worklists",
+        "Grossing / specimen triage",
+        "Slide ordering / special stains / recuts",
+        "Case assembly / worklists / pending items",
         "Reporting / synoptics",
         "Distribution / communication",
-        "Amendments / corrections",
-        "QA / peer review / conference prep"
+        "Amendments / addenda / corrections",
+        "QA / peer review / conference prep",
+        "Education support / continuous learning"
       ],
       "note": "Save results — we'll revisit the top pain points later."
     },
-
     {
       "id": "informatics-vs-it",
       "type": "two-column",
@@ -78,35 +78,38 @@
           "Keeps the plumbing running"
         ]
       },
-      "takeaway": "Informatics = clinical logic made operational. IT = infrastructure. Both essential — different jobs."
+      "takeaway": {
+        "text": "Informatics = clinical logic made operational. IT = infrastructure. Both essential — different jobs.",
+        "comment": "When a reflex stain doesn't fire correctly, that's an informatics problem (logic). When the network is down, that's IT (infrastructure). Conflating the two leads to the wrong people solving the wrong problems."
+      }
     },
-
     {
       "id": "abstraction-analogy",
       "type": "visualization",
       "transition": "slide",
       "badge": "workflow",
       "title": "The Car Analogy: Focus on the Right Abstraction Layer",
-      "subtitle": "You don't need to understand the chipset — focus on the logic layer where clinical value lives.",
+      "subtitle": "Abstraction layers are key to understanding how computers enforce identity, state, constraints, and interfaces.",
       "vizType": "abstraction-layers",
-      "takeaway": "Focus on workflow logic and decision layers — not CPU architecture. That's where clinical value lives."
+      "takeaway": {
+        "text": "Focus on abstractions that enforce workflow logic and decision layers, where clinical value lives.",
+        "comment": "Example: “Specimen” isn’t just a record—it has states (received, processed, pending add-on, ready for sign-out) and decision layers (reflex IHC, molecular trigger rules, mismatch holds). Encode those correctly and you get safer automation and fewer delays."
+      }
     },
-
     {
       "id": "thesis",
       "type": "content",
       "transition": "fade",
-      "title": "Thesis: Logical Problems > Technical Problems",
-      "subtitle": "Most pathology \"informatics pain\" is not CPU/bandwidth — it's model mismatch.",
+      "title": "Thesis: Pathology Informatics Is Built on “Logical Sciences”",
+      "subtitle": "Lincoln & Korpman (Science, 1980): a hybrid of medicine + logical sciences enabled by computers — the semantics matter more than the hardware.",
       "bullets": [
-        "Wrong recipient gets a report → workflow logic + metadata failure",
-        "Laterality discrepancy slips through → validation logic gap",
-        "\"Completed\" status ≠ clinically ready → semantic mismatch",
-        "Synoptic structure doesn't match real-world exceptions → representation mismatch",
-        "System supports \"workflow\" but not how people <em>actually</em> work → reality mismatch"
+        "Logical sciences here ≠ programming mechanics; they are formal + cognitive disciplines that define <em>meaning</em>: representation, inference, decision, and system behavior.",
+        "In pathology, the hardest problems are semantic: defining entities (case/part/block/slide), time, provenance, responsibility, and the constraints that make data computable and safe.",
+        "Workflow automation succeeds only when states and transitions have explicit clinical meaning (\"completed\" ≠ \"clinically ready\"; exceptions are first-class, not afterthoughts).",
+        "Decision theory + statistics govern alerting: tuning sensitivity/specificity to the clinical cost of error (laterality discordance ≠ typographic noise).",
+        "Behavioral science/human factors are part of the logic: systems must model how clinicians <em>actually</em> work, not how software prefers them to work."
       ]
     },
-
     {
       "id": "objectives",
       "type": "content",
@@ -120,7 +123,6 @@
         "Ask better questions of vendors/IT: <em>\"show me how exceptions work\"</em>"
       ]
     },
-
     {
       "id": "workflow-definition",
       "type": "content",
@@ -133,26 +135,35 @@
         "It is the substrate on which everything else depends — data, automation, AI",
         "Good workflow design: invisible. Bad workflow design: constant friction"
       ],
-      "takeaway": "Workflow is the substrate on which everything else (data, automation, AI) depends."
+      "takeaway": {
+        "text": "Workflow is the substrate on which everything else (data, automation, AI) depends.",
+        "comment": "You cannot layer AI on broken workflow. If case assembly is chaotic, an AI that prioritizes your worklist will just shuffle chaos faster. Fix the substrate first."
+      }
     },
-
     {
       "id": "three-phases",
       "type": "visualization",
       "transition": "fade",
       "badge": "workflow",
       "title": "Three-Phase View: Pre-Analytical → Analytical → Post-Analytical",
+      "subtitle": "In AP these boundaries blur — grossing carries pre-analytical identity risk inside the analytical phase; digital scanning is analytical but creates post-analytical versioning and availability consequences.",
       "vizType": "workflow-pipeline",
-      "takeaway": "Sets up systematic thinking about where failures occur."
+      "takeaway": {
+        "text": "In AP, phase boundaries are not clean — systems must account for steps that straddle phases.",
+        "comment": "Experts genuinely disagree on where analysis begins. Dr. Vinita Parkash (Yale, CDC ECHO 2020) argues the test starts the moment a specimen reaches a professional's hands at grossing — yet grossing also involves triage, identification integrity, and chain-of-custody, which are classically pre-analytical risks. Contamination during grossing (tissue from one case transferred to another) is functionally an identity error — a pre-analytical failure happening inside the analytical phase. Similarly, whole-slide imaging scanning is operationally analytical, but scan failures force rescans, raise versioning questions (which image is the authoritative diagnostic record?), and delay downstream reporting — all post-analytical consequences. Systems that rigidly assign steps to a single phase miss these overlaps and the risks they carry."
+      }
     },
-
     {
       "id": "microcase-delay",
       "type": "micro-case",
       "transition": "fade",
       "title": "Micro-Case: Where Did the Delay Happen?",
       "scenario": "A surgical pathology case is flagged as \"late.\" You have timestamps across the system but no clear cause. The clinician is frustrated. Where do you look first?",
-      "options": ["Pre-analytical", "Analytical", "Post-analytical"],
+      "options": [
+        "Pre-analytical",
+        "Analytical",
+        "Post-analytical"
+      ],
       "discussion": [
         "Systems often measure the wrong step → wrong intervention",
         "\"Visibility\" is the first step toward improvement",
@@ -160,7 +171,6 @@
         "The fix might be organizational, not technical"
       ]
     },
-
     {
       "id": "ap-workflow-steps",
       "type": "content",
@@ -177,9 +187,11 @@
         "Consults & second opinions",
         "Reporting distribution & notifications"
       ],
-      "takeaway": "A \"case\" is an evolving object; systems must track state changes, not just snapshots."
+      "takeaway": {
+        "text": "A \"case\" is an evolving object; systems must track state changes, not just snapshots.",
+        "comment": "A colon biopsy starts as one part, gets additional levels, reflex IHC, maybe molecular — the 'case' at sign-out is fundamentally different from the case at accession. Systems that only store the final state lose the decision history."
+      }
     },
-
     {
       "id": "workarounds",
       "type": "content",
@@ -194,9 +206,11 @@
         "People becoming the integration layer",
         "Sticky notes on monitors as the real workflow engine"
       ],
-      "takeaway": "Workarounds are not \"user failure\" — they're system design evidence."
+      "takeaway": {
+        "text": "Workarounds are not \"user failure\" — they're system design evidence.",
+        "comment": "Every sticky note on a monitor, every shared spreadsheet tracking cases 'outside the system,' every 'please ignore this status' message is a requirements document written in frustration. Catalog them — they tell you exactly what the system fails to support."
+      }
     },
-
     {
       "id": "wf-management",
       "type": "content",
@@ -211,7 +225,6 @@
         "Reduce cognitive load and prevent preventable errors"
       ]
     },
-
     {
       "id": "automate-exercise",
       "type": "timer",
@@ -227,7 +240,6 @@
         "Governance / compliance"
       ]
     },
-
     {
       "id": "generic-automation",
       "type": "content",
@@ -242,7 +254,6 @@
         "One-size workflows that ignore subspecialty differences"
       ]
     },
-
     {
       "id": "good-vs-bad-automation",
       "type": "comparison",
@@ -269,9 +280,11 @@
           "Prioritizes administrative neatness over clinical truth"
         ]
       },
-      "takeaway": "The goal is not \"more automation\" — it's better logic."
+      "takeaway": {
+        "text": "The goal is not \"more automation\" — it's better logic.",
+        "comment": "A system that auto-populates a synoptic template from dictation (good) vs one that forces you into a rigid pick-list that can't represent 'involved margin, focal, < 0.1 mm' (bad). The difference is whether the automation was designed with clinical reality in mind."
+      }
     },
-
     {
       "id": "automation-ladder",
       "type": "visualization",
@@ -281,14 +294,17 @@
       "vizType": "automation-ladder",
       "takeaway": "The goal is not \"more automation,\" but better logic at each level."
     },
-
     {
       "id": "microcase-hardstop",
       "type": "micro-case",
       "transition": "fade",
       "title": "Micro-Case: Hard Stop vs Guardrail?",
       "scenario": "(1) Laterality mismatch, (2) Wrong-site label risk, (3) Missing clinical correlation, (4) Missing CC recipient. What's the right system response for each?",
-      "options": ["Block sign-out (hard stop)", "Warn + require acknowledgment (guardrail)", "Silent logging only (audit)"],
+      "options": [
+        "Block sign-out (hard stop)",
+        "Warn + require acknowledgment (guardrail)",
+        "Silent logging only (audit)"
+      ],
       "discussion": [
         "No single answer is always right — context matters",
         "Severity × detectability × context × operational reality",
@@ -298,7 +314,6 @@
       ],
       "discussionFrame": "Framework: Severity × Detectability × Context × Operational Reality"
     },
-
     {
       "id": "competitive-advantage",
       "type": "content",
@@ -312,7 +327,6 @@
         "This isn't corporate jargon — it's how departments survive and grow"
       ]
     },
-
     {
       "id": "data-purpose",
       "type": "content",
@@ -325,9 +339,11 @@
         "Bad data forces humans to become the integration engine",
         "\"Garbage in, garbage out\" applies to AI even more than to reports"
       ],
-      "takeaway": "Bad data forces humans to become the integration engine."
+      "takeaway": {
+        "text": "Bad data forces humans to become the integration engine.",
+        "comment": "When laterality is in free text but not a computable field, someone has to manually cross-check the requisition, the gross description, and the final report. That 'someone' is usually a resident or PA — and that's a system failure, not diligence."
+      }
     },
-
     {
       "id": "structured-unstructured",
       "type": "two-column",
@@ -353,9 +369,11 @@
           "Rigid — may not capture exceptions"
         ]
       },
-      "takeaway": "A coherent hybrid model matters more than dogma about structure vs narrative."
+      "takeaway": {
+        "text": "A coherent hybrid model matters more than dogma about structure vs narrative.",
+        "comment": "Synoptic reporting captures staging and coding perfectly but struggles with 'the tumor extends to the inked margin in a single focus measuring 0.05 mm — clinical significance uncertain.' The best systems let structured and narrative coexist and cross-reference."
+      }
     },
-
     {
       "id": "data-representation",
       "type": "content",
@@ -371,7 +389,6 @@
         "These aren't edge cases — they're daily occurrences"
       ]
     },
-
     {
       "id": "data-quality",
       "type": "content",
@@ -386,7 +403,6 @@
       ],
       "note": "Clinical consequences: wrong follow-up, incomplete distribution, missed research cohorts, false alarms, alert fatigue."
     },
-
     {
       "id": "find-ambiguity",
       "type": "snippets",
@@ -400,7 +416,6 @@
       "prompt": "What would a system need to <em>know</em> to prevent downstream error in each case?",
       "goal": "Make residents articulate context dependencies explicitly."
     },
-
     {
       "id": "data-flow",
       "type": "visualization",
@@ -408,9 +423,11 @@
       "badge": "data",
       "title": "Data Flow Lifecycle: Creation → Storage → Use",
       "vizType": "data-flow",
-      "takeaway": "Failures cluster at interfaces, not in isolated steps."
+      "takeaway": {
+        "text": "Failures cluster at interfaces, not in isolated steps.",
+        "comment": "The grossing station works fine. The histology lab works fine. But the handoff between them — where cassette labels must match accession numbers, part designators, and block codes — is where mismatches occur. Most errors live in the seams."
+      }
     },
-
     {
       "id": "systems-ecosystem",
       "type": "visualization",
@@ -419,9 +436,11 @@
       "title": "The Pathology Systems Ecosystem",
       "subtitle": "No single system — pathology runs on an interconnected network.",
       "vizType": "systems-ecosystem",
-      "takeaway": "Pathology runs on a network of systems. Integration quality determines clinical quality."
+      "takeaway": {
+        "text": "Pathology runs on a network of systems. Integration quality determines clinical quality.",
+        "comment": "LIS, EHR, PACS, molecular platforms, reference lab portals, billing systems — a single case may touch 5+ systems. If they don't share identity and state reliably, the pathologist becomes the human integration bus."
+      }
     },
-
     {
       "id": "stewardship",
       "type": "content",
@@ -435,9 +454,11 @@
         "Who validates that reflex rules fire correctly? Who checks distribution logic?",
         "Stewardship is not optional — it's core competency"
       ],
-      "takeaway": "You may not own IT, but you own clinical consequences."
+      "takeaway": {
+        "text": "You may not own IT, but you own clinical consequences.",
+        "comment": "When a report goes to the wrong provider because distribution rules weren't updated after a service change, IT didn't make the clinical error — but the patient was harmed. Pathologists must own the configuration decisions that affect patient care."
+      }
     },
-
     {
       "id": "governance",
       "type": "content",
@@ -451,7 +472,6 @@
         "The informatics-savvy pathologist has outsized influence here"
       ]
     },
-
     {
       "id": "config-is-clinical",
       "type": "content",
@@ -468,7 +488,6 @@
         "Access controls and audit strategy"
       ]
     },
-
     {
       "id": "vendor-questions",
       "type": "workshop",
@@ -511,7 +530,6 @@
         }
       ]
     },
-
     {
       "id": "poll-digital",
       "type": "poll",
@@ -526,7 +544,6 @@
       ],
       "note": "We'll tailor the AI discussion based on where the room is."
     },
-
     {
       "id": "digital-path-infra",
       "type": "content",
@@ -540,9 +557,11 @@
         "<strong>\"Digital-first\" vs \"digital-available\"</strong> — different maturity, different challenges",
         "New failure modes: identity management, version control, color calibration, uptime"
       ],
-      "takeaway": "Digital pathology is an infrastructure commitment, not just a scanner purchase."
+      "takeaway": {
+        "text": "Digital pathology is an infrastructure commitment, not just a scanner purchase.",
+        "comment": "A single whole-slide image at 40× is ~2-3 GB. A mid-size lab generates thousands per week. You need petabyte-scale storage, reliable networking, color-calibrated displays, viewer integration with your LIS, and uptime guarantees — before a single diagnosis is rendered digitally."
+      }
     },
-
     {
       "id": "computer-vision-ai",
       "type": "content",
@@ -551,13 +570,12 @@
       "title": "Computer Vision AI in Pathology",
       "bullets": [
         "<strong>What it does:</strong> detection, segmentation, quantification, grading assistance",
-        "<strong>FDA-authorized examples:</strong> Paige Prostate (2021) — first AI for pathology, 7.3% improvement in cancer detection",
+        "<strong>FDA-authorized examples:</strong> Paige Prostate (2021) — first assistive AI for pathology, 7.3% improvement in cancer detection (performance numbers are setting-specific)",
         "<strong>Key principle:</strong> accuracy alone is insufficient — workflow integration determines clinical value",
         "<strong>Validation burden:</strong> institutions must validate independently, not just trust vendor claims",
         "AI as adjunctive tool: pathologist must review — on-label use matters"
       ]
     },
-
     {
       "id": "llms-in-pathology",
       "type": "two-column",
@@ -586,9 +604,11 @@
           "Self-validate — they don't know what they don't know"
         ]
       },
-      "takeaway": "LLMs are powerful text engines — you must understand their failure modes to use them safely."
+      "takeaway": {
+        "text": "LLMs are powerful text engines — you must understand their failure modes to use them safely.",
+        "comment": "An LLM can draft a perfectly formatted synoptic from your dictation — and confidently hallucinate a lymph node count. It doesn't 'know' anatomy; it predicts plausible text. Treat LLM output like a first-year resident's draft: always review, never trust blindly."
+      }
     },
-
     {
       "id": "ai-governance",
       "type": "content",
@@ -603,7 +623,6 @@
         "<strong>Stewardship connection:</strong> AI governance is the extension of lab information stewardship"
       ]
     },
-
     {
       "id": "ai-maturity",
       "type": "visualization",
@@ -612,16 +631,22 @@
       "title": "The AI Maturity Ladder for Pathology",
       "subtitle": "Parallels the automation maturity ladder — same principle, higher stakes.",
       "vizType": "ai-maturity-ladder",
-      "takeaway": "Don't skip levels. Retrospective analytics must work before you trust real-time AI."
+      "takeaway": {
+        "text": "Don't skip levels. Retrospective analytics must work before you trust real-time AI.",
+        "comment": "If your lab can't reliably measure turnaround time by phase (because timestamps are inconsistent), you're not ready for an AI that auto-triages cases in real time. Each maturity level validates the data and logic the next level depends on."
+      }
     },
-
     {
       "id": "ai-trust",
       "type": "micro-case",
       "transition": "fade",
       "title": "Interactive: Would You Trust This AI Output?",
       "scenario": "(1) AI flags a prostate biopsy region as suspicious. (2) An LLM drafts a synoptic from your dictation. (3) An algorithm auto-prioritizes your worklist. What's your response?",
-      "options": ["Trust and use as-is", "Review and edit", "Reject and redo manually"],
+      "options": [
+        "Trust and use as-is",
+        "Review and edit",
+        "Reject and redo manually"
+      ],
       "discussion": [
         "Context matters: What's the AI's track record? Is it validated here?",
         "Trust calibration: Over-trust is as dangerous as under-trust",
@@ -630,7 +655,6 @@
         "The answer should almost always involve human review — for now"
       ]
     },
-
     {
       "id": "cybersecurity",
       "type": "content",
@@ -641,12 +665,14 @@
         "<strong>Downtime = patient safety event</strong> — not just an inconvenience",
         "Security controls shape access and workflows daily",
         "Auditability and traceability matter (especially with AI outputs)",
-        "Ransomware attacks on healthcare systems are increasing yearly",
+        "Ransomware and major cyber incidents remain frequent and clinically disruptive; trends fluctuate but the operational risk is persistent",
         "Your downtime procedures are as important as your uptime workflows"
       ],
-      "takeaway": "The system must be dependable and accountable."
+      "takeaway": {
+        "text": "The system must be dependable and accountable.",
+        "comment": "In 2023, a ransomware attack on a major health system forced pathologists to hand-write reports and physically walk them to clinicians. Your downtime procedures — paper requisitions, manual logs, verbal critical values — are not edge cases. They are part of the system."
+      }
     },
-
     {
       "id": "takeaways",
       "type": "takeaways",
@@ -663,7 +689,6 @@
         "text": "Pick one workflow pain point this month. Describe it as: <strong>event → decision → data → consequence</strong>. Send me one \"automation candidate\" and one \"ambiguity\" you've seen."
       }
     },
-
     {
       "id": "qa",
       "type": "qa",

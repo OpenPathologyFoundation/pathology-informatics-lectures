@@ -5,65 +5,131 @@
 
 const Widgets = (function () {
 
-    // ─── POLL ────────────────────────────────────────────────
-    function createPoll(container, config) {
-        const votes = {};
-        config.options.forEach(o => votes[o] = 0);
-        let total = 0;
+    // ─── POLL (Socket.io live) ──────────────────────────────
+    var _socket = null;
 
-        const wrap = document.createElement('div');
+    function _getSocket() {
+        if (!_socket && typeof io !== 'undefined') _socket = io();
+        return _socket;
+    }
+
+    function createPoll(container, config) {
+        var lectureId = config.lectureId || '';
+        var slideId   = config.slideId   || '';
+        var options   = config.options    || [];
+
+        var wrap = document.createElement('div');
         wrap.className = 'poll-container';
 
+        // ── Layout: left = options, right = QR code ─────────
+        var body = document.createElement('div');
+        body.className = 'poll-body';
+
+        var leftCol = document.createElement('div');
+        leftCol.className = 'poll-left';
+
         if (config.prompt) {
-            const p = document.createElement('p');
+            var p = document.createElement('p');
             p.className = 'poll-prompt';
-            p.style.fontSize = '0.72em';
-            p.style.marginBottom = '14px';
-            p.style.color = '#555';
             p.textContent = config.prompt;
-            wrap.appendChild(p);
+            leftCol.appendChild(p);
         }
 
-        config.options.forEach(opt => {
-            const row = document.createElement('div');
+        // Option rows
+        var rows = [];
+        options.forEach(function (opt, i) {
+            var row = document.createElement('div');
             row.className = 'poll-option';
+            row.setAttribute('data-index', i);
             row.innerHTML =
                 '<div class="poll-bar" style="width:0%"></div>' +
                 '<span class="poll-label">' + opt + '</span>' +
-                '<span class="poll-count">0</span>';
+                '<span class="poll-count"></span>';
+            // Presenter can also click locally
             row.addEventListener('click', function () {
-                votes[opt]++;
-                total++;
-                row.classList.add('selected');
-                _updateBars(wrap, votes, total);
+                var sock = _getSocket();
+                if (sock) sock.emit('vote', { lectureId: lectureId, slideId: slideId, optionIndex: i });
             });
-            wrap.appendChild(row);
+            leftCol.appendChild(row);
+            rows.push(row);
         });
 
-        const resetBtn = document.createElement('button');
-        resetBtn.className = 'poll-reset';
-        resetBtn.textContent = 'Reset';
-        resetBtn.addEventListener('click', function () {
-            config.options.forEach(o => votes[o] = 0);
-            total = 0;
-            wrap.querySelectorAll('.poll-option').forEach(r => {
-                r.classList.remove('selected');
-                r.querySelector('.poll-bar').style.width = '0%';
-                r.querySelector('.poll-count').textContent = '0';
+        body.appendChild(leftCol);
+
+        // ── QR code column ──────────────────────────────────
+        var rightCol = document.createElement('div');
+        rightCol.className = 'poll-right';
+
+        var voteUrl = window.location.origin + '/vote/' + lectureId + '/' + slideId;
+        var qrWrap = document.createElement('div');
+        qrWrap.className = 'poll-qr';
+        // Generate QR using the lightweight library (loaded in lecture.html)
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(qrWrap, {
+                text: voteUrl,
+                width: 140,
+                height: 140,
+                colorDark: '#0e6e8c',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
             });
+        } else {
+            qrWrap.textContent = 'QR unavailable';
+        }
+        rightCol.appendChild(qrWrap);
+
+        var urlLabel = document.createElement('div');
+        urlLabel.className = 'poll-qr-label';
+        urlLabel.textContent = 'Scan to vote';
+        rightCol.appendChild(urlLabel);
+
+        var totalEl = document.createElement('div');
+        totalEl.className = 'poll-total';
+        totalEl.textContent = '0 votes';
+        rightCol.appendChild(totalEl);
+
+        body.appendChild(rightCol);
+        wrap.appendChild(body);
+
+        // ── Presenter reset (subtle) ────────────────────────
+        var resetBtn = document.createElement('button');
+        resetBtn.className = 'poll-reset';
+        resetBtn.textContent = 'Reset Poll';
+        resetBtn.addEventListener('click', function () {
+            var sock = _getSocket();
+            if (sock) sock.emit('reset-poll', { lectureId: lectureId, slideId: slideId });
         });
         wrap.appendChild(resetBtn);
-        container.appendChild(wrap);
-    }
 
-    function _updateBars(wrap, votes, total) {
-        wrap.querySelectorAll('.poll-option').forEach(row => {
-            const label = row.querySelector('.poll-label').textContent;
-            const count = votes[label] || 0;
-            const pct = total > 0 ? (count / total * 100) : 0;
-            row.querySelector('.poll-bar').style.width = pct + '%';
-            row.querySelector('.poll-count').textContent = count;
-        });
+        container.appendChild(wrap);
+
+        // ── Socket.io: join room + listen for results ───────
+        var sock = _getSocket();
+        if (sock) {
+            sock.emit('join-poll', { lectureId: lectureId, slideId: slideId });
+
+            sock.on('poll-results', function (data) {
+                if (data.slideId && data.slideId !== slideId) return; // not our poll
+                var total = data.total || 0;
+                totalEl.textContent = total + ' vote' + (total !== 1 ? 's' : '');
+
+                rows.forEach(function (row, i) {
+                    var count = data.votes[i] || 0;
+                    var pct = total > 0 ? (count / total * 100) : 0;
+                    row.querySelector('.poll-bar').style.width = pct + '%';
+                    row.querySelector('.poll-count').textContent = count > 0 ? count : '';
+                });
+            });
+
+            sock.on('poll-reset', function (data) {
+                if (data && data.slideId && data.slideId !== slideId) return;
+                rows.forEach(function (row) {
+                    row.querySelector('.poll-bar').style.width = '0%';
+                    row.querySelector('.poll-count').textContent = '';
+                });
+                totalEl.textContent = '0 votes';
+            });
+        }
     }
 
     // ─── MICRO-CASE VOTING ───────────────────────────────────

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Live Poll</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #f0f4f8;
+            color: #1a2e44;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 16px;
+        }
+        .brand {
+            font-size: 11px;
+            font-weight: 600;
+            color: #0e6e8c;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+        .prompt {
+            font-size: 14px;
+            color: #555;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .options {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .opt-btn {
+            position: relative;
+            overflow: hidden;
+            background: #fff;
+            border: 2px solid #e0e5eb;
+            border-radius: 12px;
+            padding: 16px 18px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .opt-btn:active { transform: scale(0.98); }
+        .opt-btn.selected {
+            border-color: #0e6e8c;
+            background: #e8f4f8;
+        }
+        .opt-btn .bar {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            background: rgba(14, 110, 140, 0.1);
+            transition: width 0.4s ease;
+            width: 0;
+            pointer-events: none;
+        }
+        .opt-btn .label { position: relative; z-index: 1; }
+        .opt-btn .count {
+            position: relative; z-index: 1;
+            float: right;
+            font-weight: 700;
+            color: #0e6e8c;
+            min-width: 24px;
+            text-align: right;
+        }
+        .thank-you {
+            display: none;
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: #0e6e8c;
+            font-weight: 600;
+        }
+        .thank-you.show { display: block; }
+        .total-votes {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #7f8c8d;
+            text-align: center;
+        }
+        .error {
+            text-align: center;
+            margin-top: 40px;
+            color: #c0392b;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="brand">openpathology.org</div>
+    <h1 id="title">Loading poll...</h1>
+    <p class="prompt" id="prompt"></p>
+    <div class="options" id="options"></div>
+    <div class="thank-you" id="thanks">Vote recorded — live results below</div>
+    <div class="total-votes" id="total"></div>
+    <div class="error" id="error"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+    (function () {
+        // Parse URL: /vote/:lectureId/:slideId
+        var parts = window.location.pathname.split('/');
+        var lectureId = parts[2];
+        var slideId = parts[3];
+
+        if (!lectureId || !slideId) {
+            document.getElementById('error').textContent = 'Invalid poll link.';
+            return;
+        }
+
+        // Generate a persistent voter ID (survives page reload)
+        var VOTER_KEY = 'op_voter_id';
+        var voterId = localStorage.getItem(VOTER_KEY);
+        if (!voterId) {
+            voterId = 'v_' + Math.random().toString(36).substr(2, 12) + Date.now().toString(36);
+            localStorage.setItem(VOTER_KEY, voterId);
+        }
+
+        var optionEls = [];
+        var optionCount = 0;
+        var myChoice = null;
+
+        // Fetch poll config
+        fetch('/api/poll/' + lectureId + '/' + slideId + '/config')
+            .then(function (r) { return r.json(); })
+            .then(function (cfg) {
+                if (cfg.error) {
+                    document.getElementById('error').textContent = cfg.error;
+                    return;
+                }
+
+                document.getElementById('title').textContent = cfg.title;
+                document.getElementById('prompt').textContent = cfg.prompt || '';
+                document.title = cfg.title + ' — Live Poll';
+
+                var container = document.getElementById('options');
+                optionCount = cfg.options.length;
+
+                cfg.options.forEach(function (opt, i) {
+                    var btn = document.createElement('button');
+                    btn.className = 'opt-btn';
+                    btn.innerHTML = '<div class="bar"></div><span class="label">' + opt + '</span><span class="count"></span>';
+                    btn.addEventListener('click', function () {
+                        myChoice = i;
+                        socket.emit('vote', { lectureId: lectureId, slideId: slideId, optionIndex: i, voterId: voterId });
+                        optionEls.forEach(function (el) { el.classList.remove('selected'); });
+                        btn.classList.add('selected');
+                        document.getElementById('thanks').classList.add('show');
+                    });
+                    container.appendChild(btn);
+                    optionEls.push(btn);
+                });
+
+                // Connect Socket.io
+                connectSocket();
+            })
+            .catch(function () {
+                document.getElementById('error').textContent = 'Could not load poll. Check the link.';
+            });
+
+        var socket;
+        function connectSocket() {
+            socket = io();
+            socket.emit('join-poll', { lectureId: lectureId, slideId: slideId });
+
+            socket.on('poll-results', function (data) {
+                var total = data.total || 0;
+                document.getElementById('total').textContent = total > 0 ? total + ' vote' + (total !== 1 ? 's' : '') : '';
+
+                optionEls.forEach(function (el, i) {
+                    var count = data.votes[i] || 0;
+                    var pct = total > 0 ? (count / total * 100) : 0;
+                    el.querySelector('.bar').style.width = pct + '%';
+                    el.querySelector('.count').textContent = count > 0 ? count : '';
+                });
+            });
+
+            socket.on('poll-reset', function () {
+                myChoice = null;
+                optionEls.forEach(function (el) { el.classList.remove('selected'); });
+                document.getElementById('thanks').classList.remove('show');
+                document.getElementById('total').textContent = '';
+            });
+        }
+    })();
+    </script>
+</body>
+</html>
