@@ -61,27 +61,37 @@ const Widgets = (function () {
         rightCol.className = 'poll-right';
 
         var voteUrl = window.location.origin + '/vote/' + lectureId + '/' + slideId;
-        var qrWrap = document.createElement('div');
-        qrWrap.className = 'poll-qr';
+        var qrLink = document.createElement('a');
+        qrLink.href = voteUrl;
+        qrLink.target = '_blank';
+        qrLink.className = 'poll-qr';
+        qrLink.title = 'Open voting page';
         // Generate QR using the lightweight library (loaded in lecture.html)
         if (typeof QRCode !== 'undefined') {
-            new QRCode(qrWrap, {
+            new QRCode(qrLink, {
                 text: voteUrl,
-                width: 140,
-                height: 140,
+                width: 220,
+                height: 220,
                 colorDark: '#0e6e8c',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.M
             });
         } else {
-            qrWrap.textContent = 'QR unavailable';
+            qrLink.textContent = 'QR unavailable';
         }
-        rightCol.appendChild(qrWrap);
+        rightCol.appendChild(qrLink);
 
         var urlLabel = document.createElement('div');
         urlLabel.className = 'poll-qr-label';
         urlLabel.textContent = 'Scan to vote';
         rightCol.appendChild(urlLabel);
+
+        var urlLink = document.createElement('a');
+        urlLink.href = voteUrl;
+        urlLink.target = '_blank';
+        urlLink.className = 'poll-qr-url';
+        urlLink.textContent = voteUrl.replace(/^https?:\/\//, '');
+        rightCol.appendChild(urlLink);
 
         var totalEl = document.createElement('div');
         totalEl.className = 'poll-total';
