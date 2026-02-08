@@ -85,6 +85,7 @@
     },
     {
       "id": "abstraction-analogy",
+      "isOptional": true,
       "type": "visualization",
       "transition": "slide",
       "badge": "workflow",
@@ -117,7 +118,7 @@
       "title": "Learning Objectives",
       "numberedItems": [
         "Differentiate pathology informatics from IT, and explain why optimization depends on informatics logic",
-        "Interpret AP workflow as information flow (states, handoffs, exceptions) using the three-phase frame",
+        "Interpret AP workflow as information flow (states, handoffs, exceptions) using the proper framework",
         "Explain what \"good automation\" looks like in pathology: reduce cognitive load, surface exceptions, preserve judgment",
         "Identify representation and data-quality problems that drive safety risk and limit analytics/AI",
         "Describe current capabilities and limits of AI (vision + LLMs), and why validation and governance matter"
@@ -141,42 +142,90 @@
       }
     },
     {
-      "id": "three-phases",
+      "id": "phase-model",
       "type": "visualization",
       "transition": "fade",
       "badge": "workflow",
-      "title": "Three-Phase View: Pre-Analytical → Analytical → Post-Analytical",
-      "subtitle": "In AP these boundaries blur — grossing carries pre-analytical identity risk inside the analytical phase; digital scanning is analytical but creates post-analytical versioning and availability consequences.",
-      "vizType": "workflow-pipeline",
+      "title": "The Three-Phase Model — Right Framework, Wrong Discipline",
+      "vizType": "phase-comparison",
       "takeaway": {
-        "text": "In AP, phase boundaries are not clean — systems must account for steps that straddle phases.",
-        "comment": "Experts genuinely disagree on where analysis begins. Dr. Vinita Parkash (Yale, CDC ECHO 2020) argues the test starts the moment a specimen reaches a professional's hands at grossing — yet grossing also involves triage, identification integrity, and chain-of-custody, which are classically pre-analytical risks. Contamination during grossing (tissue from one case transferred to another) is functionally an identity error — a pre-analytical failure happening inside the analytical phase. Similarly, whole-slide imaging scanning is operationally analytical, but scan failures force rescans, raise versioning questions (which image is the authoritative diagnostic record?), and delay downstream reporting — all post-analytical consequences. Systems that rigidly assign steps to a single phase miss these overlaps and the risks they carry."
+        "text": "In clinical chemistry, the boundaries are clean — collection, instrument, report. In anatomic pathology, interpretation runs through the entire process.",
+        "comment": "Grossing is a diagnostic act, stain selection is a diagnostic act, and the 'analytical' phase absorbs everything from embedding to sign-out. When one category contains everything, it explains nothing."
       }
     },
     {
-      "id": "microcase-delay",
-      "type": "micro-case",
+      "id": "anatomy-of-delay",
+      "type": "visualization",
       "transition": "fade",
-      "title": "Micro-Case: Where Did the Delay Happen?",
-      "scenario": "A surgical pathology case is flagged as \"late.\" You have timestamps across the system but no clear cause. The clinician is frustrated. Where do you look first?",
-      "options": [
-        "Pre-analytical",
-        "Analytical",
-        "Post-analytical"
-      ],
-      "discussion": [
-        "Systems often measure the wrong step → wrong intervention",
-        "\"Visibility\" is the first step toward improvement",
-        "TAT metrics without phase attribution are nearly useless",
-        "The fix might be organizational, not technical"
-      ]
+      "badge": "workflow",
+      "title": "Anatomy of a Delay — Where the Model Breaks",
+      "vizType": "case-timeline",
+      "vizConfig": {
+        "steps": [
+          { "label": "Collection", "minutes": 15 },
+          { "label": "Transport", "minutes": 40 },
+          { "label": "Accessioning", "minutes": 20 },
+          { "label": "Grossing", "minutes": 30 },
+          { "label": "Processing", "minutes": 480 },
+          { "label": "Slide prep", "minutes": 45 },
+          { "label": "Delivery", "minutes": 90, "delay": true, "delayNote": "Slides sat in tray — no pickup alert" },
+          { "label": "Path. receipt", "minutes": 10 },
+          { "label": "Review", "minutes": 25 },
+          { "label": "Reorder", "minutes": 0, "delay": true, "delayNote": "Recut triggered — restarts histology loop" },
+          { "label": "Re-processing", "minutes": 300 },
+          { "label": "Sign-out", "minutes": 15 },
+          { "label": "Distribution", "minutes": 5 }
+        ]
+      },
+      "takeaway": {
+        "text": "Calling this a 'pre-analytical delay' tells you nothing. The delay lives in a specific handoff between specific steps — and the fix depends entirely on which one.",
+        "comment": "Was it a distribution failure? A reorder? A grossing bottleneck? Each demands a different intervention. You need step-level granularity, not phase-level labels."
+      }
+    },
+    {
+      "id": "what-to-measure",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "workflow",
+      "title": "What to Measure Instead",
+      "vizType": "measurement-intervals",
+      "vizConfig": {
+        "steps": [
+          "Collection", "Transport", "Accessioning", "Grossing", "Processing",
+          "Slide prep", "Delivery", "Path. receipt", "Review", "Sign-out", "Distribution"
+        ],
+        "errorTypes": [
+          {
+            "label": "Mechanical",
+            "color": "#e67e22",
+            "icon": "⚙",
+            "items": ["Transport delay", "Processing queue", "Slide delivery failure"]
+          },
+          {
+            "label": "Cognitive",
+            "color": "#8e44ad",
+            "icon": "🧠",
+            "items": ["Inadequate gross", "Wrong stain selection", "Reorder from incomplete workup"]
+          },
+          {
+            "label": "Informational",
+            "color": "#c0392b",
+            "icon": "📡",
+            "items": ["Result ready but not routed", "Clinician unaware report is final", "Amendment propagation gap"]
+          }
+        ]
+      },
+      "takeaway": {
+        "text": "Meaningful turnaround time isn't a single number — it's a set of interval measurements at each well-defined step.",
+        "comment": "When something goes wrong, the question isn't 'which phase?' — it's 'which step, what kind of failure, and what fixes it?'"
+      }
     },
     {
       "id": "ap-workflow-steps",
       "type": "content",
       "transition": "fade",
       "badge": "workflow",
-      "title": "AP Workflow Steps Residents Should Recognize",
+      "title": "AP Workflow Steps You Should Recognize",
       "bullets": [
         "Intake / accession",
         "Grossing",
@@ -213,17 +262,36 @@
     },
     {
       "id": "wf-management",
-      "type": "content",
+      "type": "comparison",
       "transition": "fade",
       "badge": "workflow",
-      "title": "What Workflow Management Systems Should Do",
-      "bullets": [
-        "Track assets and transitions (specimen → blocks → slides → images)",
-        "Coordinate humans (handoffs, assignments, escalations)",
-        "Identify exceptions (delays, missing steps, mismatches)",
-        "Provide meaningful metrics (not vanity timestamps)",
-        "Reduce cognitive load and prevent preventable errors"
-      ]
+      "title": "From Tracking to Orchestration",
+      "left": {
+        "heading": "Traditional LIS Tracking",
+        "style": "muted",
+        "bullets": [
+          "Log what happened (timestamps, statuses)",
+          "Passive — waits for humans to check",
+          "Metrics after the fact (TAT reports)",
+          "Errors discovered downstream",
+          "\"The system recorded it\""
+        ]
+      },
+      "right": {
+        "heading": "Workflow Orchestration",
+        "style": "highlight",
+        "bullets": [
+          "<strong>Route</strong> work to the right person at the right time",
+          "<strong>Surface exceptions</strong> as they happen — not after",
+          "<strong>Coordinate handoffs</strong> across teams and instruments",
+          "<strong>Enforce constraints</strong> that prevent known failure modes",
+          "<strong>Adapt</strong> — dynamic prioritization, load-aware assignment"
+        ]
+      },
+      "takeaway": {
+        "text": "A good system doesn't just record your workflow — it actively drives it. Orchestration means the system carries cognitive burden so you don't have to.",
+        "comment": "Most LIS deployments are still at the tracking level. True orchestration requires event-driven architecture, real-time state awareness, and rules that encode clinical logic — not just audit trails. The gap between these two columns is where most operational pain lives."
+      }
     },
     {
       "id": "automate-exercise",
@@ -287,6 +355,7 @@
     },
     {
       "id": "automation-ladder",
+      "isOptional": true,
       "type": "visualization",
       "transition": "fade",
       "badge": "automation",
@@ -316,6 +385,7 @@
     },
     {
       "id": "competitive-advantage",
+      "isOptional": true,
       "type": "content",
       "transition": "fade",
       "badge": "automation",
@@ -413,8 +483,13 @@
         "\"Left? <em>(per requisition)</em>\" — laterality uncertain, documented as given.",
         "Narrative says \"<strong>negative</strong> for malignancy.\" Synoptic field: Tumor Present = <strong>Yes</strong>."
       ],
+      "answers": [
+        "<strong>Ambiguity:</strong> \"Cannot be excluded\" is hedged language — clinically it's indeterminate, but downstream systems may read it as negative (no carcinoma coded). A system would need to flag hedged negations and route them for explicit follow-up rather than default to benign.",
+        "<strong>Ambiguity:</strong> The pathologist doesn't know laterality — they're passing through what the requisition says with a question mark. If the requisition was wrong, every downstream system (tumor registry, staging, surgical planning) inherits the error. A system would need to cross-check laterality against imaging or OR records.",
+        "<strong>Ambiguity:</strong> The narrative and synoptic fields contradict each other. \"Negative for malignancy\" in text vs. \"Tumor Present = Yes\" in structured data. Which one gets sent to the tumor registry? Which one drives the patient portal message? A system would need conflict detection between free-text and structured fields before sign-out."
+      ],
       "prompt": "What would a system need to <em>know</em> to prevent downstream error in each case?",
-      "goal": "Make residents articulate context dependencies explicitly."
+      "goal": "Articulate context dependencies explicitly."
     },
     {
       "id": "data-flow",
@@ -490,6 +565,7 @@
     },
     {
       "id": "vendor-questions",
+      "isOptional": true,
       "type": "workshop",
       "transition": "fade",
       "title": "Workshop: 10 Questions for a New LIS/Vendor",
@@ -532,6 +608,7 @@
     },
     {
       "id": "poll-digital",
+      "isOptional": true,
       "type": "poll",
       "transition": "fade",
       "title": "Poll: Do You Use Digital Slides Today?",
@@ -546,6 +623,7 @@
     },
     {
       "id": "digital-path-infra",
+      "isOptional": true,
       "type": "content",
       "transition": "fade",
       "badge": "ai",

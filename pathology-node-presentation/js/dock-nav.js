@@ -50,28 +50,53 @@ var DockNav = (function () {
         _label.className = 'dock-label';
         _dock.appendChild(_label);
 
-        // Build a dot for each slide
-        slides.forEach(function (section, i) {
-            var dot = document.createElement('div');
-            dot.className = 'dock-dot';
+        // Build dots from slide map (includes hidden optional slides)
+        var slideMap = (typeof SlideEngine !== 'undefined' && SlideEngine.getSlideMap)
+            ? SlideEngine.getSlideMap() : [];
 
-            // Color by badge
-            var badge = section.getAttribute('data-badge');
-            dot.style.background = BADGE_COLORS[badge] || DEFAULT_COLOR;
+        if (slideMap.length > 0) {
+            // Use the full slide map — shows ghost dots for hidden optional
+            slideMap.forEach(function (entry) {
+                var dot = document.createElement('div');
+                dot.className = 'dock-dot';
 
-            // Store metadata
-            var title = section.querySelector('h1, h2');
-            dot.setAttribute('data-slide-index', i);
-            dot.setAttribute('data-slide-title', title ? title.textContent.trim() : 'Slide ' + (i + 1));
+                if (!entry.rendered) {
+                    // Ghost dot for hidden optional slide
+                    dot.classList.add('dock-dot--ghost');
+                    dot.style.background = '#ccc';
+                    dot.setAttribute('data-slide-title', entry.title + ' (optional)');
+                } else {
+                    dot.style.background = BADGE_COLORS[entry.badge] || DEFAULT_COLOR;
+                    dot.setAttribute('data-slide-title', entry.title);
+                    // Click → navigate to the rendered index
+                    (function (ri) {
+                        dot.addEventListener('click', function () {
+                            Reveal.slide(ri);
+                        });
+                    })(entry.renderedIndex);
+                }
 
-            // Click → navigate
-            dot.addEventListener('click', function () {
-                Reveal.slide(i);
+                dot.setAttribute('data-slide-index', entry.index);
+                dot.setAttribute('data-rendered-index', entry.renderedIndex);
+
+                _rail.appendChild(dot);
+                _dots.push(dot);
             });
-
-            _rail.appendChild(dot);
-            _dots.push(dot);
-        });
+        } else {
+            // Fallback: no slide map, build from DOM as before
+            slides.forEach(function (section, i) {
+                var dot = document.createElement('div');
+                dot.className = 'dock-dot';
+                var badge = section.getAttribute('data-badge');
+                dot.style.background = BADGE_COLORS[badge] || DEFAULT_COLOR;
+                var title = section.querySelector('h1, h2');
+                dot.setAttribute('data-slide-index', i);
+                dot.setAttribute('data-slide-title', title ? title.textContent.trim() : 'Slide ' + (i + 1));
+                dot.addEventListener('click', function () { Reveal.slide(i); });
+                _rail.appendChild(dot);
+                _dots.push(dot);
+            });
+        }
 
         _dock.appendChild(_rail);
         document.body.appendChild(_dock);
@@ -179,8 +204,9 @@ var DockNav = (function () {
     // ─── CURRENT SLIDE MARKER ───────────────────────────────
     function _updateCurrent(index) {
         _current = index;
-        _dots.forEach(function (dot, i) {
-            dot.classList.toggle('dock-dot--current', i === index);
+        _dots.forEach(function (dot) {
+            var ri = parseInt(dot.getAttribute('data-rendered-index'), 10);
+            dot.classList.toggle('dock-dot--current', ri === index);
         });
     }
 

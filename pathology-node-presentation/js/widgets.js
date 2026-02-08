@@ -273,26 +273,32 @@ const Widgets = (function () {
         controls.appendChild(resetBtn);
         wrap.appendChild(display);
         wrap.appendChild(controls);
-        container.appendChild(wrap);
 
-        // Categories list
+        // Categories list — two-column layout: timer left, categories right
         if (config.categories && config.categories.length) {
+            var row = document.createElement('div');
+            row.className = 'timer-row';
+
+            var leftCol = document.createElement('div');
+            leftCol.className = 'timer-left';
+            leftCol.appendChild(wrap);
+
             var catWrap = document.createElement('div');
-            catWrap.style.marginTop = '14px';
-            catWrap.style.fontSize = '0.62em';
-            catWrap.style.color = '#555';
+            catWrap.className = 'timer-categories';
             catWrap.innerHTML = '<strong>Classify responses into:</strong>';
             var ol = document.createElement('ol');
-            ol.style.textAlign = 'left';
-            ol.style.maxWidth = '500px';
-            ol.style.margin = '6px auto';
             config.categories.forEach(function (cat) {
                 var li = document.createElement('li');
                 li.textContent = cat;
                 ol.appendChild(li);
             });
             catWrap.appendChild(ol);
-            container.appendChild(catWrap);
+
+            row.appendChild(leftCol);
+            row.appendChild(catWrap);
+            container.appendChild(row);
+        } else {
+            container.appendChild(wrap);
         }
     }
 

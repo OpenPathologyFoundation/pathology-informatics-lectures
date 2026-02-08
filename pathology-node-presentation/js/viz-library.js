@@ -381,6 +381,331 @@ const VizLibrary = (function () {
         });
     }
 
+    // ─── PHASE COMPARISON (CP ✓ vs AP ?) ─────────────────────
+    function phaseComparison(container, config) {
+        var W = 1060, H = 380;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        var colW = 500, gap = 60;
+        var phaseW = 150, phaseH = 260, phaseGap = 10;
+        var colors = ['#3498db', '#27ae60', '#9b59b6'];
+        var phaseLabels = ['Pre-Analytical', 'Analytical', 'Post-Analytical'];
+
+        // ── LEFT: Clinical Chemistry (clean) ──
+        var lx = 0;
+        var lg = svg.append('g').style('opacity', 0);
+        lg.append('text').attr('x', lx + colW / 2).attr('y', 24)
+            .attr('text-anchor', 'middle').attr('font-size', '15px')
+            .attr('font-weight', '700').attr('fill', '#0e6e8c')
+            .text('Clinical Chemistry  ✓');
+
+        var cpSteps = [
+            ['Order entry', 'Collection', 'Transport', 'Accessioning'],
+            ['Instrument analysis', '(single automated step)'],
+            ['Result review', 'Reporting', 'Distribution']
+        ];
+
+        phaseLabels.forEach(function (label, pi) {
+            var px = lx + pi * (phaseW + phaseGap) + 20;
+            lg.append('rect').attr('x', px).attr('y', 40)
+                .attr('width', phaseW).attr('height', phaseH)
+                .attr('rx', 10).attr('fill', colors[pi]).attr('fill-opacity', 0.08)
+                .attr('stroke', colors[pi]).attr('stroke-opacity', 0.4).attr('stroke-width', 1.5);
+
+            lg.append('text').attr('x', px + phaseW / 2).attr('y', 62)
+                .attr('text-anchor', 'middle').attr('font-size', '11px')
+                .attr('font-weight', '700').attr('fill', colors[pi]).text(label);
+
+            cpSteps[pi].forEach(function (step, si) {
+                lg.append('text').attr('x', px + phaseW / 2).attr('y', 88 + si * 22)
+                    .attr('text-anchor', 'middle').attr('font-size', '11px')
+                    .attr('fill', '#555').text(step);
+            });
+        });
+
+        // Clean dividers between phases
+        for (var di = 0; di < 2; di++) {
+            var dx = lx + (di + 1) * (phaseW + phaseGap) + 20 - phaseGap / 2;
+            lg.append('text').attr('x', dx).attr('y', 170)
+                .attr('text-anchor', 'middle').attr('font-size', '18px')
+                .attr('fill', '#bdc3c7').text('→');
+        }
+
+        lg.append('text').attr('x', lx + colW / 2).attr('y', H - 30)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#27ae60').attr('font-weight', '600')
+            .text('Clean boundaries — each step belongs to exactly one phase');
+
+        lg.transition().duration(600).style('opacity', 1);
+
+        // ── RIGHT: Anatomic Pathology (blurred) ──
+        var rx = colW + gap;
+        var rg = svg.append('g').style('opacity', 0);
+        rg.append('text').attr('x', rx + colW / 2).attr('y', 24)
+            .attr('text-anchor', 'middle').attr('font-size', '15px')
+            .attr('font-weight', '700').attr('fill', '#0e6e8c')
+            .text('Anatomic Pathology  ?');
+
+        var apSteps = [
+            ['Order entry', 'Collection', 'Transport'],
+            ['Grossing ←→', 'Processing', 'Slide creation', 'Staining', 'Interpretation', 'Sign-out'],
+            ['Reporting', 'Distribution', 'Recuts / rescans ←→', 'Follow-up']
+        ];
+
+        phaseLabels.forEach(function (label, pi) {
+            var px = rx + pi * (phaseW + phaseGap) + 20;
+            var h = pi === 1 ? phaseH + 20 : phaseH - 10;
+            var y = pi === 1 ? 30 : 50;
+
+            rg.append('rect').attr('x', px).attr('y', y)
+                .attr('width', phaseW).attr('height', h)
+                .attr('rx', 10).attr('fill', colors[pi]).attr('fill-opacity', 0.08)
+                .attr('stroke', colors[pi]).attr('stroke-opacity', 0.4).attr('stroke-width', 1.5)
+                .attr('stroke-dasharray', '6,3');
+
+            rg.append('text').attr('x', px + phaseW / 2).attr('y', y + 22)
+                .attr('text-anchor', 'middle').attr('font-size', '11px')
+                .attr('font-weight', '700').attr('fill', colors[pi]).text(label);
+
+            apSteps[pi].forEach(function (step, si) {
+                var isOverlap = (step.indexOf('←→') >= 0);
+                rg.append('text').attr('x', px + phaseW / 2).attr('y', y + 46 + si * 22)
+                    .attr('text-anchor', 'middle').attr('font-size', '11px')
+                    .attr('fill', isOverlap ? '#e74c3c' : '#555')
+                    .attr('font-weight', isOverlap ? '700' : '400')
+                    .text(step);
+            });
+        });
+
+        // Full-width BLUR overlay spanning all three AP phases
+        var blurX = rx + 14;
+        var blurW = 3 * phaseW + 2 * phaseGap + 12;
+        rg.append('rect').attr('x', blurX).attr('y', 70)
+            .attr('width', blurW).attr('height', 200).attr('rx', 10)
+            .attr('fill', '#e74c3c').attr('fill-opacity', 0.04)
+            .attr('stroke', '#e74c3c').attr('stroke-dasharray', '6,4')
+            .attr('stroke-width', 1.5).attr('stroke-opacity', 0.5);
+        rg.append('text').attr('x', blurX + blurW / 2).attr('y', 286)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', '#e74c3c').attr('font-weight', '700')
+            .text('BOUNDARIES BLUR — activities cross phases');
+
+        rg.append('text').attr('x', rx + colW / 2).attr('y', H - 30)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#e74c3c').attr('font-weight', '600')
+            .text('Grossing, staining, recuts, rescans — all straddle phases');
+
+        rg.transition().delay(500).duration(600).style('opacity', 1);
+
+        // Center divider
+        svg.append('line').attr('x1', colW + gap / 2).attr('x2', colW + gap / 2)
+            .attr('y1', 10).attr('y2', H - 10)
+            .attr('stroke', '#e0e5eb').attr('stroke-width', 1).attr('stroke-dasharray', '4,4');
+    }
+
+    // ─── CASE TIMELINE (horizontal step chain with delays) ──
+    function caseTimeline(container, config) {
+        var steps = (config && config.steps) || [];
+        var n = steps.length;
+        var W = 1060, H = 340;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        // Two-row layout for 13 steps
+        var row1Count = Math.ceil(n / 2);
+        var row2Count = n - row1Count;
+        var boxW = 72, boxH = 34, gapX = 8, rowGap = 100;
+        var row1Y = 40, row2Y = row1Y + rowGap;
+
+        function boxX(col, rowCount) {
+            var totalW = rowCount * boxW + (rowCount - 1) * gapX;
+            var startX = (W - totalW) / 2;
+            return startX + col * (boxW + gapX);
+        }
+
+        steps.forEach(function (step, i) {
+            var isRow1 = i < row1Count;
+            var col = isRow1 ? i : (i - row1Count);
+            var rowCount = isRow1 ? row1Count : row2Count;
+            var x = boxX(col, rowCount);
+            var y = isRow1 ? row1Y : row2Y;
+
+            var g = svg.append('g').style('opacity', 0);
+
+            var isDelay = !!step.delay;
+            var fillColor = isDelay ? 'rgba(231,76,60,0.12)' : 'rgba(41,128,185,0.06)';
+            var strokeColor = isDelay ? '#e74c3c' : '#bdc3c7';
+            var strokeW = isDelay ? 2 : 1.5;
+
+            g.append('rect').attr('x', x).attr('y', y)
+                .attr('width', boxW).attr('height', boxH)
+                .attr('rx', 6).attr('fill', fillColor)
+                .attr('stroke', strokeColor).attr('stroke-width', strokeW);
+
+            g.append('text').attr('x', x + boxW / 2).attr('y', y + boxH / 2 + 4)
+                .attr('text-anchor', 'middle').attr('font-size', '9px')
+                .attr('font-weight', '600')
+                .attr('fill', isDelay ? '#e74c3c' : '#0e6e8c')
+                .text(step.label);
+
+            // Time label below box
+            if (step.minutes > 0) {
+                var timeStr = step.minutes >= 60
+                    ? (step.minutes / 60).toFixed(0) + 'h'
+                    : step.minutes + 'm';
+                g.append('text').attr('x', x + boxW / 2).attr('y', y + boxH + 14)
+                    .attr('text-anchor', 'middle').attr('font-size', '8px')
+                    .attr('fill', '#999').text(timeStr);
+            }
+
+            // Delay callout
+            if (isDelay && step.delayNote) {
+                var noteY = isRow1 ? y - 14 : y + boxH + 26;
+                g.append('text').attr('x', x + boxW / 2).attr('y', noteY)
+                    .attr('text-anchor', 'middle').attr('font-size', '8px')
+                    .attr('fill', '#e74c3c').attr('font-weight', '600')
+                    .text('⚠ ' + step.delayNote);
+            }
+
+            // Arrow to next step in same row
+            var nextInRow = isRow1 ? (i + 1 < row1Count) : (i + 1 < n);
+            if (nextInRow && !(isRow1 && i + 1 === row1Count)) {
+                g.append('text')
+                    .attr('x', x + boxW + gapX / 2).attr('y', y + boxH / 2 + 4)
+                    .attr('text-anchor', 'middle').attr('font-size', '12px')
+                    .attr('fill', '#bdc3c7').text('→');
+            }
+
+            g.transition().delay(i * 80).duration(300).style('opacity', 1);
+        });
+
+        // Curved arrow from end of row 1 down to start of row 2
+        if (row2Count > 0) {
+            var endX1 = boxX(row1Count - 1, row1Count) + boxW;
+            var startX2 = boxX(0, row2Count);
+            svg.append('path')
+                .attr('d', 'M' + endX1 + ',' + (row1Y + boxH / 2) +
+                    ' C' + (endX1 + 40) + ',' + (row1Y + boxH / 2) +
+                    ' ' + (endX1 + 40) + ',' + (row2Y + boxH / 2) +
+                    ' ' + (endX1) + ',' + (row2Y + boxH / 2))
+                .attr('fill', 'none').attr('stroke', '#bdc3c7')
+                .attr('stroke-width', 1.5).attr('stroke-dasharray', '4,3')
+                .attr('marker-end', 'none');
+
+            // Horizontal connector to row 2 first box if needed
+            if (startX2 < endX1) {
+                svg.append('line')
+                    .attr('x1', endX1).attr('y1', row2Y + boxH / 2)
+                    .attr('x2', boxX(row2Count - 1, row2Count) + boxW + 5).attr('y2', row2Y + boxH / 2)
+                    .attr('stroke', 'none');
+            }
+        }
+
+        // Legend
+        svg.append('rect').attr('x', 20).attr('y', H - 40).attr('width', 14).attr('height', 14)
+            .attr('rx', 3).attr('fill', 'rgba(231,76,60,0.12)').attr('stroke', '#e74c3c').attr('stroke-width', 1.5);
+        svg.append('text').attr('x', 40).attr('y', H - 29)
+            .attr('font-size', '10px').attr('fill', '#e74c3c').attr('font-weight', '600')
+            .text('Delay / breakpoint');
+
+        svg.append('rect').attr('x', 170).attr('y', H - 40).attr('width', 14).attr('height', 14)
+            .attr('rx', 3).attr('fill', 'rgba(41,128,185,0.06)').attr('stroke', '#bdc3c7').attr('stroke-width', 1.5);
+        svg.append('text').attr('x', 190).attr('y', H - 29)
+            .attr('font-size', '10px').attr('fill', '#888')
+            .text('Normal step');
+    }
+
+    // ─── MEASUREMENT INTERVALS (relay race + error types) ────
+    function measurementIntervals(container, config) {
+        var steps = (config && config.steps) || [];
+        var errorTypes = (config && config.errorTypes) || [];
+        var W = 1060, H = 380;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        // ── Top row: step chain as relay race with split times ──
+        var n = steps.length;
+        var boxW = 76, boxH = 30, gapX = 12;
+        var totalW = n * boxW + (n - 1) * gapX;
+        var startX = (W - totalW) / 2;
+        var chainY = 30;
+
+        steps.forEach(function (step, i) {
+            var x = startX + i * (boxW + gapX);
+            var g = svg.append('g').style('opacity', 0);
+
+            g.append('rect').attr('x', x).attr('y', chainY)
+                .attr('width', boxW).attr('height', boxH)
+                .attr('rx', 5).attr('fill', 'rgba(14,110,140,0.08)')
+                .attr('stroke', '#0e6e8c').attr('stroke-width', 1.5);
+
+            g.append('text').attr('x', x + boxW / 2).attr('y', chainY + boxH / 2 + 4)
+                .attr('text-anchor', 'middle').attr('font-size', '8px')
+                .attr('font-weight', '600').attr('fill', '#0e6e8c')
+                .text(step);
+
+            // Interval bracket below
+            if (i < n - 1) {
+                var midX = x + boxW + gapX / 2;
+                g.append('text').attr('x', midX).attr('y', chainY + boxH / 2 + 4)
+                    .attr('text-anchor', 'middle').attr('font-size', '11px')
+                    .attr('fill', '#bdc3c7').text('→');
+
+                // Small clock icon for measurable interval
+                g.append('text').attr('x', midX).attr('y', chainY + boxH + 16)
+                    .attr('text-anchor', 'middle').attr('font-size', '8px')
+                    .attr('fill', '#999').text('⏱');
+            }
+
+            g.transition().delay(i * 60).duration(300).style('opacity', 1);
+        });
+
+        // ── Bottom section: error type cards ──
+        var cardY = chainY + boxH + 50;
+        var cardW = (W - 80) / errorTypes.length;
+        var cardGap = 20;
+
+        errorTypes.forEach(function (et, ei) {
+            var cx = 20 + ei * (cardW + cardGap);
+            var g = svg.append('g').style('opacity', 0);
+
+            g.append('rect').attr('x', cx).attr('y', cardY)
+                .attr('width', cardW).attr('height', H - cardY - 20)
+                .attr('rx', 10).attr('fill', et.color).attr('fill-opacity', 0.06)
+                .attr('stroke', et.color).attr('stroke-opacity', 0.3).attr('stroke-width', 1.5);
+
+            g.append('text').attr('x', cx + 14).attr('y', cardY + 26)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', et.color)
+                .text(et.icon + '  ' + et.label);
+
+            et.items.forEach(function (item, ii) {
+                g.append('text').attr('x', cx + 22).attr('y', cardY + 52 + ii * 24)
+                    .attr('font-size', '12px').attr('fill', '#444')
+                    .text('• ' + item);
+            });
+
+            g.transition().delay(400 + ei * 300).duration(500).style('opacity', 1);
+        });
+
+        // Connecting lines from chain to error type cards
+        var lineY1 = chainY + boxH + 20;
+        var lineY2 = cardY - 5;
+        errorTypes.forEach(function (et, ei) {
+            var cx = 20 + ei * (cardW + cardGap) + cardW / 2;
+            svg.append('line').attr('x1', cx).attr('y1', lineY1)
+                .attr('x2', cx).attr('y2', lineY2)
+                .attr('stroke', et.color).attr('stroke-width', 1)
+                .attr('stroke-dasharray', '4,3').attr('opacity', 0.4);
+        });
+    }
+
     // ─── REGISTRY (map name → function) ──────────────────────
     var registry = {
         'workflow-pipeline': workflowPipeline,
@@ -388,7 +713,10 @@ const VizLibrary = (function () {
         'systems-ecosystem': systemsEcosystem,
         'ai-maturity-ladder': aiMaturityLadder,
         'data-flow': dataFlow,
-        'automation-ladder': automationLadder
+        'automation-ladder': automationLadder,
+        'phase-comparison': phaseComparison,
+        'case-timeline': caseTimeline,
+        'measurement-intervals': measurementIntervals
     };
 
     function render(name, container, config) {

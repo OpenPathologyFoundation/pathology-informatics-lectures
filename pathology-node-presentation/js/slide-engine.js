@@ -7,6 +7,8 @@ var SlideEngine = (function () {
 
     var _vizQueue = [];   // visualizations to render on slide entry
     var _rendered = {};   // track which vizs have been drawn
+    var _slideMap = [];   // metadata for ALL slides (including hidden optional)
+    var _showOptional = sessionStorage.getItem('showOptional') !== 'false'; // default: show all
 
     // ─── MAIN ENTRY POINT ────────────────────────────────────
     function loadLecture(jsonUrl, callback) {
@@ -46,10 +48,31 @@ var SlideEngine = (function () {
             if (t.accent) root.style.setProperty('--intro-accent', t.accent);
         }
 
-        // Render each slide
-        data.slides.forEach(function (slide) {
-            var section = renderSlide(slide, data.meta);
-            if (section) slidesContainer.appendChild(section);
+        // Build slide map and render
+        _slideMap = [];
+        var renderedIndex = 0;
+        data.slides.forEach(function (slide, i) {
+            var isOpt = !!slide.isOptional;
+            var shouldRender = !isOpt || _showOptional;
+
+            _slideMap.push({
+                index: i,
+                id: slide.id || '',
+                title: slide.title || 'Slide ' + (i + 1),
+                badge: slide.badge || (slide.type === 'poll' || slide.type === 'micro-case' || slide.type === 'timer' || slide.type === 'workshop' || slide.type === 'snippets' ? 'interactive' : null),
+                isOptional: isOpt,
+                rendered: shouldRender,
+                renderedIndex: shouldRender ? renderedIndex : -1
+            });
+
+            if (shouldRender) {
+                var section = renderSlide(slide, data.meta);
+                if (section) {
+                    if (isOpt) section.classList.add('optional-slide');
+                    slidesContainer.appendChild(section);
+                    renderedIndex++;
+                }
+            }
         });
     }
 
@@ -144,6 +167,22 @@ var SlideEngine = (function () {
         var date = (slide.date || (meta && meta.date) || '');
         box.innerHTML = '<p><em>' + presenter + '</em><br>' + institution + (date ? ' | ' + date : '') + '</p>';
         content.appendChild(box);
+
+        // Subtle optional-slides toggle
+        var toggle = el('div', 'optional-toggle');
+        var optCount = 0;
+        // Count will be filled after render; use a timeout
+        toggle.innerHTML = '<label class="opt-switch">' +
+            '<input type="checkbox"' + (_showOptional ? ' checked' : '') + '>' +
+            '<span class="opt-slider"></span>' +
+            '<span class="opt-label">' + (_showOptional ? 'Full deck' : 'Core slides') + '</span>' +
+            '</label>';
+        var cb = toggle.querySelector('input');
+        cb.addEventListener('change', function () {
+            sessionStorage.setItem('showOptional', cb.checked ? 'true' : 'false');
+            window.location.reload();
+        });
+        content.appendChild(toggle);
 
         s.appendChild(content);
         s.appendChild(el('div', 'slide-background-overlay'));
@@ -370,10 +409,30 @@ var SlideEngine = (function () {
 
         var wrap = el('div', 'snippet-cards');
 
+        var answers = slide.answers || [];
         slide.snippets.forEach(function (snippet, i) {
+            var cardWrap = el('div', 'snippet-card-wrap');
             var card = el('div', 'snippet-card');
             card.innerHTML = '<span class="snippet-num">' + (i + 1) + '</span>' + snippet;
-            wrap.appendChild(card);
+
+            if (answers[i]) {
+                card.style.cursor = 'pointer';
+                var hint = el('span', 'snippet-reveal-hint');
+                hint.textContent = '▼';
+                card.appendChild(hint);
+
+                var answer = el('div', 'snippet-answer');
+                answer.innerHTML = answers[i];
+                card.addEventListener('click', function () {
+                    var open = cardWrap.classList.toggle('snippet-open');
+                    hint.textContent = open ? '▲' : '▼';
+                });
+                cardWrap.appendChild(card);
+                cardWrap.appendChild(answer);
+            } else {
+                cardWrap.appendChild(card);
+            }
+            wrap.appendChild(cardWrap);
         });
 
         s.appendChild(wrap);
@@ -522,6 +581,8 @@ var SlideEngine = (function () {
         loadLecture: loadLecture,
         initWidgets: initWidgets,
         initVizOnSlideChange: initVizOnSlideChange,
-        initBadgeOverlay: initBadgeOverlay
+        initBadgeOverlay: initBadgeOverlay,
+        getSlideMap: function () { return _slideMap; },
+        isShowingOptional: function () { return _showOptional; }
     };
 })();

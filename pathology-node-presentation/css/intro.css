@@ -59,6 +59,8 @@
     margin-bottom: 8px;
 }
 
+.intro-slide strong { color: var(--ip); }
+
 /* ── List reset: kill theme.css bullets, own our own ────────── */
 .reveal .intro-slide ul,
 .reveal .intro-slide ol {
@@ -615,6 +617,33 @@ a.poll-qr, a.poll-qr:hover {
 .timer-start:hover { background: #166d3b; }
 .timer-reset-btn { background: #e8ecf0; color: #555; }
 .timer-reset-btn:hover { background: #d5dae0; }
+.timer-row {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+}
+.timer-left { flex: 0 0 auto; }
+.timer-categories {
+    flex: 1;
+    text-align: left;
+    font-size: 18px;
+    color: #555;
+    padding-top: 0;
+}
+.timer-categories strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--ip);
+    font-size: 18px;
+}
+.timer-categories ol {
+    margin: 0;
+    padding-left: 22px;
+}
+.timer-categories ol li {
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
 
 /* ─── D3 VISUALIZATIONS ───────────────────────────────────── */
 .viz-container {
@@ -685,6 +714,31 @@ a.poll-qr, a.poll-qr:hover {
     box-shadow: var(--ishadow);
 }
 .snippet-card:hover { border-color: var(--ih); }
+.snippet-card-wrap { flex: 1 1 240px; max-width: 360px; }
+.snippet-card-wrap .snippet-card { margin: 0; max-width: none; }
+.snippet-reveal-hint {
+    position: absolute; bottom: 4px; right: 10px;
+    font-size: 10px; color: #bdc3c7;
+    transition: color 0.2s;
+}
+.snippet-card:hover .snippet-reveal-hint { color: var(--ih); }
+.snippet-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.35s ease;
+    padding: 0 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #444;
+    background: #f8f9fb;
+    border: 1.5px solid #e0e5eb;
+    border-top: none;
+    border-radius: 0 0 var(--irad) var(--irad);
+}
+.snippet-open .snippet-answer {
+    max-height: 200px;
+    padding: 10px 14px;
+}
 .snippet-card .snippet-num {
     position: absolute; top: -8px; left: 10px;
     background: var(--ih); color: #fff;
@@ -732,6 +786,13 @@ a.poll-qr, a.poll-qr:hover {
     opacity: 1 !important;
     box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px currentColor;
 }
+.dock-dot--ghost {
+    opacity: 0.18 !important;
+    cursor: default;
+    width: 4px;
+    height: 4px;
+}
+.dock-nav--active .dock-dot--ghost { opacity: 0.25 !important; }
 
 .dock-label {
     position: absolute;
@@ -760,6 +821,58 @@ a.poll-qr, a.poll-qr:hover {
 }
 .dock-edge--left  { left: 0; }
 .dock-edge--right { right: 0; }
+
+/* ─── OPTIONAL SLIDE TOGGLE (title slide) ────────────────── */
+.optional-toggle {
+    margin-top: 18px;
+    opacity: 0.35;
+    transition: opacity 0.3s;
+}
+.optional-toggle:hover { opacity: 0.85; }
+.opt-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+.opt-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.opt-slider {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    background: #bdc3c7;
+    border-radius: 9px;
+    transition: background 0.25s;
+}
+.opt-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s;
+}
+.opt-switch input:checked + .opt-slider {
+    background: #0e6e8c;
+}
+.opt-switch input:checked + .opt-slider::after {
+    transform: translateX(14px);
+}
+.opt-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.3px;
+}
 
 /* ─── RESPONSIVE ──────────────────────────────────────────── */
 @media (max-width: 900px) {
