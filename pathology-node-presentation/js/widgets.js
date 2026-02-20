@@ -178,13 +178,20 @@ const Widgets = (function () {
             const ul = document.createElement('ul');
             ul.style.textAlign = 'left';
             ul.style.width = '100%';
-            ul.style.margin = '12px 0';
             config.discussion.forEach(function (point) {
                 const li = document.createElement('li');
-                li.textContent = point;
+                li.innerHTML = point;
                 ul.appendChild(li);
             });
             revealDiv.appendChild(ul);
+
+            // Discussion frame note (inside reveal so it appears with discussion)
+            if (config.discussionFrame) {
+                const note = document.createElement('p');
+                note.style.cssText = 'font-size:14px;color:#555;font-style:italic;margin:4px 0 0;line-height:1.4;';
+                note.innerHTML = config.discussionFrame;
+                revealDiv.appendChild(note);
+            }
 
             revealBtn.addEventListener('click', function () {
                 revealDiv.classList.toggle('shown');
@@ -194,17 +201,6 @@ const Widgets = (function () {
 
             container.appendChild(revealBtn);
             container.appendChild(revealDiv);
-        }
-
-        // Discussion frame note
-        if (config.discussionFrame) {
-            const note = document.createElement('p');
-            note.style.fontSize = '0.6em';
-            note.style.color = '#7f8c8d';
-            note.style.fontStyle = 'italic';
-            note.style.marginTop = '8px';
-            note.textContent = config.discussionFrame;
-            container.appendChild(note);
         }
     }
 

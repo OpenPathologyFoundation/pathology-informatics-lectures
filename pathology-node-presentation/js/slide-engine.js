@@ -79,18 +79,20 @@ var SlideEngine = (function () {
     // ─── SLIDE DISPATCHER ────────────────────────────────────
     function renderSlide(slide, meta) {
         var renderers = {
-            'title':         renderTitle,
-            'content':       renderContent,
-            'two-column':    renderTwoColumn,
-            'comparison':    renderComparison,
-            'poll':          renderPoll,
-            'micro-case':    renderMicroCase,
-            'timer':         renderTimer,
-            'visualization': renderVisualization,
-            'workshop':      renderWorkshop,
-            'snippets':      renderSnippets,
-            'takeaways':     renderTakeaways,
-            'qa':            renderQA
+            'title':            renderTitle,
+            'content':          renderContent,
+            'two-column':       renderTwoColumn,
+            'comparison':       renderComparison,
+            'poll':             renderPoll,
+            'micro-case':       renderMicroCase,
+            'timer':            renderTimer,
+            'visualization':    renderVisualization,
+            'workshop':         renderWorkshop,
+            'snippets':         renderSnippets,
+            'interactive-list': renderInteractiveList,
+            'infographic':      renderInfographic,
+            'takeaways':        renderTakeaways,
+            'qa':               renderQA
         };
 
         var fn = renderers[slide.type];
@@ -161,12 +163,23 @@ var SlideEngine = (function () {
             content.appendChild(el('h3', 'animate-subtitle', slide.subtitle));
         }
 
-        var box = el('div', 'presenter-box animate-presenter');
-        var presenter = (slide.presenter || (meta && meta.presenter) || '');
-        var institution = (slide.institution || (meta && meta.institution) || '');
+        // Use Presenter module if available; fall back to JSON
+        var hasPresenter = (typeof Presenter !== 'undefined' && !Presenter.isSkipped());
+        var presenter = hasPresenter ? Presenter.getDisplayName() : (slide.presenter || (meta && meta.presenter) || '');
+        var institution = hasPresenter ? Presenter.getInstitution() : (slide.institution || (meta && meta.institution) || '');
         var date = (slide.date || (meta && meta.date) || '');
-        box.innerHTML = '<p><em>' + presenter + '</em><br>' + institution + (date ? ' | ' + date : '') + '</p>';
-        content.appendChild(box);
+
+        if (typeof Presenter !== 'undefined' && Presenter.isSkipped()) {
+            // Community / anonymous mode
+            var banner = el('div', 'community-banner animate-presenter');
+            var repoUrl = Presenter.getRepoUrl();
+            banner.innerHTML = '<span>📖</span> <span>Community Lecture — <a href="' + repoUrl + '" target="_blank">View Contributors & Source</a></span>';
+            content.appendChild(banner);
+        } else if (presenter) {
+            var box = el('div', 'presenter-box animate-presenter');
+            box.innerHTML = '<p><em>' + presenter + '</em><br>' + institution + (date ? ' | ' + date : '') + '</p>';
+            content.appendChild(box);
+        }
 
         // Subtle optional-slides toggle
         var toggle = el('div', 'optional-toggle');
@@ -184,6 +197,15 @@ var SlideEngine = (function () {
         });
         content.appendChild(toggle);
 
+        // GitHub repo link (bottom-left)
+        if (typeof Presenter !== 'undefined') {
+            var repoLink = el('a', 'repo-link');
+            repoLink.href = Presenter.getRepoUrl();
+            repoLink.target = '_blank';
+            repoLink.innerHTML = '<svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Source';
+            s.appendChild(repoLink);
+        }
+
         s.appendChild(content);
         s.appendChild(el('div', 'slide-background-overlay'));
         return s;
@@ -198,6 +220,16 @@ var SlideEngine = (function () {
         if (slide.subtitle) {
             var sub = el('p', 'slide-subtitle', slide.subtitle);
             s.appendChild(sub);
+        }
+
+        // COI slide: override bullets with presenter's disclosures
+        if (slide.id === 'coi' && typeof Presenter !== 'undefined') {
+            var coiBullets = Presenter.getCOI();
+            var disclaimer = 'This presentation is intended solely for educational purposes. All content reflects the presenter\'s independent views and does not represent the official position of any institution or vendor.';
+            coiBullets.push(disclaimer);
+            s.appendChild(makeBullets(coiBullets, false));
+            addTakeaway(s, slide.takeaway);
+            return s;
         }
 
         if (slide.bullets) {
@@ -453,6 +485,160 @@ var SlideEngine = (function () {
         return s;
     }
 
+    // ─── INTERACTIVE LIST (hover-to-reveal, progressive disclosure) ──
+    function renderInteractiveList(slide, meta) {
+        var s = el('section', 'intro-slide ilist-slide');
+        if (slide.darkBg) {
+            s.setAttribute('data-background-color', '#0f172a');
+            s.classList.add('dark-slide');
+        }
+        applyBadge(s, 'interactive');
+        s.appendChild(el('h2', '', slide.title));
+
+        // Epigraph
+        if (slide.epigraph) {
+            var bq = el('blockquote', 'ilist-epigraph');
+            bq.innerHTML = '"' + slide.epigraph.text + '"';
+            if (slide.epigraph.attribution) {
+                bq.innerHTML += '<footer>— ' + slide.epigraph.attribution + '</footer>';
+            }
+            s.appendChild(bq);
+        }
+
+        // Grid container
+        var items = slide.items || [];
+        var isTwoCol = (slide.layout === 'two-column') || items.length > 5;
+        var grid = el('div', 'ilist-grid' + (isTwoCol ? ' ilist-two-col' : ''));
+
+        // Tooltip element (shared)
+        var tooltip = el('div', 'ilist-tooltip');
+        tooltip.style.display = 'none';
+        s.appendChild(tooltip);
+
+        items.forEach(function (item, i) {
+            var row = el('div', 'ilist-item');
+            row.setAttribute('data-index', i);
+
+            var numSpan = el('span', 'ilist-num');
+            numSpan.textContent = item.number || (i + 1);
+
+            var qSpan = el('span', 'ilist-question');
+            qSpan.innerHTML = item.question;
+
+            row.appendChild(numSpan);
+            row.appendChild(qSpan);
+
+            // If there's a detail, add hover behavior
+            if (item.detail) {
+                row.classList.add('ilist-has-detail');
+
+                // Small hint icon
+                var hint = el('span', 'ilist-hint');
+                hint.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+                row.appendChild(hint);
+
+                row.addEventListener('mouseenter', function (e) {
+                    // Dim siblings
+                    grid.querySelectorAll('.ilist-item').forEach(function (sib) {
+                        if (sib !== row) sib.classList.add('ilist-dimmed');
+                    });
+                    row.classList.add('ilist-active');
+
+                    // Show tooltip
+                    tooltip.innerHTML = '<div class="ilist-tooltip-inner">' +
+                        '<span class="ilist-tooltip-num">' + (item.number || (i + 1)) + '</span>' +
+                        '<p>' + item.detail + '</p></div>';
+                    tooltip.style.display = 'block';
+
+                    // Position near the item
+                    var rect = row.getBoundingClientRect();
+                    var slideRect = s.getBoundingClientRect();
+                    tooltip.style.left = (rect.right - slideRect.left + 12) + 'px';
+                    tooltip.style.top = (rect.top - slideRect.top - 10) + 'px';
+
+                    // Clamp to viewport
+                    requestAnimationFrame(function () {
+                        var tr = tooltip.getBoundingClientRect();
+                        if (tr.right > slideRect.right - 20) {
+                            tooltip.style.left = (rect.left - slideRect.left - tr.width - 12) + 'px';
+                        }
+                        if (tr.bottom > slideRect.bottom - 20) {
+                            tooltip.style.top = (slideRect.bottom - slideRect.top - tr.height - 20) + 'px';
+                        }
+                    });
+                });
+
+                row.addEventListener('mouseleave', function () {
+                    grid.querySelectorAll('.ilist-item').forEach(function (sib) {
+                        sib.classList.remove('ilist-dimmed');
+                    });
+                    row.classList.remove('ilist-active');
+                    tooltip.style.display = 'none';
+                });
+            }
+
+            grid.appendChild(row);
+        });
+
+        s.appendChild(grid);
+        addTakeaway(s, slide.takeaway);
+        return s;
+    }
+
+    // ─── INFOGRAPHIC SLIDE (rich HTML card layout, dark bg) ──
+    function renderInfographic(slide, meta) {
+        var s = el('section', 'intro-slide infographic-slide');
+        s.setAttribute('data-background-color', slide.bgColor || '#0f172a');
+        s.classList.add('dark-slide');
+        applyBadge(s, slide.badge);
+
+        // Title with gradient
+        var titleEl = el('h2', 'infographic-title', slide.title);
+        s.appendChild(titleEl);
+
+        if (slide.subtitle) {
+            s.appendChild(el('p', 'infographic-subtitle', slide.subtitle));
+        }
+
+        // Cards grid
+        if (slide.cards && slide.cards.length) {
+            var cardGrid = el('div', 'infographic-cards');
+            slide.cards.forEach(function (card, i) {
+                var cardEl = el('div', 'infographic-card');
+                if (card.accentColor) cardEl.style.borderTopColor = card.accentColor;
+
+                var iconLine = '';
+                if (card.icon) iconLine = '<span class="infographic-card-icon">' + card.icon + '</span>';
+                var labelLine = card.label ? '<span class="infographic-card-label">' + card.label + '</span>' : '';
+                var valueLine = card.value ? '<span class="infographic-card-value">' + card.value + '</span>' : '';
+                var descLine = card.description ? '<p class="infographic-card-desc">' + card.description + '</p>' : '';
+
+                cardEl.innerHTML = iconLine + labelLine + valueLine + descLine;
+                cardGrid.appendChild(cardEl);
+            });
+            s.appendChild(cardGrid);
+        }
+
+        // Optional viz container
+        if (slide.vizType) {
+            var vizDiv = el('div', 'viz-container');
+            vizDiv.id = 'viz-' + slide.id;
+            s.appendChild(vizDiv);
+            s.setAttribute('data-viz', slide.vizType);
+
+            _vizQueue.push({
+                type: 'viz',
+                elementId: 'viz-' + slide.id,
+                vizType: slide.vizType,
+                vizConfig: slide.vizConfig || {},
+                slideId: slide.id
+            });
+        }
+
+        addTakeaway(s, slide.takeaway);
+        return s;
+    }
+
     // ─── TAKEAWAYS SLIDE ─────────────────────────────────────
     function renderTakeaways(slide, meta) {
         var s = el('section', 'intro-slide');
@@ -486,10 +672,34 @@ var SlideEngine = (function () {
         container.appendChild(icon);
         container.appendChild(el('p', 'qa-text', slide.title || 'Questions & Discussion'));
 
-        if (slide.contact) {
+        // Use presenter data if available; fall back to JSON contact
+        var hasPresenter = (typeof Presenter !== 'undefined' && !Presenter.isSkipped());
+        if (hasPresenter) {
             var info = el('div', 'contact-info');
-            info.innerHTML = '<p>' + slide.contact + '</p>';
+            var contactHtml = '<p>' + Presenter.getDisplayName();
+            if (Presenter.getInstitution()) contactHtml += '<br>' + Presenter.getInstitution();
+            if (Presenter.getEmail()) contactHtml += '<br>' + Presenter.getEmail();
+            contactHtml += '</p>';
+            info.innerHTML = contactHtml;
             container.appendChild(info);
+        } else if (typeof Presenter !== 'undefined' && Presenter.isSkipped()) {
+            var community = el('div', 'contact-info');
+            var repoUrl = Presenter.getRepoUrl();
+            community.innerHTML = '<p>Community Lecture<br><a href="' + repoUrl + '" target="_blank" style="color:#60a5fa">View on GitHub</a></p>';
+            container.appendChild(community);
+        } else if (slide.contact) {
+            var info2 = el('div', 'contact-info');
+            info2.innerHTML = '<p>' + slide.contact + '</p>';
+            container.appendChild(info2);
+        }
+
+        // GitHub repo link (bottom-left)
+        if (typeof Presenter !== 'undefined') {
+            var repoLink = el('a', 'repo-link');
+            repoLink.href = Presenter.getRepoUrl();
+            repoLink.target = '_blank';
+            repoLink.innerHTML = '<svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Source';
+            s.appendChild(repoLink);
         }
 
         s.appendChild(container);

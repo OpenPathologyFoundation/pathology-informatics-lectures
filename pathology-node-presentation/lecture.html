@@ -70,6 +70,8 @@
     <script src="js/widgets.js"></script>
     <script src="js/viz-library.js"></script>
     <script src="js/slide-engine.js"></script>
+    <script src="js/glossary.js"></script>
+    <script src="js/presenter.js"></script>
     <script src="js/dock-nav.js"></script>
 
     <script>
@@ -79,31 +81,48 @@
         var lectureName = params.get('lecture') || 'intro_pathology_informatics';
         var jsonUrl = 'data/lectures/' + lectureName + '.json';
 
-        // Load the lecture JSON, then initialize Reveal
-        SlideEngine.loadLecture(jsonUrl, function (data) {
-            Reveal.initialize({
-                width: 1200,
-                height: 700,
-                margin: 0.04,
-                minScale: 0.2,
-                maxScale: 2.0,
+        // Step 1: Show presenter form (or load from localStorage)
+        // Step 2: Once presenter config is ready, load the lecture
+        Presenter.init(function () {
+            // Load the lecture JSON, then initialize Reveal
+            SlideEngine.loadLecture(jsonUrl, function (data) {
+                // Initialize glossary from lecture meta (before Reveal so panel is ready)
+                if (data.meta && data.meta.glossary) {
+                    Glossary.init(data.meta.glossary);
+                }
 
-                controls: false,
-                progress: false,
-                center: false,
-                hash: true,
+                Reveal.initialize({
+                    width: 1200,
+                    height: 700,
+                    margin: 0.04,
+                    minScale: 0.2,
+                    maxScale: 2.0,
 
-                transition: 'slide',
-                transitionSpeed: 'default',
-                backgroundTransition: 'fade',
+                    controls: false,
+                    progress: false,
+                    center: false,
+                    hash: true,
 
-                plugins: [RevealNotes, RevealMarkdown, RevealHighlight]
-            }).then(function () {
-                // Initialize interactive widgets after Reveal is ready
-                SlideEngine.initWidgets();
-                SlideEngine.initVizOnSlideChange();
-                SlideEngine.initBadgeOverlay();
-                DockNav.init();
+                    transition: 'slide',
+                    transitionSpeed: 'default',
+                    backgroundTransition: 'fade',
+
+                    plugins: [RevealNotes, RevealMarkdown, RevealHighlight]
+                }).then(function () {
+                    // Initialize interactive widgets after Reveal is ready
+                    SlideEngine.initWidgets();
+                    SlideEngine.initVizOnSlideChange();
+                    SlideEngine.initBadgeOverlay();
+                    DockNav.init();
+
+                    // Glossary: scan slides for terms, add buttons, enable keyboard shortcut
+                    Glossary.scanSlides();
+                    Glossary.addButtons();
+                    Glossary.initKeyboard();
+
+                    // Presenter: enable P key to re-open config
+                    Presenter.initKeyboard();
+                });
             });
         });
     </script>

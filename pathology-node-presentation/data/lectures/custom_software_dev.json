@@ -1,0 +1,777 @@
+{
+  "meta": {
+    "title": "Custom Software Development in Pathology: Why We Build, What We Build, and How You Can Too",
+    "shortTitle": "Custom Software Development",
+    "presenter": "Peter Gershkovich, MD. MHA",
+    "institution": "Yale University School of Medicine",
+    "date": "2026",
+    "theme": {
+      "primary": "#1a2e44",
+      "secondary": "#e67e22",
+      "accent": "#27ae60"
+    },
+    "glossary": [
+      { "term": "LIS", "definition": "Laboratory Information System — the central software that manages specimen tracking, result reporting, billing, and compliance in a pathology lab." },
+      { "term": "EHR", "definition": "Electronic Health Record — the digital patient chart used hospital-wide; the LIS feeds results into the EHR." },
+      { "term": "PACS", "definition": "Picture Archiving and Communication System — stores and distributes medical images (radiology, pathology whole-slide images)." },
+      { "term": "HL7 FHIR", "definition": "Fast Healthcare Interoperability Resources — a modern standard for exchanging healthcare data between systems via web APIs." },
+      { "term": "HL7", "definition": "Health Level 7 — a set of standards for transferring clinical and administrative data between hospital information systems." },
+      { "term": "DICOM", "definition": "Digital Imaging and Communications in Medicine — the universal standard for storing and transmitting medical images." },
+      { "term": "API", "definition": "Application Programming Interface — a defined way for two software systems to talk to each other; like a menu that lists what you can ask a system to do." },
+      { "term": "REST", "definition": "Representational State Transfer — an architectural style for web APIs that uses standard HTTP methods (GET, POST, PUT, DELETE)." },
+      { "term": "IHC", "definition": "Immunohistochemistry — a staining technique that uses antibodies to detect specific proteins in tissue sections." },
+      { "term": "NGS", "definition": "Next-Generation Sequencing — high-throughput DNA/RNA sequencing used in molecular pathology for variant detection." },
+      { "term": "WSI", "definition": "Whole Slide Image — a high-resolution digital scan of a glass slide, often several gigabytes in size." },
+      { "term": "PHI", "definition": "Protected Health Information — any patient data covered by HIPAA privacy regulations." },
+      { "term": "HIPAA", "definition": "Health Insurance Portability and Accountability Act — U.S. federal law governing the privacy and security of patient health information." },
+      { "term": "URS", "definition": "User Requirements Specification — a document that defines what a system must do from the user's perspective, written in plain language." },
+      { "term": "SRS", "definition": "Software Requirements Specification — translates user requirements into precise, testable technical requirements." },
+      { "term": "DHF", "definition": "Design History File — the complete collection of documents that describe the design of a medical device/software, required by FDA." },
+      { "term": "QMS", "definition": "Quality Management System — the organizational framework of policies, processes, and records that ensures product quality and regulatory compliance." },
+      { "term": "IEC 62304", "definition": "International standard for medical device software lifecycle processes — defines how to develop, maintain, and retire software safely." },
+      { "term": "21 CFR 820", "definition": "FDA's Quality System Regulation — specifies current good manufacturing practice (cGMP) requirements for medical devices." },
+      { "term": "FMEA", "definition": "Failure Mode and Effects Analysis — a systematic method for identifying what could go wrong, how severe it would be, and how to prevent it." },
+      { "term": "RTM", "definition": "Requirements Traceability Matrix — a table linking every requirement to its test, proving nothing was missed." },
+      { "term": "Python", "definition": "A popular, readable programming language widely used in data science, automation, and bioinformatics." },
+      { "term": "JavaScript", "definition": "The programming language of the web — runs in every browser and powers interactive interfaces." },
+      { "term": "SQL", "definition": "Structured Query Language — the standard language for querying and managing data in relational databases." },
+      { "term": "Git", "definition": "A version control system that tracks every change to code, enabling collaboration and rollback to any previous state." },
+      { "term": "Docker", "definition": "A containerization platform that packages software with all its dependencies so it runs identically everywhere." },
+      { "term": "Node.js", "definition": "A runtime that lets JavaScript run outside the browser — commonly used to build web servers and command-line tools." },
+      { "term": "FastAPI", "definition": "A modern Python web framework for building APIs quickly, with automatic documentation and type checking." },
+      { "term": "Express", "definition": "A minimal Node.js web framework for building servers and APIs — the backbone of many web applications." },
+      { "term": "React", "definition": "A JavaScript library (by Meta) for building user interfaces from reusable components." },
+      { "term": "D3.js", "definition": "Data-Driven Documents — a JavaScript library for creating interactive data visualizations in the browser." },
+      { "term": "Socket.io", "definition": "A library enabling real-time, bidirectional communication between web clients and servers — used for live dashboards and alerts." },
+      { "term": "QuPath", "definition": "An open-source platform for digital pathology image analysis, supporting machine learning and whole-slide annotation." },
+      { "term": "Slideflow", "definition": "An open-source deep learning framework designed specifically for digital pathology and whole-slide image analysis." },
+      { "term": "Digital Slide Archive", "definition": "An open-source platform (Emory) for managing, visualizing, and annotating whole-slide images at scale." },
+      { "term": "MONAI", "definition": "Medical Open Network for Artificial Intelligence — an open-source framework for deep learning in medical imaging." },
+      { "term": "ClinVar", "definition": "An NCBI database of genomic variants and their relationship to human disease — essential for molecular pathology reporting." },
+      { "term": "Agile", "definition": "A software development methodology emphasizing iterative delivery, frequent feedback, and adaptation — contrast with waterfall." },
+      { "term": "waterfall", "definition": "A traditional development model where phases (design → build → test → deploy) happen sequentially with no overlap." },
+      { "term": "DevSecOps", "definition": "Development + Security + Operations — integrating security practices into every phase of the software development lifecycle." },
+      { "term": "XSS", "definition": "Cross-Site Scripting — a web security vulnerability where attackers inject malicious scripts into pages viewed by other users." },
+      { "term": "CAP", "definition": "College of American Pathologists — the organization that accredits pathology laboratories in the U.S." },
+      { "term": "CMS", "definition": "Centers for Medicare & Medicaid Services — the federal agency that regulates clinical laboratories under CLIA." },
+      { "term": "FDA", "definition": "Food and Drug Administration — the U.S. agency that regulates medical devices, including clinical software." },
+      { "term": "Reveal.js", "definition": "An open-source HTML presentation framework — this lecture is built with it." },
+      { "term": "JSON", "definition": "JavaScript Object Notation — a lightweight, human-readable data format used to store and exchange structured data." },
+      { "term": "PyTorch", "definition": "An open-source machine learning framework (by Meta) widely used for deep learning research and production." },
+      { "term": "MVP", "definition": "Minimum Viable Product — the simplest version of a tool that solves the core problem, used to get early feedback." },
+      { "term": "DOM", "definition": "Document Object Model — the browser's internal representation of a web page as a tree of elements that JavaScript can manipulate." },
+      { "term": "npm", "definition": "Node Package Manager — a tool for installing, sharing, and managing JavaScript libraries and dependencies." },
+      { "term": "functionality gap", "definition": "A workflow need that is technically attainable but absent from vendor software — the central concept of this lecture (Gershkovich & Sinard, 2015)." },
+      { "term": "traceability", "definition": "The ability to link every requirement to its implementation and test — proving that nothing was missed and everything was verified." },
+      { "term": "regression tests", "definition": "Automated tests that re-run after every code change to ensure new work hasn't broken existing functionality." },
+      { "term": "edge cases", "definition": "Unusual or extreme inputs that could cause unexpected behavior — critical to test in clinical software." },
+      { "term": "computational pathology", "definition": "The application of computational methods (AI, image analysis, data mining) to pathology diagnosis and research." },
+      { "term": "deep learning", "definition": "A subset of machine learning using multi-layered neural networks — powers most modern image recognition and language models." },
+      { "term": "hallucinated logic", "definition": "When an AI generates code that looks correct but contains subtle logical errors — a key risk of AI-assisted development." },
+      { "term": "prompt drift", "definition": "When an AI's behavior changes unpredictably across sessions or model updates, producing inconsistent outputs over time." },
+      { "term": "Copilot", "definition": "GitHub Copilot — an AI coding assistant (by GitHub/OpenAI) that suggests code completions in real time." },
+      { "term": "Cursor", "definition": "An AI-powered code editor that integrates language models directly into the development workflow." },
+      { "term": "Claude", "definition": "An AI assistant by Anthropic — used in this lecture as an example of AI-assisted code generation." },
+      { "term": "synoptic template", "definition": "A structured reporting format for pathology cases (e.g., cancer protocols) with predefined fields ensuring completeness." }
+    ]
+  },
+  "slides": [
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "zoom",
+      "title": "Custom Software Development in Pathology",
+      "subtitle": "Why We Build, What We Build, and How You Can Too",
+      "presenter": "Peter Gershkovich, MD. MHA",
+      "institution": "Yale University School of Medicine",
+      "date": "2026"
+    },
+
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter's independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "objectives",
+      "type": "content",
+      "transition": "fade",
+      "title": "Learning Objectives",
+      "numberedItems": [
+        "Articulate <em>why</em> pathology labs build custom software and the evidence supporting it",
+        "Identify workflow gaps that commercial systems cannot address and evaluate Buy vs. Build using a structured framework",
+        "Explain an AI-assisted development workflow for clinical environments: <strong>spec → generate → test → review → deploy</strong>",
+        "Identify the clinical-grade artifacts that make software defensible: URS, DHF, risk analysis, traceability, automated tests, security policy",
+        "Recognize what <em>you</em> can do — even without writing code — to drive change in your lab"
+      ]
+    },
+
+    {
+      "id": "provocative-opener",
+      "type": "content",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "The Functionality Gap: What Your LIS Wasn't Designed to Do",
+      "bullets": [
+        "Your LIS was designed for billing and compliance — not for <em>your</em> clinical workflow",
+        "When the technology is attainable but absent from the LIS, you get workarounds — and <strong>workarounds are where errors live</strong> (<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard, Adv Anat Pathol 2015</a>)",
+        "<strong>50% of labs</strong> report interoperability as their biggest obstacle (<a href='https://pubmed.ncbi.nlm.nih.gov/30564059/' target='_blank'>Lukić, J Med Biochem 2017</a>)",
+        "Today: we can close many gaps quickly using AI-assisted development — <strong>without giving up validation</strong>. We'll prove it."
+      ],
+      "takeaway": {
+        "text": "A 'functionality gap' = important + technically attainable + absent from vendor (<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard, 2015</a>). LIS solves the general case; your lab is a specific case.",
+        "comment": "This isn't anti-vendor. Vendors build essential infrastructure. But they can't know that your frozen section service needs a real-time OR notification, or that your molecular team needs a custom NGS reporting pipeline. That gap is where custom software lives."
+      }
+    },
+
+    {
+      "id": "poll-frustration",
+      "type": "poll",
+      "transition": "fade",
+      "title": "Poll: What Frustrates You Most?",
+      "prompt": "Which workflow gap causes the most friction in your daily practice?",
+      "options": [
+        "Case assembly / missing slides or reports",
+        "Alert fatigue or missing critical notifications",
+        "Clunky reporting (synoptic templates, addenda)",
+        "Poor integration between systems (LIS, PACS, EHR)",
+        "Manual data entry / repetitive tasks",
+        "Lack of real-time dashboards or analytics",
+        "Communication gaps (OR, clinicians, reference labs)",
+        "Something else entirely"
+      ],
+      "note": "We'll design solutions for the top pain points later in this lecture."
+    },
+
+    {
+      "id": "case-ihc-control",
+      "type": "micro-case",
+      "transition": "fade",
+      "title": "Case 1: The Positive Control You Can't See",
+      "scenario": "You're signing out an IHC case in your office — a quarter mile from the histology lab. The CK7 stain looks weak. Was it the tissue or the reagent? The positive control would tell you, but it's one physical slide shared across the entire staining batch. It's somewhere in the lab. Nobody digitized it. The LIS doesn't even know it exists — positive controls aren't linked to cases, they're linked to <em>batches</em>. <strong>How do you verify stain validity without leaving your desk?</strong>",
+      "options": [
+        "A. Walk to the lab, find the batch, pull the control slide, walk back",
+        "B. Call the histotech and ask them to check it for you",
+        "C. Digitize the positive control and link it to the batch in software",
+        "D. Trust the stain and sign it out — the lab would have flagged a failure"
+      ],
+      "discussion": [
+        "No commercial LIS associates positive controls with staining batches — this functionality simply does not exist",
+        "One positive control validates an entire batch: if it works, every slide in that batch is confirmed",
+        "At Yale, we built custom software that creates staining batches, scans positive controls, and links them digitally — pathologists can review controls from their desk",
+        "This is unique in the country — a real 'functionality gap' that no vendor has addressed (<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard, 2015</a>)"
+      ],
+      "discussionFrame": "This isn't hypothetical — we solved this at Yale because no vendor would. Custom software turned a daily frustration into a one-click verification."
+    },
+
+    {
+      "id": "case-ngs",
+      "type": "micro-case",
+      "transition": "fade",
+      "title": "Case 2: The NGS Report That Took 47 Clicks",
+      "scenario": "A molecular pathologist receives NGS results from an external reference lab. To create the final report she must: open the LIS, find the case, open the PDF, cross-reference the variant list against ClinVar, check institutional guidelines, copy-paste into a synoptic template, manually format, and sign out. <strong>47 clicks. 22 minutes. Every. Single. Case.</strong>",
+      "options": [
+        "A. This is fine — it ensures accuracy through manual review",
+        "B. An API integration could auto-populate structured data from the reference lab",
+        "C. A custom tool could pre-populate variants, flag actionable ones, and draft the report",
+        "D. Wait for the LIS vendor to fix this (estimated: 2-3 years)"
+      ],
+      "discussion": [
+        "Manual transcription introduces errors — it doesn't prevent them",
+        "HL7/FHIR-based integrations can pull structured variant data directly",
+        "Yale's TQuest platform links tumor genetic defects to therapeutic options automatically",
+        "Custom tools can reduce report generation from 22 minutes to under 5"
+      ],
+      "discussionFrame": "The question is whether you value your molecular pathologists' time at $0/hour."
+    },
+
+    {
+      "id": "seven-options",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "framework",
+      "title": "When You Hit a Gap: The Seven Options",
+      "subtitle": "From <a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard (2015)</a> — a decision framework for closing functionality gaps",
+      "vizType": "seven-options-ladder",
+      "takeaway": {
+        "text": "Most labs default to options 1–3. The labs that transform choose 5–7.",
+        "comment": "Ignoring the gap or patching manually is the path of least resistance — but it compounds. Every manual workaround is a future error waiting to happen. The decision to build or integrate is a decision to invest in your lab's future."
+      }
+    },
+
+    {
+      "id": "poll-buyvsbuild",
+      "type": "poll",
+      "transition": "fade",
+      "title": "The Great Debate: Buy vs. Build",
+      "prompt": "When your lab identifies a critical workflow gap, what should you do?",
+      "options": [
+        "Always buy commercial — building is too risky",
+        "Buy first, build only if the vendor can't deliver",
+        "Evaluate case by case — depends on the gap",
+        "Build first — you know your workflow better than any vendor",
+        "Use open-source tools and customize them"
+      ],
+      "note": "There's no single right answer — but the evidence might surprise you."
+    },
+
+    {
+      "id": "evidence-build",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "evidence",
+      "bgColor": "#0f172a",
+      "title": "The Evidence for Building",
+      "subtitle": "What the literature says about custom software development in pathology",
+      "cards": [
+        { "icon": "💰", "label": "Annual Vendor Cost", "value": "22–25%", "description": "of purchase price — every year, forever (<a href='https://pubmed.ncbi.nlm.nih.gov/23372985/' target='_blank'>Sinard & Gershkovich, 2012</a>)", "accentColor": "#ef4444" },
+        { "icon": "📈", "label": "5-Year Savings", "value": "$1.3M", "description": "from digital pathology implementation (<a href='https://pubmed.ncbi.nlm.nih.gov/31173528/' target='_blank'>Hanna et al., 2019</a>)", "accentColor": "#22c55e" },
+        { "icon": "🧬", "label": "AI Models Deployed", "value": "16", "description": "deep learning models integrated into LIS via open-source framework (<a href='https://genomemedicine.biomedcentral.com/articles/10.1186/s13073-025-01484-y' target='_blank'>Genome Medicine, 2025</a>)", "accentColor": "#3b82f6" },
+        { "icon": "⏱️", "label": "Vendor Release Cycle", "value": "12–18mo", "description": "vs. days for custom — when regulations or assays change, agility wins", "accentColor": "#f59e0b" },
+        { "icon": "🏥", "label": "Large System Projection", "value": "$12.4M", "description": "5-year savings for 219K annual accessions (<a href='https://pubmed.ncbi.nlm.nih.gov/31173528/' target='_blank'>Hanna et al.</a>)", "accentColor": "#8b5cf6" },
+        { "icon": "🔬", "label": "Integration Gap", "value": "50%", "description": "of labs report interoperability as biggest obstacle (<a href='https://pubmed.ncbi.nlm.nih.gov/30564059/' target='_blank'>Lukić, 2017</a>)", "accentColor": "#06b6d4" }
+      ],
+      "takeaway": {
+        "text": "The ROI of custom development is not speculative — it is documented, measurable, and reproducible.",
+        "comment": "The Gershkovich & Sinard 2015 paper (Adv Anat Pathol) formalized the 'functionality gap' concept and the 7-option framework. The 2012 paper (J Pathol Inform) remains the most comprehensive implementation analysis. Since then, open-source tooling has dramatically reduced the barrier to entry."
+      }
+    },
+
+    {
+      "id": "cost-comparison",
+      "type": "visualization",
+      "transition": "slide",
+      "badge": "evidence",
+      "title": "Cost Reality Check: Vendor vs. Custom Over Time",
+      "subtitle": "Based on <a href='https://pubmed.ncbi.nlm.nih.gov/23372985/' target='_blank'>Sinard & Gershkovich (2012)</a> — annual support at 22–25% of purchase price compounds fast",
+      "vizType": "cost-comparison",
+      "vizConfig": {
+        "vendorInitial": 200,
+        "vendorAnnualPct": 0.23,
+        "customInitial": 350,
+        "customAnnualPct": 0.05,
+        "years": 10,
+        "breakEvenNote": "Custom becomes cheaper by year 4–5"
+      },
+      "takeaway": {
+        "text": "The breakeven point for custom vs. vendor is typically 4–5 years — and the gap widens every year after.",
+        "comment": "These are conservative estimates. The real advantage of custom development is not just cost — it's agility. When a new assay launches or a regulation changes, you can ship an update in days, not quarters."
+      }
+    },
+
+    {
+      "id": "culture-of-dev",
+      "type": "two-column",
+      "transition": "fade",
+      "title": "The Culture of Bespoke Development",
+      "left": {
+        "heading": "What Makes It Work",
+        "bullets": [
+          "<strong>Domain expertise:</strong> Pathologists who understand code, or coders who understand pathology",
+          "<strong>Small teams:</strong> 1–2 developers with clinical domain knowledge (<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard, 2015</a>)",
+          "<strong>Iterative process:</strong> Ship small, get feedback, iterate — not waterfall",
+          "<strong>Institutional support:</strong> Leadership that sees informatics as strategic, not overhead"
+        ]
+      },
+      "right": {
+        "heading": "What Kills It",
+        "highlight": true,
+        "bullets": [
+          "<strong>\"We're not a software company\"</strong> — the most dangerous myth in lab medicine",
+          "<strong>No dedicated time:</strong> Informatics as a side project never works",
+          "<strong>Vendor lock-in mentality:</strong> \"Our vendor will fix it eventually\"",
+          "<strong>Fear of validation:</strong> Custom ≠ unvalidated — same QA process applies"
+        ]
+      },
+      "takeaway": {
+        "text": "Every lab that builds custom software started with one person who saw a gap and refused to ignore it."
+      }
+    },
+
+    {
+      "id": "tech-stack",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "technical",
+      "title": "The Modern Tech Stack: What Powers Custom Tools",
+      "subtitle": "You don't need to master all of this — but knowing the layers helps you communicate with developers",
+      "vizType": "tech-stack-pyramid",
+      "takeaway": {
+        "text": "The stack is layered so you can contribute at any level — from specifying requirements to writing code.",
+        "comment": "Most impactful contributions from pathologists are at the top layers: defining requirements, designing interfaces, and testing with real clinical scenarios. You don't need to understand TCP/IP to build a frozen section alert system."
+      }
+    },
+
+    {
+      "id": "what-is-code",
+      "type": "interactive-list",
+      "transition": "fade",
+      "badge": "technical",
+      "darkBg": true,
+      "title": "What Is Code, Really?",
+      "epigraph": {
+        "text": "If you can write a clinical protocol, you can reason about code. The syntax is the easy part.",
+        "attribution": "The mindset shift"
+      },
+      "layout": "two-column",
+      "items": [
+        { "number": 1, "question": "Instructions for a tireless machine", "detail": "A protocol says: 'If frozen section slide is ready and no pathologist has acknowledged in 10 min, page the attending.' Code says the same thing — but executes it every time, without fatigue or forgetting." },
+        { "number": 2, "question": "Python — the lingua franca", "detail": "Readable, powerful, dominant in data science and AI. Most pathology informatics tools are built in Python. If you learn one language, learn this one." },
+        { "number": 3, "question": "JavaScript — the browser language", "detail": "Powers every web application including this presentation. Real-time dashboards, interactive visualizations, clinical tools that run in any browser." },
+        { "number": 4, "question": "SQL — talk to any database", "detail": "One line of SQL can answer questions your LIS reporting module can't. 'Show me average TAT by case type for the last 6 months' — that's one query." },
+        { "number": 5, "question": "APIs — the universal connector", "detail": "REST APIs let any two systems talk to each other. Your LIS, your PACS, your EHR, your custom dashboard — all connected through standardized interfaces." },
+        { "number": 6, "question": "AI handles the syntax now", "detail": "Claude, Copilot, Cursor — describe what you want in plain English, AI generates working code. The bottleneck is no longer knowing a language. It's understanding the problem deeply enough to describe it." }
+      ],
+      "takeaway": {
+        "text": "You already think algorithmically every time you work through a differential. Code is just a different notation for the same logical reasoning."
+      }
+    },
+
+    {
+      "id": "snippets-demo",
+      "type": "snippets",
+      "transition": "fade",
+      "title": "Code in Action: From Problem to Solution",
+      "snippets": [
+        "<strong>Python — Query your LIS database:</strong><br><code style='font-size:0.7em'>cases = db.query(\"SELECT * FROM frozen_sections WHERE status='pending' AND elapsed_min > 10\")</code>",
+        "<strong>JavaScript — Real-time dashboard:</strong><br><code style='font-size:0.7em'>socket.on('new-frozen', (data) => { addToBoard(data); startTimer(data.caseId); })</code>",
+        "<strong>REST API — Connect any two systems:</strong><br><code style='font-size:0.7em'>GET /api/cases/pending → [{caseId: 'FS-2026-001', elapsed: '12m', surgeon: 'Dr. Smith'}]</code>",
+        "<strong>SQL — Find your slowest workflows:</strong><br><code style='font-size:0.7em'>SELECT avg(tat_hours) as avg_tat, case_type FROM cases GROUP BY case_type ORDER BY avg_tat DESC</code>"
+      ],
+      "answers": [
+        "This single line queries all frozen sections that have been pending more than 10 minutes. In a custom tool, this drives an alert system. In a vendor LIS, this query might not even be exposed.",
+        "Socket.io enables real-time push — when a new frozen section enters the system, every connected dashboard updates instantly. No polling, no refresh, no delay.",
+        "REST APIs are the universal language of system integration. This endpoint could feed a mobile app, a wall-mounted display, or a pager system — all from the same data source.",
+        "This finds your bottlenecks. Which case types have the longest turnaround? Where should you focus automation? One query, infinite insight."
+      ],
+      "prompt": "Click each card to see what it does and why it matters.",
+      "goal": "Goal: Show that powerful clinical tools are built from simple, readable building blocks."
+    },
+
+    {
+      "id": "open-source-toolkit",
+      "type": "comparison",
+      "transition": "fade",
+      "title": "The Open-Source Toolkit: Your Starting Arsenal",
+      "left": {
+        "heading": "Image & AI Tools",
+        "style": "highlight-left",
+        "bullets": [
+          "<strong>QuPath</strong> — Quantitative pathology, cell counting, TIL analysis",
+          "<strong>Slideflow</strong> — Deep learning for digital pathology (Python, GPU)",
+          "<strong>Digital Slide Archive</strong> — WSI management with REST APIs",
+          "<strong>MONAI</strong> — Medical imaging AI framework (PyTorch)"
+        ]
+      },
+      "right": {
+        "heading": "Infrastructure & Integration",
+        "style": "highlight-right",
+        "bullets": [
+          "<strong>Python + FastAPI</strong> — Build APIs and web services in hours",
+          "<strong>Node.js + Express</strong> — Real-time apps (like this presentation!)",
+          "<strong>Docker</strong> — Package and deploy anywhere, reproducibly",
+          "<strong>HL7 FHIR</strong> — Standard for healthcare data exchange"
+        ]
+      },
+      "takeaway": {
+        "text": "Every tool listed here is free, open-source, and used in production at major academic medical centers."
+      }
+    },
+
+    {
+      "id": "this-presentation",
+      "type": "content",
+      "transition": "fade",
+      "badge": "meta",
+      "title": "Meta-Moment: This Lecture Is the Proof",
+      "subtitle": "Everything you're looking at right now was built with the same tools we're teaching.",
+      "bullets": [
+        "This presentation is <strong>not PowerPoint</strong> — it's a web application (Reveal.js + D3.js + Node.js)",
+        "Live polls use <strong>Socket.io</strong> for real-time voting from your phones",
+        "Every visualization is <strong>generated from data</strong>, not drawn by hand",
+        "The entire lecture is a <strong>single JSON file</strong> — change the data, change the slides",
+        "Platform development time: <strong>~2 weeks</strong>. Reusable for every future lecture."
+      ],
+      "takeaway": {
+        "text": "Every element is programmable, data-driven, and interactive — that's what 'full expressive power of code' means.",
+        "comment": "A PowerPoint cannot have live audience polling with QR codes, real-time D3 visualizations that animate on entry, or a server that processes audience input. This can."
+      }
+    },
+
+    {
+      "id": "ai-era-thesis",
+      "type": "content",
+      "transition": "convex",
+      "badge": "framework",
+      "title": "The AI Shift: The Bottleneck Is No Longer Coding",
+      "subtitle": "AI coding assistants (Claude, Copilot, Cursor) generate working code from natural language. So what changed?",
+      "bullets": [
+        "<strong>AI makes scaffolding and glue code cheap.</strong> UI layouts, event handlers, boilerplate — generated in minutes, not days.",
+        "The scarce resource is now <strong>domain clarity</strong>: requirements, edge cases, failure modes. <em>You</em> have that.",
+        "<strong>Clinical-grade is not slower</strong> — it's testable, auditable, and defensible.",
+        "Safety comes from <strong>artifacts</strong>: URS/SRS, tests, traceability, security posture — not from writing every line by hand."
+      ],
+      "takeaway": {
+        "text": "AI speeds implementation. Safety comes from artifacts. We'll prove both right now with a real app built this way.",
+        "comment": "Five years ago, a frozen section dashboard required a dev team. Today, a motivated resident with Claude can prototype it in a weekend. But the prototype only becomes clinical-grade when you add tests, traceability, and QMS docs."
+      }
+    },
+
+    {
+      "id": "mdc-as-proof",
+      "type": "content",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "Tessera/MDC: Small App, Complete System",
+      "subtitle": "A manual differential counter — rebuilt from a broken legacy app in a single AI-assisted session.",
+      "bullets": [
+        "<strong>Keyboard-first counting</strong> — undo, thresholds, comments, templates, clipboard, session history",
+        "<strong>All data stays in the browser</strong> — no server-side patient data, sessionStorage only",
+        "<strong>Zero framework dependencies</strong> — vanilla JS, tests use Node built-in runner, no npm install for testing",
+        "Complete <strong>QMS/DHF documentation</strong>: URS (47 requirements), SRS (88 specs), Risk Analysis, Traceability Matrix"
+      ],
+      "takeaway": {
+        "text": "The code works AND it's defensible. 146 automated tests, 10 QMS documents, 100% requirements traceability.",
+        "comment": "The key lesson: the app itself was correct. The developer experience around it was initially broken — wrong tooling instructions, unnecessary Python dependency. This is a common real-world pattern: the code works, but nobody can run it because the setup instructions are wrong. Test your own setup instructions."
+      }
+    },
+
+    {
+      "id": "ai-assisted-pipeline-clinical",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "AI-Assisted Pipeline (Clinical-Grade)",
+      "left": {
+        "heading": "Fast Path (AI Helps Here)",
+        "bullets": [
+          "Generate UI scaffold and layout",
+          "Wire events, handlers, state management",
+          "Generate test skeletons from requirements",
+          "Draft QMS documentation structure",
+          "Debug and fix tooling/build issues"
+        ]
+      },
+      "right": {
+        "heading": "Clinical Control (Humans Own)",
+        "highlight": true,
+        "bullets": [
+          "<strong>URS:</strong> what must be true clinically",
+          "<strong>SRS:</strong> testable system behavior",
+          "<strong>Risk analysis</strong> + mitigations (FMEA)",
+          "<strong>Verification vectors</strong> + regression tests",
+          "<strong>Design direction</strong> and domain decisions"
+        ]
+      },
+      "takeaway": {
+        "text": "AI was a full-stack development partner on Tessera. The human provided clinical domain expertise and design direction. AI handled execution at scale."
+      }
+    },
+
+    {
+      "id": "ai-must-not-do",
+      "type": "content",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "What AI Must NOT Do in Clinical Software",
+      "bullets": [
+        "<strong>No autonomous clinical decisions</strong> — MDC is a counting aid; the human identifies cells. AI never diagnoses.",
+        "<strong>No PHI in prompts or bug reports</strong> — per security + support policies, patient data never enters AI context",
+        "<strong>No hidden transformations</strong> — every calculation, every state change must be testable and reviewable",
+        "<strong>No unverified outputs in production</strong> — AI-generated code is reviewed, tested, and traced to requirements before deployment"
+      ],
+      "takeaway": {
+        "text": "AI is a development tool, not a clinical decision-maker. The safety envelope is locked by humans + automated tests.",
+        "comment": "MDC's README explicitly states: 'This is a counting aid, not a diagnostic system. All cell identification is performed by the human operator.' That boundary is non-negotiable."
+      }
+    },
+
+    {
+      "id": "clinical-grade-artifacts-mdc",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "evidence",
+      "bgColor": "#0f172a",
+      "title": "Clinical-Grade Artifacts (Tessera Has Them)",
+      "subtitle": "What makes software defensible — every artifact exists in the public repo",
+      "cards": [
+        { "icon": "📋", "label": "QMS/DHF", "value": "10 docs", "description": "URS, SRS, SAD, SDD, RA/FMEA, TP, VV, RTM, SOP, TR — per 21 CFR 820 / IEC 62304", "accentColor": "#3b82f6" },
+        { "icon": "🧪", "label": "Automated Tests", "value": "146", "description": "5 test suites, 0 npm dependencies, 100% pass rate in 78ms", "accentColor": "#22c55e" },
+        { "icon": "🔗", "label": "Traceability", "value": "100%", "description": "Every test → SRS requirement → FMEA hazard → VV protocol vector", "accentColor": "#f59e0b" },
+        { "icon": "⚙️", "label": "Configuration", "value": "JSON", "description": "Cell types, keys, templates, thresholds — all in templates.json, not hard-coded", "accentColor": "#8b5cf6" },
+        { "icon": "🔒", "label": "Security", "value": "By Design", "description": "No server-side data, XSS escaping, responsible disclosure policy", "accentColor": "#ef4444" },
+        { "icon": "📖", "label": "Support", "value": "No-PHI", "description": "Issue templates enforce zero patient data in bug reports", "accentColor": "#06b6d4" }
+      ],
+      "takeaway": {
+        "text": "Security posture is enforced by design choices like 'no server-side patient data' + responsible disclosure — not by paperwork alone."
+      }
+    },
+
+    {
+      "id": "how-to-run-mdc",
+      "type": "snippets",
+      "transition": "fade",
+      "badge": "technical",
+      "title": "Reproducibility Demo: Run + Test in Under a Minute",
+      "snippets": [
+        "<strong>Serve the app (zero dependencies):</strong><br><code style='font-size:0.8em'>npm run serve<br># → http://localhost:8089/</code>",
+        "<strong>Run all 146 tests:</strong><br><code style='font-size:0.8em'>npm test<br># or: node --test 'tests/*.test.js'</code>",
+        "<strong>What tests verify (5 suites):</strong><br><code style='font-size:0.7em'>01: Calculation engine (31)<br>02: Configuration (27)<br>03: HTML structure (36)<br>04: JS integrity/safety (37)<br>05: End-to-end data (15)</code>",
+        "<strong>Result:</strong><br><code style='font-size:0.8em'># tests 146 | # pass 146<br># fail 0 | duration 78ms</code>"
+      ],
+      "answers": [
+        "Built-in serve.js uses Node's native http module — no Express, no dependencies. The entire server is a single file. PORT=3000 npm run serve to change the port.",
+        "Node's built-in test runner means you can clone the repo and run tests immediately. No npm install for testing. This was a deliberate design choice: fewer dependencies = fewer things that can break.",
+        "Each suite targets a different layer: math correctness, config validity, DOM structure, safety mechanisms (keyboard guards, division-by-zero, XSS), and full clinical workflows with undo/correction.",
+        "146 tests in 78 milliseconds. 100% pass rate. Every test traces to an SRS requirement and an FMEA hazard. This is what 'clinical-grade' looks like in a public repo."
+      ],
+      "prompt": "Click each card for details on the test architecture.",
+      "goal": "Goal: Demonstrate that clinical-grade testing doesn't require complex infrastructure — just discipline."
+    },
+
+    {
+      "id": "urs-is-clinical-safety",
+      "type": "content",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "URS Is Patient Safety Made Explicit",
+      "subtitle": "47 user requirements, each with a clinical rationale. Here are six that protect patients:",
+      "numberedItems": [
+        "<strong>Case number required before counting</strong> (URS-001/004) — prevents results without specimen identity",
+        "<strong>Auto-clear on new case</strong> (URS-003/062) — prevents cross-contamination of counts between patients",
+        "<strong>Undo/decrement</strong> (URS-025) — supports real-time correction without restarting",
+        "<strong>Minimum count enforcement</strong> (URS-041/042) — warns when count is below clinical threshold (200 BM / 100 PB)",
+        "<strong>Copy-to-clipboard</strong> (URS-055) — formatted output ready for LIS, eliminating transcription errors",
+        "<strong>Reset confirmation</strong> (URS-061) — prevents accidental data loss mid-count"
+      ],
+      "takeaway": {
+        "text": "This is what AI cannot invent for you. Only domain experts can write requirements that protect patients.",
+        "comment": "Every URS item traces forward to SRS specs, FMEA hazards, and test cases. Bidirectional traceability means nothing is untested and nothing is untraceable. That's the definition of defensible software."
+      }
+    },
+
+    {
+      "id": "workshop-timer",
+      "type": "timer",
+      "transition": "convex",
+      "title": "Workshop: Design Your Own Solution",
+      "prompt": "Using Tessera/MDC as a model, design a clinical tool. In small groups (2-3), produce a 1-page spec. You have 5 minutes.",
+      "duration": 300,
+      "categories": [
+        "URS-style requirement list (5 items — each with a clinical rationale, like MDC's)",
+        "Failure modes (3 ways this could harm a patient or workflow)",
+        "Minimum tests (5 tests — at least 2 edge cases)",
+        "Data handling stance (what must never leave the device; no PHI in bug reports)",
+        "MVP boundary (what you will NOT build in v1 — scope discipline)"
+      ]
+    },
+
+    {
+      "id": "workshop-share",
+      "type": "poll",
+      "transition": "fade",
+      "title": "Share Your Solutions: What Would You Build?",
+      "prompt": "What type of tool did your group design?",
+      "options": [
+        "Real-time alerting / notification system",
+        "Dashboard / analytics display",
+        "Report generation / automation tool",
+        "System integration / data bridge",
+        "Quality assurance / safety check tool",
+        "Communication / coordination platform",
+        "AI-assisted diagnostic aid"
+      ],
+      "note": "Your spec should be good enough that an AI coding assistant can scaffold it. Let's hear from 2-3 groups."
+    },
+
+    {
+      "id": "validation-reality",
+      "type": "two-column",
+      "transition": "fade",
+      "title": "Addressing the Elephant: Validation & Compliance",
+      "left": {
+        "heading": "The Fear",
+        "bullets": [
+          "\"Custom software can't be validated\"",
+          "\"HIPAA makes custom development impossible\"",
+          "\"The FDA will shut us down\"",
+          "\"AI-generated code is untestable\""
+        ]
+      },
+      "right": {
+        "heading": "The Reality",
+        "highlight": true,
+        "bullets": [
+          "Custom software follows the <em>same</em> validation framework as vendor software (CAP LAP checklist)",
+          "HIPAA applies to <em>data handling</em>, not to who wrote the code — or what tool wrote it",
+          "Most clinical decision support tools are <strong>not</strong> FDA-regulated (21st Century Cures Act)",
+          "AI-assisted code is validated the same way: <strong>requirements → tests → traceability</strong>. MDC's 146 tests prove it."
+        ]
+      },
+      "takeaway": {
+        "text": "Validation is a process, not a barrier. The safety envelope is locked by regression tests — like MDC's 146-test suite.",
+        "comment": "From Gershkovich & Sinard (Adv Anat Pathol, 2015): gap ownership — the ability to control the pathology information infrastructure — is the key element of successfully closing functionality gaps. The validation process is well-defined and manageable."
+      }
+    },
+
+    {
+      "id": "ai-failure-modes",
+      "type": "content",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "AI Failure Modes (and How We Neutralize Them)",
+      "subtitle": "AI is powerful but fallible. Each failure mode has a concrete mitigation.",
+      "bullets": [
+        "<strong>Hallucinated logic</strong> → prevented by unit tests + code review against URS requirements",
+        "<strong>Prompt drift</strong> → prevented by versioned specs + regression suite that catches regressions automatically",
+        "<strong>Data leakage</strong> → prevented by 'no PHI in prompts/issues' policy, per MDC's security + support docs",
+        "<strong>Supply chain risk</strong> → minimized by 'zero npm dependencies for testing' and minimal overall deps"
+      ],
+      "takeaway": {
+        "text": "Every AI risk has a testable mitigation. The same QA rigor that validates vendor code validates AI-assisted code.",
+        "comment": "MDC deliberately chose zero-dependency vanilla JS — simpler to audit, deploy, and maintain. That's not anti-framework ideology; it's a risk-aware design decision for a clinical tool."
+      }
+    },
+
+    {
+      "id": "dev-lifecycle",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "framework",
+      "title": "The Development Pipeline: From Gap to Production",
+      "subtitle": "Watch ideas flow through the pipeline — each station transforms raw problems into deployed solutions.",
+      "vizType": "animated-pipeline",
+      "takeaway": {
+        "text": "Ship small, get feedback, iterate. The best clinical tools evolve through use — not through specification documents alone.",
+        "comment": "This is DevSecOps philosophy applied to lab medicine. Security and compliance are baked into every iteration, not bolted on at the end."
+      }
+    },
+
+    {
+      "id": "resident-roles",
+      "type": "content",
+      "transition": "fade",
+      "title": "Your Role: What Residents Can Do Right Now",
+      "numberedItems": [
+        "<strong>Spot gaps:</strong> Document workflow friction points — every complaint is a requirements document",
+        "<strong>Write functional specs:</strong> URS-style requirements with clinical rationales — this is the hardest and most valuable step",
+        "<strong>Prototype:</strong> Use AI assistants to scaffold from your spec — test the result against your requirements",
+        "<strong>Test:</strong> Be the clinical validator — no one knows the edge cases better than the person doing the work",
+        "<strong>Advocate:</strong> Present the gap, the solution, and the evidence to your leadership — informatics is a career path"
+      ],
+      "takeaway": {
+        "text": "You don't need to be a developer to drive custom software development. You need to be the person who understands the problem.",
+        "comment": "Rudolf et al. (2018) found that pathology informatics fellowship alumni fill diverse, high-impact roles: CMIO, Director of Pathology Informatics, industry leads. This is a growing career path with real demand."
+      }
+    },
+
+    {
+      "id": "resident-superpower-2026",
+      "type": "content",
+      "transition": "fade",
+      "badge": "meta",
+      "title": "Your New Leverage: You Can Ship Requirements, Not Code",
+      "bullets": [
+        "Write <strong>URS items like MDC's</strong> — case ID required, undo, thresholds, reset guard — each with a clinical rationale",
+        "Use <strong>AI to scaffold implementation and tests</strong> from your spec — the entire MDC was co-developed in a single session",
+        "Your job is the <strong>safety envelope</strong>: edge cases, failure modes, validation criteria",
+        "The arc: <strong>Understand → Analyze → Document → Build → Verify → Fix</strong>. Documentation isn't overhead — it's the blueprint."
+      ],
+      "takeaway": {
+        "text": "You can propose a 1-page spec, generate a scaffold with AI, and prove safety via tests + QMS documents. That's the new resident superpower."
+      }
+    },
+
+    {
+      "id": "career-paths",
+      "type": "content",
+      "transition": "fade",
+      "isOptional": true,
+      "title": "Career Paths in Pathology Informatics",
+      "subtitle": "<a href='https://pubmed.ncbi.nlm.nih.gov/29721362/' target='_blank'>Rudolf et al. (2018)</a>: Survey of 23 informatics fellowship alumni from 4 programs",
+      "bullets": [
+        "<strong>10/23</strong> — Director of Pathology Informatics (academic)",
+        "<strong>3/23</strong> — Chief Medical Informatics Officer (CMIO)",
+        "<strong>3/23</strong> — Industry roles (vendor, startup, consulting)",
+        "<strong>2/23</strong> — Informatics program director",
+        "<strong>Demand is growing:</strong> <a href='https://pubmed.ncbi.nlm.nih.gov/32284963/' target='_blank'>Maness et al. (2020)</a> showed informatics training improves communication, efficiency, and job effectiveness across all pathology roles"
+      ],
+      "takeaway": {
+        "text": "Pathology informatics is not a niche — it's a growing specialty with diverse, high-impact career opportunities."
+      }
+    },
+
+    {
+      "id": "reproducibility-warning",
+      "type": "content",
+      "transition": "fade",
+      "isOptional": true,
+      "badge": "evidence",
+      "title": "A Word of Caution: Reproducibility in Computational Pathology",
+      "subtitle": "<a href='https://pubmed.ncbi.nlm.nih.gov/37827448/' target='_blank'>Built to Last?</a> (Modern Pathology, 2023) — Analysis of 160 deep learning publications",
+      "bullets": [
+        "Only <strong>25%</strong> (41/160) made code publicly available",
+        "Of those, only <strong>49%</strong> released trained model weights",
+        "Only <strong>39%</strong> validated on an independent cohort",
+        "<strong>Lesson:</strong> If you build it, <em>document it</em>. Version control, reproducible environments, and open-source practices are not optional — they're professional standards."
+      ],
+      "takeaway": {
+        "text": "Build to last: version control, documentation, containerization, and validation are what separate a prototype from a production tool."
+      }
+    },
+
+    {
+      "id": "takeaways",
+      "type": "takeaways",
+      "transition": "convex",
+      "title": "Key Takeaways",
+      "items": [
+        "<strong>Your LIS has gaps</strong> — and that's not a failure, it's an opportunity. Every workflow friction point is a requirements document.",
+        "<strong>Custom software is evidence-based</strong> — cost-effective, faster to adapt, and proven at institutions like Yale for over a decade.",
+        "<strong>AI collapses build friction</strong> — but safety comes from artifacts: URS, tests, traceability, security posture. Tessera proves both.",
+        "<strong>You already have the hardest skill</strong> — domain expertise. AI handles the syntax. Your job is the safety envelope.",
+        "<strong>Start now:</strong> Spot a gap → write a 1-page URS → scaffold with AI → test → validate → deploy. Every meaningful tool starts with someone who understood the problem deeply."
+      ],
+      "cta": {
+        "label": "Your challenge:",
+        "text": "Before our next session, identify ONE workflow gap and write a 1-page URS with 5 requirements (each with a clinical rationale) and 3 failure modes. Bring it — we'll review them together."
+      }
+    },
+
+    {
+      "id": "references",
+      "type": "content",
+      "transition": "fade",
+      "isOptional": true,
+      "title": "Selected References",
+      "bullets": [
+        "Gershkovich P, Sinard JH. <em>Customizing Laboratory Information Systems: Closing the Functionality Gap.</em> Adv Anat Pathol. 2015;22(5):323-330. <a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>PubMed</a>",
+        "Sinard JH, Gershkovich P. <em>Custom software development for use in a clinical laboratory.</em> J Pathol Inform. 2012;3:44. <a href='https://pubmed.ncbi.nlm.nih.gov/23372985/' target='_blank'>PubMed</a>",
+        "Hanna M, Reuter V, et al. <em>Implementation of digital pathology offers clinical and operational increase in efficiency and cost savings.</em> Arch Pathol Lab Med. 2019. <a href='https://pubmed.ncbi.nlm.nih.gov/31173528/' target='_blank'>PubMed</a>",
+        "Sirintrapun SJ, Lopez AM. <em>Preparing for a computational pathology future.</em> Am J Clin Pathol. 2018. <a href='https://academic.oup.com/ajcp/article/149/5/369/4925838' target='_blank'>AJCP</a>",
+        "Maness HTD, et al. <em>Informatics training for pathology practice and research in the digital era.</em> Acad Pathol. 2020. <a href='https://pubmed.ncbi.nlm.nih.gov/32284963/' target='_blank'>PubMed</a>",
+        "Rudolf JW, et al. <em>Career paths of pathology informatics fellowship alumni.</em> J Pathol Inform. 2018. <a href='https://pubmed.ncbi.nlm.nih.gov/29721362/' target='_blank'>PubMed</a>",
+        "Lukić V. <em>Laboratory Information System — Where are we Today?</em> J Med Biochem. 2017;36(3):220-224. <a href='https://pubmed.ncbi.nlm.nih.gov/30564059/' target='_blank'>PubMed</a>",
+        "Genome Medicine. <em>Closing the gap in clinical adoption of computational pathology.</em> 2025. <a href='https://genomemedicine.biomedcentral.com/articles/10.1186/s13073-025-01484-y' target='_blank'>Full text</a>",
+        "<em>Built to last? Reproducibility of deep learning in computational pathology.</em> Mod Pathol. 2023. <a href='https://pubmed.ncbi.nlm.nih.gov/37827448/' target='_blank'>PubMed</a>",
+        "Gershkovich P. <em>Tessera/MDC: Manual Differential Counter.</em> AI-assisted clinical software development case study. 2026."
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions, Discussion & Live Demo",
+      "contact": "Peter Gershkovich, MD. MHA<br>Yale University School of Medicine<br>peter.gershkovich@yale.edu"
+    }
+  ]
+}
