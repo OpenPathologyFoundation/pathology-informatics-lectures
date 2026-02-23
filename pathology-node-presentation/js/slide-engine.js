@@ -550,21 +550,39 @@ var SlideEngine = (function () {
                         '<p>' + item.detail + '</p></div>';
                     tooltip.style.display = 'block';
 
-                    // Position near the item
-                    var rect = row.getBoundingClientRect();
-                    var slideRect = s.getBoundingClientRect();
-                    tooltip.style.left = (rect.right - slideRect.left + 12) + 'px';
-                    tooltip.style.top = (rect.top - slideRect.top - 10) + 'px';
+                    // Use offset-based coords (unaffected by Reveal transform)
+                    var rowTop = row.offsetTop + grid.offsetTop;
+                    var rowLeft = row.offsetLeft + grid.offsetLeft;
+                    var rowW = row.offsetWidth;
+                    var rowH = row.offsetHeight;
 
-                    // Clamp to viewport
+                    // Default: right of the item
+                    tooltip.style.left = (rowLeft + rowW + 12) + 'px';
+                    tooltip.style.top = rowTop + 'px';
+
+                    // Clamp within slide (1200×700 canvas)
                     requestAnimationFrame(function () {
-                        var tr = tooltip.getBoundingClientRect();
-                        if (tr.right > slideRect.right - 20) {
-                            tooltip.style.left = (rect.left - slideRect.left - tr.width - 12) + 'px';
+                        var tipW = tooltip.offsetWidth;
+                        var tipH = tooltip.offsetHeight;
+                        var slideW = s.offsetWidth || 1200;
+                        var slideH = s.offsetHeight || 700;
+
+                        var left = rowLeft + rowW + 12;
+                        var top = rowTop;
+
+                        // If overflows right, flip to left side
+                        if (left + tipW > slideW - 20) {
+                            left = rowLeft - tipW - 12;
                         }
-                        if (tr.bottom > slideRect.bottom - 20) {
-                            tooltip.style.top = (slideRect.bottom - slideRect.top - tr.height - 20) + 'px';
+                        // Clamp bottom
+                        if (top + tipH > slideH - 20) {
+                            top = slideH - tipH - 20;
                         }
+                        // Clamp top
+                        if (top < 10) top = 10;
+
+                        tooltip.style.left = left + 'px';
+                        tooltip.style.top = top + 'px';
                     });
                 });
 
