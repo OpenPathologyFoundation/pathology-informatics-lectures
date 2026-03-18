@@ -11,27 +11,59 @@
       "accent": "#C0392B"
     },
     "glossary": [
-      { "term": "DevSecOps", "definition": "Development + Security + Operations — integrating security practices into every phase of the software development lifecycle." },
-      { "term": "Keycloak", "definition": "An open-source identity and access management solution supporting SAML, OAuth 2.0, and OpenID Connect for enterprise single sign-on." },
-      { "term": "Meilisearch", "definition": "A lightweight, open-source search engine designed for fast, typo-tolerant full-text search with minimal configuration." },
-      { "term": "Elasticsearch", "definition": "A distributed, RESTful search and analytics engine built on Apache Lucene, widely used for log analytics and full-text search at scale." },
-      { "term": "Xenonym", "definition": "An open-source synthetic name generator that produces linguistically plausible names belonging to no real person — built for safe test data generation." },
-      { "term": "HIPAA", "definition": "Health Insurance Portability and Accountability Act — U.S. federal law governing the privacy and security of patient health information." },
-      { "term": "HL7", "definition": "Health Level 7 — a set of standards for transferring clinical and administrative data between hospital information systems." },
-      { "term": "FOSSA", "definition": "A software composition analysis tool that performs deep dependency analysis and exploitability scoring for open-source components." },
-      { "term": "CVE", "definition": "Common Vulnerabilities and Exposures — a standardized list of publicly known cybersecurity vulnerabilities." },
-      { "term": "Docker", "definition": "A containerization platform that packages software with all its dependencies so it runs identically everywhere." },
-      { "term": "JSON", "definition": "JavaScript Object Notation — a lightweight, human-readable data format used to store and exchange structured data." },
-      { "term": "Tufte", "definition": "Edward Tufte — Yale professor and information design pioneer who published influential critiques of PowerPoint's cognitive impact." },
-      { "term": "Epic", "definition": "A major electronic health record (EHR) vendor used by many large healthcare systems, including Yale." },
-      { "term": "Beaker", "definition": "Epic's laboratory information system module for managing clinical laboratory workflows." },
-      { "term": "SAML", "definition": "Security Assertion Markup Language — an XML-based standard for exchanging authentication and authorization data between parties." },
-      { "term": "OAuth", "definition": "An open standard for access delegation, commonly used for token-based authentication on the web." },
-      { "term": "OpenID Connect", "definition": "An identity layer on top of OAuth 2.0 that allows clients to verify user identity and obtain basic profile information." },
-      { "term": "LLM", "definition": "Large Language Model — an AI model trained on vast text corpora, capable of generating and analyzing natural language and code." },
-      { "term": "PR", "definition": "Pull Request — a method of submitting contributions to a codebase where changes are reviewed before being merged." },
-      { "term": "Svelte", "definition": "A modern JavaScript framework that compiles components into efficient vanilla JavaScript at build time." },
-      { "term": "React", "definition": "A JavaScript library (by Meta) for building user interfaces from reusable components." }
+      { "term": "AI", "definition": "Artificial Intelligence — in this context, large language models (LLMs) used as development assistants for code generation, design consultation, and review automation." },
+      { "term": "API", "definition": "Application Programming Interface — a defined set of rules that allows different software systems to communicate with each other." },
+      { "term": "AWS", "definition": "Amazon Web Services — a cloud computing platform providing on-demand infrastructure, used here to host the LLM powering code review." },
+      { "term": "Bauhaus", "definition": "A German art and design school (1919–1933) whose principles — form follows function, geometric clarity, no unnecessary decoration — inform the visual language of this presentation." },
+      { "term": "Beaker", "definition": "Epic's laboratory information system (LIS) module — a vintage system that serves a predominantly clerical function within health systems, managing specimen tracking, test ordering, and result reporting in clinical laboratories." },
+      { "term": "Biometric Authentication", "definition": "Identity verification using biological characteristics such as fingerprints, facial recognition, or iris scans — supported by modern identity platforms like Keycloak." },
+      { "term": "Bobby Tables", "definition": "A reference to the xkcd comic illustrating SQL injection — a security vulnerability where malicious database commands are embedded in user input (e.g., a name field containing 'DROP TABLE')." },
+      { "term": "Boilerplate", "definition": "Standardized, repetitive code that must be written to set up frameworks, configurations, or structures before any meaningful logic can be added." },
+      { "term": "Cognitive Load", "definition": "The total mental effort required to complete a task — in software development, the sum of remembering syntax, navigating frameworks, managing complexity, and making design decisions." },
+      { "term": "Containerization", "definition": "Packaging software with all its dependencies into isolated, portable units (containers) that run identically across environments — Docker is the most common platform." },
+      { "term": "CVE", "definition": "Common Vulnerabilities and Exposures — a standardized catalog of publicly known cybersecurity vulnerabilities, each assigned a unique identifier." },
+      { "term": "D3.js", "definition": "Data-Driven Documents — a JavaScript library for creating dynamic, interactive data visualizations in web browsers using SVG, HTML, and CSS." },
+      { "term": "Data Model", "definition": "The formal structure defining how data is organized, stored, and related — tables, fields, relationships, and constraints that form the blueprint of a database." },
+      { "term": "Dependency", "definition": "An external software library or component that your code relies on — dependencies can introduce security vulnerabilities or compatibility issues." },
+      { "term": "DevSecOps", "definition": "Development + Security + Operations — a practice that integrates security into every phase of the software development lifecycle, rather than treating it as a separate final step." },
+      { "term": "Diacritics", "definition": "Marks added to letters to indicate pronunciation — accents, umlauts, tildes, and cedillas (e.g., ü, č, ñ) that many software systems fail to handle correctly." },
+      { "term": "Docker", "definition": "A containerization platform that packages software with all its dependencies into portable containers, ensuring it runs identically on any machine." },
+      { "term": "EHR", "definition": "Electronic Health Record — a digital version of a patient's medical chart, maintained by healthcare providers across encounters and settings." },
+      { "term": "Elasticsearch", "definition": "A distributed, open-source search and analytics engine built on Apache Lucene — widely used for log analytics, monitoring, and full-text search at enterprise scale." },
+      { "term": "Epic", "definition": "A major electronic health record (EHR) vendor — a vintage system that serves a predominantly clerical function within health systems, managing patient records, scheduling, billing, and clinical documentation across large healthcare organizations including Yale." },
+      { "term": "FHIR", "definition": "Fast Healthcare Interoperability Resources — a modern HL7 standard for exchanging healthcare data electronically using web-based APIs (RESTful services)." },
+      { "term": "FOSSA", "definition": "A software composition analysis tool that scans project dependencies for open-source license compliance issues and known security vulnerabilities with exploitability scoring." },
+      { "term": "GitHub", "definition": "A web-based platform for version control and collaboration using Git — provides code hosting, pull request workflows, and audit trails for software development teams." },
+      { "term": "HIPAA", "definition": "Health Insurance Portability and Accountability Act — U.S. federal law governing the privacy and security of protected health information (PHI), with significant penalties for violations." },
+      { "term": "HL7", "definition": "Health Level 7 — a set of international standards for transferring clinical and administrative data between hospital information systems." },
+      { "term": "JSON", "definition": "JavaScript Object Notation — a lightweight, human-readable data format used to store and exchange structured data between systems and applications." },
+      { "term": "Keycloak", "definition": "An open-source identity and access management solution supporting SAML, OAuth 2.0, and OpenID Connect — provides enterprise single sign-on (SSO) without vendor lock-in." },
+      { "term": "LIS", "definition": "Laboratory Information System — software that manages clinical laboratory operations including specimen tracking, test ordering, result reporting, and quality control." },
+      { "term": "LLM", "definition": "Large Language Model — an AI system trained on vast text and code corpora, capable of generating natural language, writing code, and reasoning across domains." },
+      { "term": "Locale Handling", "definition": "Programming logic that correctly processes region-specific formats — dates, numbers, currencies, character encodings, and text direction that vary by country and language." },
+      { "term": "Malevich", "definition": "Kazimir Malevich (1879–1935) — Russian avant-garde artist who painted the Black Square (1915), which he called 'the zero point of painting' — the void before creation." },
+      { "term": "Meilisearch", "definition": "A lightweight, open-source search engine designed for fast, typo-tolerant full-text search with minimal configuration — an alternative to Elasticsearch for smaller-scale deployments." },
+      { "term": "METR", "definition": "Model Evaluation and Threat Research — an AI safety research organization that conducts rigorous studies measuring AI's impact on developer productivity." },
+      { "term": "Minard", "definition": "Charles Joseph Minard (1781–1870) — French civil engineer whose 1869 map of Napoleon's Russian campaign is considered one of the greatest statistical graphics ever drawn, encoding six variables in a single image." },
+      { "term": "Node.js", "definition": "A JavaScript runtime that allows JavaScript to run outside the browser — used here as the server platform for the presentation application." },
+      { "term": "OAuth", "definition": "An open standard for token-based access delegation — allows applications to access user data without exposing passwords." },
+      { "term": "Ontology", "definition": "A formal, structured representation of knowledge within a domain — defines concepts, categories, and the relationships between them (e.g., SNOMED CT in medicine)." },
+      { "term": "OpenID Connect", "definition": "An identity verification layer built on top of OAuth 2.0 — allows applications to confirm a user's identity and obtain basic profile information." },
+      { "term": "Phonemic", "definition": "Relating to phonemes — the smallest units of sound that distinguish one word from another in a language (e.g., the 'p' in 'pat' vs. the 'b' in 'bat')." },
+      { "term": "PR", "definition": "Pull Request — a formal proposal to merge code changes into a shared codebase, typically reviewed by peers before acceptance." },
+      { "term": "RCT", "definition": "Randomized Controlled Trial — a study design where participants are randomly assigned to treatment or control groups to measure causal effects — the gold standard in research methodology." },
+      { "term": "React", "definition": "A JavaScript library (by Meta) for building user interfaces from reusable, composable components." },
+      { "term": "Reveal.js", "definition": "An open-source HTML presentation framework that renders slides in a web browser — the engine powering this presentation instead of PowerPoint." },
+      { "term": "SAML", "definition": "Security Assertion Markup Language — an XML-based standard for exchanging authentication and authorization data between identity providers and service providers." },
+      { "term": "Schema", "definition": "The formal structure of a database or data format — defines tables, fields, data types, and validation rules that govern how data is stored and validated." },
+      { "term": "SQL Injection", "definition": "A security vulnerability where malicious database commands are inserted through user input fields — one of the most common and dangerous web application attacks." },
+      { "term": "SSO", "definition": "Single Sign-On — an authentication method allowing users to log in once and access multiple applications without re-entering credentials." },
+      { "term": "Svelte", "definition": "A modern JavaScript framework that compiles components into efficient vanilla JavaScript at build time, eliminating runtime overhead." },
+      { "term": "Syllabic Mixing", "definition": "A linguistic technique that combines syllable structures from multiple unrelated languages to generate names that sound plausible to human ears but belong to no real language or person." },
+      { "term": "Test Coverage", "definition": "The percentage of code paths exercised by automated tests — higher coverage means more code has been verified to work correctly under test conditions." },
+      { "term": "Tufte", "definition": "Edward Tufte — Yale professor emeritus and information design pioneer whose books (The Visual Display of Quantitative Information, 1983) established principles for data-rich, honest graphics and critiqued PowerPoint's cognitive limitations." },
+      { "term": "Version Control", "definition": "A system (typically Git) that tracks every change to source code over time, enabling collaboration, rollback, and audit trails for software development." },
+      { "term": "Xenonym", "definition": "An open-source synthetic name generator that produces linguistically plausible names belonging to no real person — built for safe, HIPAA-compliant test data generation using syllabic mixing across seven languages." }
     ]
   },
   "slides": [
@@ -66,28 +98,17 @@
       "title": "What We Build — The Operational Landscape",
       "subtitle": "REALM: Rapidly Evolving Agile Laboratory Modules — 19 years of systems across the continuum of care",
       "vizType": "realm-diagram",
-      "vizConfig": {},
-      "takeaway": {
-        "text": "This is not a slide. It is a live interactive systems map — the kind of information density that PowerPoint cannot express.",
-        "comment": "Pause on this. Let the audience explore it visually. Point out that systems span the continuum — they are not siloed. The colors encode status and role simultaneously. This is Tufte: multiple data streams in a single graphic."
-      }
+      "vizConfig": {}
     },
 
     {
       "id": "wrong-question",
-      "type": "content",
+      "type": "visualization",
       "transition": "fade",
-      "title": "The Wrong Question",
-      "bullets": [
-        "Most conversations about AI-assisted development ask: <strong><em style='text-decoration:line-through; opacity:0.5;'>What can AI build?</em></strong>",
-        "That is the wrong question.",
-        "The useful question: <strong>What does AI change about the act of building?</strong>"
-      ],
-      "fragments": true,
-      "takeaway": {
-        "text": "The capability is not the transformation. The transformation is what changes in the practice of building.",
-        "comment": "Let's try to recalibrate our thinking about the role of AI in development."
-      }
+      "title": "",
+      "subtitle": "",
+      "vizType": "wrong-question",
+      "speakerNotes": "Most conversations about AI-assisted development ask: What can AI build? That is the wrong question. The useful question is: What does AI change about the act of building? The capability is not the transformation. The transformation is what changes in the practice of building. Let's try to recalibrate our thinking about the role of AI in development."
     },
 
     {
@@ -99,7 +120,7 @@
       "vizConfig": {},
       "takeaway": {
         "text": "Most tool adoption runs in the opposite direction — we buy what's available and adapt our work to it. This talk is about a different mode.",
-        "comment": "The earliest clinical and laboratory systems were born exactly this way — pioneers automated their own workflows, not someone else's idea of a workflow. Read any early publication on hospital information systems and the pattern is transparent: clinicians built what they needed."
+        "comment": "The earliest clinical and laboratory systems emerged from exactly this principle. Pioneers automated their own workflows, not someone else’s idea of a workflow. In early publications on hospital information systems, the pattern is clear: clinicians built what they needed."
       }
     },
 
@@ -114,7 +135,7 @@
       "vizConfig": {},
       "takeaway": {
         "text": "Freeing up cognitive load is only valuable if you have something worth thinking about.",
-        "comment": "Think of every time you've looked up how to configure a Hibernate mapping you've configured forty times before. That look-up is not thinking. AI absorbs it. What remains — should remain — is the decision about whether Hibernate is the right tool at all. Sources: Microsoft Time Warp (2024), JetBrains DevEco 2025, METR RCT (2025 + Feb 2026 update) — see Sources slide."
+        "comment": "Think of every time you've looked up how to configure a Hibernate mapping you've configured forty times before. That look-up is not thinking. AI absorbs it. What remains (should remain) is the decision about whether Hibernate is the right tool at all. Sources: Microsoft Time Warp (2024), JetBrains DevEco 2025, METR RCT (2025 + Feb 2026 update) — see Sources slide."
       }
     },
 
@@ -150,42 +171,22 @@
 
     {
       "id": "domain-knowledge",
-      "type": "content",
+      "type": "visualization",
       "transition": "fade",
-      "badge": "debate",
-      "title": "Domain Knowledge Is Not Transferable",
-      "bullets": [
-        "<strong>AI doesn't know:</strong>",
-        "What a diagnostic clause means in surgical pathology",
-        "What the Hermes HL7 broker expects on the wire",
-        "Why the pre-analytical/analytical/post-analytical framework maps poorly onto anatomic pathology",
-        "Which Epic constraint will block your integration in 6 months",
-        "That knowledge lives in <strong>you</strong>. AI amplifies it. It cannot replace it.",
-        "The practitioner with deep domain knowledge and AI assistance is not slightly better than the one without AI. <strong>The gap is qualitative.</strong>"
-      ],
-      "takeaway": {
-        "text": "Domain knowledge just became more valuable, not less.",
-        "comment": "The pathology examples are intentional — they are specific, and they signal to the audience that this is a practitioner's perspective, not a vendor pitch."
-      }
+      "title": "",
+      "subtitle": "",
+      "vizType": "tacit-knowledge",
+      "speakerNotes": "AI can use codified knowledge: rules, dictionaries, ontologies, interface specifications, historical examples. It cannot fully inherit lived experience, tacit judgment, local workflow reality, or institutional memory. What matters in practice is often knowing which ambiguity is dangerous, which exception matters, and when a formally correct answer is operationally wrong. The transfer boundary on this slide is real — everything above it transfers to AI, everything below it does not. The expert's role doesn't disappear. It shifts toward formalization, supervision, and interpretation — they become the bridge spanning both zones. The practitioner with deep domain knowledge and AI assistance is not slightly better than the one without AI. The gap is qualitative."
     },
 
     {
       "id": "architectural-judgment",
-      "type": "content",
+      "type": "visualization",
       "transition": "fade",
-      "badge": "debate",
-      "title": "Architectural Judgment Remains Scarce",
-      "bullets": [
-        "AI accelerates <strong>implementation</strong>. AI does not clarify <strong>intent</strong>.",
-        "The decision about <em>what to build</em> — the right abstraction, the right data model, the right decomposition — is unchanged.",
-        "Vague requirements now produce working code that <strong>does the wrong thing</strong>.",
-        "Precision of thought is no longer optional.",
-        "The cost of poor architectural decisions does not go down with AI assistance. <strong>It scales.</strong>"
-      ],
-      "takeaway": {
-        "text": "AI makes the cost of a bad architecture decision scale. It doesn't eliminate it.",
-        "comment": "AI will produce correct, compiling, well-formatted code for the wrong problem. Faster than ever. If you don't know what you're building, AI will build the wrong thing at previously impossible speed."
-      }
+      "title": "",
+      "subtitle": "",
+      "vizType": "architectural-judgment",
+      "speakerNotes": "AI accelerates implementation. AI does not clarify intent. The decision about what to build — the right abstraction, the right data model, the right decomposition — is unchanged. Vague requirements now produce working code that does the wrong thing. Precision of thought is no longer optional. Look at the fork: same AI power on both paths. The left branch stays narrow — clear intent produces the right system at scale. The right branch widens — vague intent produces working code for the wrong problem, and the cost scales. The width IS the cost. AI will produce correct, compiling, well-formatted code for the wrong problem. Faster than ever. If you don't know what you're building, AI will build the wrong thing at previously impossible speed."
     },
 
     {
@@ -228,7 +229,7 @@
         "highlight": true,
         "bullets": [
           "AI-assisted Docker configuration: <strong>hours, not days</strong>",
-          "Not because AI configured it for you — because AI knew what configuration questions to answer",
+          "AI knew how to answer configuration questions",
           "You can now evaluate before you commit. <strong>That is architecturally new.</strong>"
         ]
       },
@@ -268,30 +269,19 @@
         "This is not a trivial problem. And it is the kind of problem where you would not historically think to consult a language model."
       ],
       "takeaway": {
-        "text": "Fake-sounding names are a different class of failure, not the same failure as real names.",
+        "text": "Obviously fake data tests almost nothing.",
         "comment": "The boring solution is to use obviously fake names — John Doe, Jane Smith. But that tests almost nothing, because real data is irregular, surprising, and occasionally adversarial."
       }
     },
 
     {
       "id": "syllabic-mixing",
-      "type": "content",
+      "type": "visualization",
       "transition": "fade",
-      "badge": "evidence",
-      "title": "The AI Conversation — Syllabic Mixing",
-      "subtitle": "AI as cross-domain design consultant — not code generator.",
-      "bullets": [
-        "<strong>The design challenge presented to AI:</strong> \"How do you generate names that feel linguistically plausible but are structurally foreign to any single language?\"",
-        "<strong>The solution it surfaced:</strong> syllabic mixing across seven languages",
-        "Take the phonemic and syllabic building blocks from 7 unrelated languages",
-        "Combine them according to each language's internal rules — consonant clusters, vowel harmony, stress patterns",
-        "<strong>Probability that the combination is a real name:</strong> vanishingly small",
-        "<strong>Probability that it sounds like a name to a human ear:</strong> high"
-      ],
-      "takeaway": {
-        "text": "The model didn't write the code. It found the field.",
-        "comment": "I did not search for this solution. I described the constraint and the model surfaced an approach from linguistics that I would not have reached independently. AI functioning as a cross-domain consultant."
-      }
+      "title": "",
+      "subtitle": "",
+      "vizType": "syllabic-mixing",
+      "speakerNotes": "The design challenge I presented to AI: How do you generate names that feel linguistically plausible but are structurally foreign to any single language? The solution it surfaced: syllabic mixing across seven languages. Take the phonemic and syllabic building blocks from Finnish, Georgian, Yoruba, Japanese, Welsh, Swahili, and Hungarian. Combine them according to each language's internal rules — consonant clusters, vowel harmony, stress patterns. The probability that the combination is a real name: vanishingly small. The probability that it sounds like a name to a human ear: high. I did not search for this solution. I described the constraint and the model surfaced an approach from computational linguistics that I would not have reached independently. The model didn't write the code. It found the field. This is AI functioning as a cross-domain consultant."
     },
 
     {
@@ -332,31 +322,16 @@
 
     {
       "id": "xenonym-synthesis",
-      "type": "two-column",
+      "type": "visualization",
       "transition": "fade",
-      "title": "What Xenonym Illustrates",
-      "left": {
-        "heading": "What Happened",
-        "bullets": [
-          "AI suggested syllabic mixing — a linguistic solution to a data problem",
-          "Nontra Null cases generated deliberately",
-          "Schema generalization emerged from the seed problem",
-          "Application is fully public — no sensitive data"
-        ]
-      },
-      "right": {
-        "heading": "Which Argument It Demonstrates",
-        "highlight": true,
-        "bullets": [
-          "The architectural horizon expands — AI knows domains you don't",
-          "Building block thinking — adversarial cases before you need them",
-          "Architectural judgment: recognizing when a solution is more general than the problem that produced it",
-          "<strong>Security by construction, not by restriction</strong>"
-        ]
-      },
+      "title": "",
+      "subtitle": "",
+      "vizType": "xenonym-synthesis",
+      "vizConfig": {},
+      "speakerNotes": "Xenonym is a supplementary tool — it only exists because AI made it feasible to build. It illustrates three things at once. First, the architectural horizon expanded: AI surfaced computational linguistics, a domain I would not have searched. Second, building block thinking: AI helped create systematic adversarial edge cases — Nontra Null, SQL injection names, diacritics — before production needs them. Third, architectural generalization: what started as a name generator became a flexible schema-driven system once we recognized the pattern was more general. The bottom of this slide shows the paradigm shift: system integrity achieved by construction — by generating and testing edge cases proactively — not by restricting inputs. This tool would not have existed without AI. That is the qualitative transformation: supplementary technologies that were never worth building now emerge naturally from the work.",
       "takeaway": {
-        "text": "Security by construction, not by restriction. That phrase carries us into the next section.",
-        "comment": "Xenonym exists because I needed safe test data. It was built with AI as a design partner, tested against adversarial inputs that AI helped identify, and deployed publicly precisely because it contains nothing sensitive."
+        "text": "AI qualitatively transformed the development of supplementary technologies. Tools that were never worth building now emerge naturally from the work.",
+        "comment": "Xenonym is not a functional production application — it is a supplementary tool that appeared only because AI collapsed the cost of building it. It is fully public because it helps broadly with safe systems design across a wide range of cases. The integrity-by-construction argument carries us into the next section."
       }
     },
 
@@ -465,7 +440,7 @@
       "transition": "fade",
       "badge": "framework",
       "title": "The Pattern: Every Liberation Has the Same Structure",
-      "subtitle": "Four constraints. Same structural collapse. AI changed the price.",
+      "subtitle": "Four constraints. In each case, the barrier was cost, not possibility.",
       "vizType": "liberation-pattern",
       "vizConfig": {},
       "takeaway": {

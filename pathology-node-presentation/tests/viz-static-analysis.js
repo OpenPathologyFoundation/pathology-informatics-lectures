@@ -304,9 +304,14 @@ vizSlides.forEach(s => {
                      body.includes("fill', '#0f172a") || body.includes("fill', '#1e293b");
     const baseBg = isDarkBg ? '#1e293b' : SLIDE_BG;
 
+    // Mixed-bg slides: some text lives on a local dark region (e.g. blankPage's black square)
+    const MIXED_BG_LIGHT_ON_DARK = { 'blankPage': ['#e5e7eb', '#cbd5e1', '#9ca3af'] };
+    const skipFills = MIXED_BG_LIGHT_ON_DARK[fnName] || [];
+
     let issueCount = 0;
     texts.forEach(t => {
         if (!t.fill || !t.fill.startsWith('#')) return;
+        if (skipFills.includes(t.fill)) return; // on local dark region, not slide bg
 
         // Large text threshold
         const isLarge = (t.fontSize && t.fontSize >= 18) ||

@@ -1960,15 +1960,15 @@ const VizLibrary = (function () {
         rightG.append('text').attr('x', rightX + panelW / 2).attr('y', panelY + panelH + 22)
             .attr('text-anchor', 'middle').attr('font-size', '11px')
             .attr('fill', '#374151').attr('font-weight', 700)
-            .text('The Unmarked Page');
+            .text('The Blank Page');
         rightG.append('text').attr('x', rightX + panelW / 2).attr('y', panelY + panelH + 38)
             .attr('text-anchor', 'middle').attr('font-size', '10px')
             .attr('fill', '#6b7280').attr('font-style', 'italic')
-            .text('"So many possibilities." — Stephen King');
+            .text('It is not empty;');
         rightG.append('text').attr('x', rightX + panelW / 2).attr('y', panelY + panelH + 54)
             .attr('text-anchor', 'middle').attr('font-size', '9px')
             .attr('fill', '#6b7280')
-            .text('Beautiful — until you must be the one to mark it.');
+            .text('it is crowded with unrealized beginnings.');
 
         rightG.transition().delay(600).duration(800).ease(d3.easeCubicOut).style('opacity', 1)
             .on('end', blink);
@@ -2019,6 +2019,146 @@ const VizLibrary = (function () {
             .text('A plausible wrong answer is harder to catch than no answer at all.');
 
         bottomG.transition().delay(1800).duration(500).style('opacity', 1);
+
+        // ══════════════════════════════════════════════════════════
+        // PHASE 2 — Click to dissolve the blank page anxiety
+        // Clinical data model appears on black, requirements on white
+        // ══════════════════════════════════════════════════════════
+
+        var phase2Triggered = false;
+
+        // ── Left: Clinical data model (white on black) ──
+        var sqX = leftX + sqInset;
+        var sqY = panelY + 25;
+        var modelG = svg.append('g').style('opacity', 0);
+
+        // Entity boxes
+        var entities = [
+            { name: 'Patient', x: sqX + 20, y: sqY + 16, w: 72, h: 28 },
+            { name: 'Order', x: sqX + 130, y: sqY + 16, w: 60, h: 28 },
+            { name: 'Specimen', x: sqX + 20, y: sqY + 72, w: 76, h: 28 },
+            { name: 'Accession', x: sqX + 130, y: sqY + 72, w: 80, h: 28 },
+            { name: 'Result', x: sqX + 72, y: sqY + 128, w: 60, h: 28 },
+            { name: 'Report', x: sqX + 160, y: sqY + 128, w: 60, h: 28 }
+        ];
+
+        entities.forEach(function (ent, i) {
+            modelG.append('rect')
+                .attr('x', ent.x).attr('y', ent.y)
+                .attr('width', ent.w).attr('height', ent.h)
+                .attr('rx', 3)
+                .attr('fill', 'none')
+                .attr('stroke', '#e5e7eb').attr('stroke-width', 1.2);
+
+            modelG.append('text')
+                .attr('x', ent.x + ent.w / 2).attr('y', ent.y + ent.h / 2 + 4)
+                .attr('text-anchor', 'middle').attr('font-size', '10px')
+                .attr('font-weight', '600').attr('fill', '#e5e7eb')
+                .text(ent.name);
+        });
+
+        // Relationship lines
+        var rels = [
+            { x1: 92, y1: 30, x2: 130, y2: 30 },    // Patient → Order
+            { x1: 58, y1: 44, x2: 58, y2: 72 },      // Patient → Specimen
+            { x1: 170, y1: 44, x2: 170, y2: 72 },    // Order → Accession
+            { x1: 96, y1: 100, x2: 102, y2: 128 },   // Specimen → Result
+            { x1: 170, y1: 100, x2: 190, y2: 128 }   // Accession → Report
+        ];
+
+        rels.forEach(function (rel) {
+            modelG.append('line')
+                .attr('x1', sqX + rel.x1).attr('y1', sqY + rel.y1)
+                .attr('x2', sqX + rel.x2).attr('y2', sqY + rel.y2)
+                .attr('stroke', '#9ca3af').attr('stroke-width', 0.8)
+                .attr('stroke-dasharray', '3,2');
+        });
+
+        // Small title in corner
+        modelG.append('text')
+            .attr('x', sqX + sqSize / 2).attr('y', sqY + sqSize - 12)
+            .attr('text-anchor', 'middle').attr('font-size', '9px')
+            .attr('fill', '#cbd5e1').attr('letter-spacing', '1px')
+            .text('CLINICAL DATA MODEL');
+
+        // ── Right: User requirements appearing ──
+        var reqG = svg.append('g').style('opacity', 0);
+
+        var reqLines = [
+            { text: 'User Requirements', size: '12px', weight: '700', fill: '#1f2937', y: panelY + 42 },
+            { text: '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', size: '9px', weight: '400', fill: '#d1d5db', y: panelY + 54 },
+            { text: '1. System shall accept specimen', size: '10px', weight: '400', fill: '#374151', y: panelY + 74 },
+            { text: '   accessioning via barcode scan', size: '10px', weight: '400', fill: '#374151', y: panelY + 88 },
+            { text: '2. Results must route to ordering', size: '10px', weight: '400', fill: '#374151', y: panelY + 110 },
+            { text: '   provider within 4 hours', size: '10px', weight: '400', fill: '#374151', y: panelY + 124 },
+            { text: '3. Critical values trigger alert', size: '10px', weight: '400', fill: '#374151', y: panelY + 146 },
+            { text: '   to on-call pathologist', size: '10px', weight: '400', fill: '#374151', y: panelY + 160 },
+            { text: '4. Audit trail for all result', size: '10px', weight: '400', fill: '#374151', y: panelY + 182 },
+            { text: '   amendments and addenda', size: '10px', weight: '400', fill: '#374151', y: panelY + 196 },
+            { text: '5. Integration with Epic via', size: '10px', weight: '400', fill: '#374151', y: panelY + 218 },
+            { text: '   HL7 FHIR endpoints', size: '10px', weight: '400', fill: '#374151', y: panelY + 232 }
+        ];
+
+        reqLines.forEach(function (line) {
+            reqG.append('text')
+                .attr('x', rightX + 32).attr('y', line.y)
+                .attr('font-size', line.size)
+                .attr('font-weight', line.weight)
+                .attr('fill', line.fill)
+                .text(line.text);
+        });
+
+        // ── Click handler to trigger phase 2 ──
+        svg.style('cursor', 'pointer');
+
+        svg.on('click', function () {
+            if (phase2Triggered) return;
+            phase2Triggered = true;
+            svg.style('cursor', 'default');
+
+            // Stop cursor blink — hide it
+            cursor.interrupt().attr('fill-opacity', 0);
+
+            // Fade in the data model on the black square
+            modelG.transition().duration(1200).ease(d3.easeCubicOut)
+                .style('opacity', 1);
+
+            // Fade in requirements on the white page (staggered by line)
+            reqG.style('opacity', 1);
+            reqG.selectAll('text').style('opacity', 0)
+                .each(function (d, i) {
+                    d3.select(this).transition()
+                        .delay(400 + i * 120)
+                        .duration(400)
+                        .ease(d3.easeCubicOut)
+                        .style('opacity', 1);
+                });
+
+            // Update center text
+            midG.selectAll('text').transition().duration(400).style('opacity', 0);
+            midG.transition().delay(600).duration(0).each(function () {
+                var mg = d3.select(this);
+                mg.selectAll('text').remove();
+
+                mg.append('text').attr('x', centerX).attr('y', panelY + panelH / 2 - 16)
+                    .attr('text-anchor', 'middle').attr('font-size', '11px')
+                    .attr('fill', '#6b7280').style('opacity', 0)
+                    .text('The cost of the first mark')
+                    .transition().duration(600).style('opacity', 1);
+
+                mg.append('text').attr('x', centerX).attr('y', panelY + panelH / 2 + 6)
+                    .attr('text-anchor', 'middle').attr('font-size', '14px')
+                    .attr('fill', '#065f46').attr('font-weight', 700).style('opacity', 0)
+                    .text('is now zero.')
+                    .transition().delay(200).duration(600).style('opacity', 1);
+
+                mg.append('text').attr('x', centerX).attr('y', panelY + panelH / 2 + 34)
+                    .attr('text-anchor', 'middle').attr('font-size', '11px')
+                    .attr('fill', '#6b7280').style('opacity', 0)
+                    .text('Now the real work begins.')
+                    .transition().delay(500).duration(600).style('opacity', 1);
+            });
+        });
     }
 
 
@@ -2032,7 +2172,7 @@ const VizLibrary = (function () {
             .style('max-width', '100%');
 
         var patterns = [
-            { constraint: 'Boilerplate\n& Overhead', collapsed: 'First Draft\nCost', icon: '📝',
+            { constraint: 'Implementation\nBoilerplate', collapsed: 'First Draft\nCost', icon: '📝',
               color: '#3498db', detail: 'The cost of generating a first draft collapsed' },
             { constraint: 'Technology\nEvaluation', collapsed: 'Eval Tax', icon: '🔍',
               color: '#9b59b6', detail: 'The technology evaluation tax collapsed' },
@@ -3016,6 +3156,932 @@ const VizLibrary = (function () {
     }
 
 
+    // ─── ARCHITECTURAL JUDGMENT (scaling fork) ─────────────────
+    function architecturalJudgment(container, config) {
+        var W = 1050, H = 560;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        // Transparent bg for test harness
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', 'white').attr('fill-opacity', 0);
+
+        var cx = W / 2;
+
+        // ── Colors ──
+        var green = '#065f46';
+        var greenLight = '#ecfdf5';
+        var red = '#991b1b';
+        var redLight = '#fef2f2';
+        var slate = '#374151';
+        var darkText = '#1f2937';
+
+        // ── Geometry: Y-fork from bottom center ──
+        var stemBaseY = H - 70;
+        var forkY = 340;
+        var stemW = 64;
+
+        // Left branch (precise intent) — stays narrow
+        var leftEndX = cx - 260;
+        var leftEndY = 100;
+        var leftW = 56;
+
+        // Right branch (vague intent) — widens dramatically
+        var rightEndX = cx + 260;
+        var rightEndY = 100;
+        var rightWEnd = 200;
+
+        // ── Top annotation ──
+        svg.append('text')
+            .attr('x', cx).attr('y', 28)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('fill', '#6b7280').attr('letter-spacing', '1.5px')
+            .text('PRECISION OF THOUGHT');
+
+        // ── Draw stem (layer 1 — back) ──
+        svg.append('polygon')
+            .attr('points',
+                (cx - stemW / 2) + ',' + stemBaseY + ' ' +
+                (cx + stemW / 2) + ',' + stemBaseY + ' ' +
+                (cx + stemW / 2) + ',' + forkY + ' ' +
+                (cx - stemW / 2) + ',' + forkY)
+            .attr('fill', '#e5e7eb').attr('stroke', slate)
+            .attr('stroke-width', 1.5);
+
+        // ── LEFT BRANCH (layer 2) ──
+        var lx1 = cx - stemW / 2;
+        var lx2 = cx - 4;
+        svg.append('polygon')
+            .attr('points',
+                lx1 + ',' + forkY + ' ' +
+                lx2 + ',' + forkY + ' ' +
+                (leftEndX + leftW / 2) + ',' + leftEndY + ' ' +
+                (leftEndX - leftW / 2) + ',' + leftEndY)
+            .attr('fill', greenLight)
+            .attr('stroke', green).attr('stroke-width', 1.5);
+
+        // ── RIGHT BRANCH (layer 2) ──
+        var rx1 = cx + 4;
+        var rx2 = cx + stemW / 2;
+        svg.append('polygon')
+            .attr('points',
+                rx1 + ',' + forkY + ' ' +
+                rx2 + ',' + forkY + ' ' +
+                (rightEndX + rightWEnd / 2) + ',' + rightEndY + ' ' +
+                (rightEndX - rightWEnd / 2) + ',' + rightEndY)
+            .attr('fill', redLight)
+            .attr('stroke', red).attr('stroke-width', 1.5);
+
+        // ══════ ALL LABELS DRAWN LAST (layer 3 — on top) ══════
+
+        // ── Stem label ──
+        svg.append('text')
+            .attr('x', cx).attr('y', stemBaseY + 24)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('font-weight', '700').attr('fill', darkText)
+            .text('AI-Accelerated Implementation');
+
+        svg.append('text')
+            .attr('x', cx).attr('y', stemBaseY + 42)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#4b5563').attr('font-style', 'italic')
+            .text('Same speed. Same power. Either path.');
+
+        // ── Fork point (drawn ON TOP of branches) ──
+        // White backing to clear the overlapping branch edges
+        svg.append('circle')
+            .attr('cx', cx).attr('cy', forkY)
+            .attr('r', 18)
+            .attr('fill', 'white');
+
+        svg.append('circle')
+            .attr('cx', cx).attr('cy', forkY)
+            .attr('r', 16)
+            .attr('fill', '#f3f4f6')
+            .attr('stroke', slate).attr('stroke-width', 2);
+
+        // "DECISION POINT" inside the circle area, clearly visible
+        svg.append('text')
+            .attr('x', cx).attr('y', forkY - 24)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('font-weight', '700').attr('fill', darkText)
+            .attr('letter-spacing', '1.5px');
+
+        // Arrow-down hint inside circle
+        svg.append('text')
+            .attr('x', cx).attr('y', forkY + 5)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('font-weight', '700').attr('fill', slate)
+            .text('\u25B2'); // upward triangle (fork goes up)
+
+        // ── Left branch labels ──
+        svg.append('text')
+            .attr('x', leftEndX).attr('y', leftEndY - 20)
+            .attr('text-anchor', 'middle').attr('font-size', '16px')
+            .attr('font-weight', '700').attr('fill', green)
+            .text('Clear Intent');
+
+        // Annotations along left branch — positioned outside the shape
+        var leftAnnotX = leftEndX - leftW / 2 - 16;
+        var leftMidY = (forkY + leftEndY) / 2 - 10;
+
+        svg.append('text')
+            .attr('x', leftAnnotX).attr('y', leftMidY - 20)
+            .attr('text-anchor', 'end').attr('font-size', '12px')
+            .attr('fill', green).attr('font-weight', '600')
+            .text('Right abstraction');
+        svg.append('text')
+            .attr('x', leftAnnotX).attr('y', leftMidY)
+            .attr('text-anchor', 'end').attr('font-size', '12px')
+            .attr('fill', green).attr('font-weight', '600')
+            .text('Right data model');
+        svg.append('text')
+            .attr('x', leftAnnotX).attr('y', leftMidY + 20)
+            .attr('text-anchor', 'end').attr('font-size', '12px')
+            .attr('fill', green).attr('font-weight', '600')
+            .text('Right decomposition');
+
+        // Left outcome
+        svg.append('rect')
+            .attr('x', leftEndX - 90).attr('y', leftEndY - 8)
+            .attr('width', 180).attr('height', 3)
+            .attr('fill', green).attr('fill-opacity', 0.3);
+
+        svg.append('text')
+            .attr('x', leftEndX).attr('y', leftEndY + 18)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('fill', green).attr('font-weight', '600');
+
+        // ── Right branch labels ──
+        svg.append('text')
+            .attr('x', rightEndX).attr('y', rightEndY - 20)
+            .attr('text-anchor', 'middle').attr('font-size', '16px')
+            .attr('font-weight', '700').attr('fill', red)
+            .text('Vague Intent');
+
+        // Annotations along right branch — positioned outside the shape
+        var rightAnnotX = rightEndX + rightWEnd / 2 + 16;
+        var rightMidY = (forkY + rightEndY) / 2 - 10;
+
+        svg.append('text')
+            .attr('x', rightAnnotX).attr('y', rightMidY - 20)
+            .attr('font-size', '12px')
+            .attr('fill', red).attr('font-weight', '600')
+            .text('Working code');
+        svg.append('text')
+            .attr('x', rightAnnotX).attr('y', rightMidY)
+            .attr('font-size', '12px')
+            .attr('fill', red).attr('font-weight', '600')
+            .text('Wrong system');
+        svg.append('text')
+            .attr('x', rightAnnotX).attr('y', rightMidY + 20)
+            .attr('font-size', '12px')
+            .attr('fill', red).attr('font-weight', '600')
+            .text('Scaled cost');
+
+        // Width annotation on right branch
+        var annY = rightEndY + 8;
+        svg.append('line')
+            .attr('x1', rightEndX - rightWEnd / 2)
+            .attr('y1', annY)
+            .attr('x2', rightEndX + rightWEnd / 2)
+            .attr('y2', annY)
+            .attr('stroke', red).attr('stroke-width', 1)
+            .attr('stroke-opacity', 0.5);
+
+        svg.append('text')
+            .attr('x', rightEndX).attr('y', annY + 18)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', red).attr('font-weight', '600')
+            .text('Cost expands');
+
+        // Width comparison on left branch
+        svg.append('line')
+            .attr('x1', leftEndX - leftW / 2).attr('y1', leftEndY + 8)
+            .attr('x2', leftEndX + leftW / 2).attr('y2', leftEndY + 8)
+            .attr('stroke', green).attr('stroke-width', 1)
+            .attr('stroke-opacity', 0.5);
+
+        // ── Center insight (between fork and stem) ──
+        svg.append('text')
+            .attr('x', cx).attr('y', forkY + 46)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('fill', darkText).attr('font-style', 'italic');
+
+        // ── Bauhaus bottom rule ──
+        svg.append('line')
+            .attr('x1', 40).attr('y1', H - 4)
+            .attr('x2', W - 40).attr('y2', H - 4)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.12);
+    }
+
+
+    // ─── TACIT KNOWLEDGE (transfer boundary) ───────────────────
+    function tacitKnowledge(container, config) {
+        var W = 1050, H = 560;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        // Transparent bg for test harness
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', 'white').attr('fill-opacity', 0);
+
+        var darkText = '#1f2937';
+
+        // ── Layout ──
+        var leftMargin = 50;
+        var zoneW = 720;
+        var boundaryY = 260;
+        var topZoneY = 56;
+        var botZoneY = boundaryY + 4;
+        var botZoneH = 210;
+        var topZoneH = boundaryY - topZoneY - 4;
+
+        // Expert bridge on the right
+        var bridgeX = leftMargin + zoneW + 50;
+        var bridgeW = 170;
+
+        // ── Top zone background (codified — AI accessible) ──
+        svg.append('rect')
+            .attr('x', leftMargin).attr('y', topZoneY)
+            .attr('width', zoneW).attr('height', topZoneH)
+            .attr('rx', 4)
+            .attr('fill', '#ecfdf5')
+            .attr('stroke', '#065f46').attr('stroke-width', 1)
+            .attr('stroke-opacity', 0.25);
+
+        // Top zone header
+        svg.append('text')
+            .attr('x', leftMargin + 16).attr('y', topZoneY + 26)
+            .attr('font-size', '15px').attr('font-weight', '700')
+            .attr('fill', '#065f46').attr('letter-spacing', '1px')
+            .text('CODIFIED KNOWLEDGE');
+
+        svg.append('text')
+            .attr('x', leftMargin + 16).attr('y', topZoneY + 46)
+            .attr('font-size', '13px')
+            .attr('fill', '#065f46')
+            .text('AI can use this');
+
+        // Codified items
+        var codified = [
+            { label: 'Rules & Policies', x: 100, y: 100 },
+            { label: 'Dictionaries & Ontologies', x: 360, y: 90 },
+            { label: 'Interface Specifications', x: 140, y: 160 },
+            { label: 'Historical Examples', x: 420, y: 155 },
+            { label: 'Documentation', x: 600, y: 110 },
+            { label: 'Code & APIs', x: 580, y: 170 }
+        ];
+
+        codified.forEach(function (item) {
+            // Dot
+            svg.append('circle')
+                .attr('cx', leftMargin + item.x).attr('cy', topZoneY + item.y - 30)
+                .attr('r', 5)
+                .attr('fill', '#065f46').attr('fill-opacity', 0.7);
+            // Label
+            svg.append('text')
+                .attr('x', leftMargin + item.x + 12)
+                .attr('y', topZoneY + item.y - 25)
+                .attr('font-size', '14px').attr('font-weight', '600')
+                .attr('fill', '#1f2937')
+                .text(item.label);
+        });
+
+        // ── Bottom zone background (tacit — AI inaccessible) ──
+        // Drawn BEFORE boundary so boundary renders on top
+        svg.append('rect')
+            .attr('x', leftMargin).attr('y', botZoneY)
+            .attr('width', zoneW).attr('height', botZoneH)
+            .attr('rx', 4)
+            .attr('fill', '#fef2f2')
+            .attr('stroke', '#991b1b').attr('stroke-width', 1)
+            .attr('stroke-opacity', 0.25);
+
+        // Bottom zone header
+        svg.append('text')
+            .attr('x', leftMargin + 16).attr('y', botZoneY + 26)
+            .attr('font-size', '15px').attr('font-weight', '700')
+            .attr('fill', '#991b1b').attr('letter-spacing', '1px')
+            .text('TACIT KNOWLEDGE');
+
+        svg.append('text')
+            .attr('x', leftMargin + 16).attr('y', botZoneY + 46)
+            .attr('font-size', '13px')
+            .attr('fill', '#991b1b')
+            .text('AI cannot inherit this');
+
+        // Tacit items
+        var tacit = [
+            { label: 'Lived experience', x: 100, y: 80 },
+            { label: 'Tacit judgment', x: 360, y: 72 },
+            { label: 'Local workflow reality', x: 140, y: 140 },
+            { label: 'Institutional memory', x: 420, y: 135 },
+            { label: 'Which ambiguity is dangerous', x: 240, y: 180 },
+            { label: 'When correct is wrong', x: 550, y: 100 }
+        ];
+
+        tacit.forEach(function (item) {
+            // Hollow dot (tacit = not capturable)
+            svg.append('circle')
+                .attr('cx', leftMargin + item.x).attr('cy', botZoneY + item.y - 20)
+                .attr('r', 5)
+                .attr('fill', 'none')
+                .attr('stroke', '#991b1b').attr('stroke-width', 2.5);
+            // Label
+            svg.append('text')
+                .attr('x', leftMargin + item.x + 12)
+                .attr('y', botZoneY + item.y - 15)
+                .attr('font-size', '14px').attr('font-weight', '600')
+                .attr('fill', '#1f2937')
+                .text(item.label);
+        });
+
+        // ── TRANSFER BOUNDARY LINE (drawn after both zones so it's on top) ──
+        svg.append('line')
+            .attr('x1', leftMargin - 10).attr('y1', boundaryY)
+            .attr('x2', leftMargin + zoneW + 10).attr('y2', boundaryY)
+            .attr('stroke', '#dc2626').attr('stroke-width', 3);
+
+        // Boundary label — white backing with generous padding
+        var boundaryLabelX = leftMargin + zoneW / 2;
+        svg.append('rect')
+            .attr('x', boundaryLabelX - 130).attr('y', boundaryY - 16)
+            .attr('width', 260).attr('height', 32)
+            .attr('rx', 4).attr('fill', 'white')
+            .attr('stroke', '#dc2626').attr('stroke-width', 1).attr('stroke-opacity', 0.3);
+
+        svg.append('text')
+            .attr('x', boundaryLabelX).attr('y', boundaryY + 8)
+            .attr('text-anchor', 'middle').attr('font-size', '16px')
+            .attr('font-weight', '700').attr('fill', '#dc2626')
+            .attr('letter-spacing', '2.5px')
+            .text('TRANSFER BOUNDARY');
+
+        // ── EXPERT BRIDGE (right side, spanning both zones) ──
+        var bridgeTop = topZoneY + 20;
+        var bridgeBot = botZoneY + botZoneH - 20;
+        var bridgeCx = bridgeX + bridgeW / 2;
+
+        // Vertical bridge rect
+        svg.append('rect')
+            .attr('x', bridgeX).attr('y', bridgeTop)
+            .attr('width', bridgeW).attr('height', bridgeBot - bridgeTop)
+            .attr('rx', 4)
+            .attr('fill', '#eff6ff')
+            .attr('stroke', '#1e3a5f').attr('stroke-width', 2);
+
+        // Bridge header
+        svg.append('text')
+            .attr('x', bridgeCx).attr('y', bridgeTop + 28)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('font-weight', '700').attr('fill', '#1e3a5f')
+            .attr('letter-spacing', '1.5px')
+            .text('THE EXPERT');
+
+        // Bridge subtitle
+        svg.append('text')
+            .attr('x', bridgeCx).attr('y', bridgeTop + 46)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#4b5563').attr('font-style', 'italic')
+            .text('spans both zones');
+
+        // Divider inside bridge
+        svg.append('line')
+            .attr('x1', bridgeX + 16).attr('y1', bridgeTop + 58)
+            .attr('x2', bridgeX + bridgeW - 16).attr('y2', bridgeTop + 58)
+            .attr('stroke', '#1e3a5f').attr('stroke-width', 1).attr('stroke-opacity', 0.2);
+
+        // Expert roles
+        var roles = [
+            { label: 'Formalize', desc: 'what can be codified', y: bridgeTop + 86 },
+            { label: 'Supervise', desc: 'what AI produces', y: bridgeTop + 140 },
+            { label: 'Interpret', desc: 'what context demands', y: bridgeTop + 194 }
+        ];
+
+        roles.forEach(function (role) {
+            svg.append('text')
+                .attr('x', bridgeCx).attr('y', role.y)
+                .attr('text-anchor', 'middle').attr('font-size', '16px')
+                .attr('font-weight', '700').attr('fill', '#1e3a5f')
+                .text(role.label);
+
+            svg.append('text')
+                .attr('x', bridgeCx).attr('y', role.y + 20)
+                .attr('text-anchor', 'middle').attr('font-size', '12px')
+                .attr('fill', '#374151')
+                .text(role.desc);
+        });
+
+        // Arrows from bridge into both zones
+        // Arrow into top zone
+        svg.append('line')
+            .attr('x1', bridgeX).attr('y1', bridgeTop + 80)
+            .attr('x2', leftMargin + zoneW + 6).attr('y2', bridgeTop + 80)
+            .attr('stroke', '#1e3a5f').attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '4,3');
+
+        // Arrow into bottom zone
+        svg.append('line')
+            .attr('x1', bridgeX).attr('y1', botZoneY + 80)
+            .attr('x2', leftMargin + zoneW + 6).attr('y2', botZoneY + 80)
+            .attr('stroke', '#1e3a5f').attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '4,3');
+
+        // ── Top title ──
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 30)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('fill', '#374151').attr('font-weight', '700')
+            .attr('letter-spacing', '2px')
+            .text('TACIT KNOWLEDGE DOES NOT TRANSFER CLEANLY');
+
+        // ── Bottom takeaway ──
+        svg.append('text')
+            .attr('x', W / 2).attr('y', H - 28)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('fill', darkText).attr('font-style', 'italic')
+            .text('AI amplifies expertise.');
+
+        svg.append('text')
+            .attr('x', W / 2).attr('y', H - 8)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('fill', darkText).attr('font-weight', '700')
+            .text('The gap is qualitative.');
+
+        // ── Bauhaus bottom rule ──
+        svg.append('line')
+            .attr('x1', 40).attr('y1', H - 4)
+            .attr('x2', W - 40).attr('y2', H - 4)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.12);
+    }
+
+
+    // ─── WRONG QUESTION (typographic pivot) ────────────────────
+    function wrongQuestion(container, config) {
+        var W = 1050, H = 560;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', 'white').attr('fill-opacity', 0);
+
+        var cx = W / 2;
+        var darkText = '#1f2937';
+
+        // ══════════════════════════════════════════════
+        // UPPER ZONE — The wrong question (faded, struck)
+        // ══════════════════════════════════════════════
+
+        // Subtle background tint for wrong-question zone
+        svg.append('rect')
+            .attr('x', 60).attr('y', 30)
+            .attr('width', W - 120).attr('height', 160)
+            .attr('rx', 4)
+            .attr('fill', '#fef2f2');
+
+        // "Most conversations about AI ask:"
+        svg.append('text')
+            .attr('x', cx).attr('y', 72)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('fill', '#6b7280')
+            .text('Most conversations about AI-assisted development ask:');
+
+        // The wrong question — large, struck through
+        var wrongY = 128;
+        svg.append('text')
+            .attr('x', cx).attr('y', wrongY)
+            .attr('text-anchor', 'middle').attr('font-size', '32px')
+            .attr('font-weight', '300').attr('fill', '#991b1b')
+            .attr('fill-opacity', 0.4)
+            .attr('font-style', 'italic')
+            .text('\u201CWhat can AI build?\u201D');
+
+        // Strikethrough line across the wrong question
+        var strikeW = 360;
+        svg.append('line')
+            .attr('x1', cx - strikeW / 2).attr('y1', wrongY - 8)
+            .attr('x2', cx + strikeW / 2).attr('y2', wrongY - 8)
+            .attr('stroke', '#991b1b').attr('stroke-width', 2.5)
+            .attr('stroke-opacity', 0.5);
+
+        // "That is the wrong question." label
+        svg.append('text')
+            .attr('x', cx).attr('y', 170)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('font-weight', '600').attr('fill', '#991b1b')
+            .attr('letter-spacing', '2px')
+            .text('THAT IS THE WRONG QUESTION');
+
+        // ══════════════════════════════════════════════
+        // GEOMETRIC PIVOT — Bauhaus divider
+        // ══════════════════════════════════════════════
+
+        var pivotY = 214;
+
+        // Horizontal rule
+        svg.append('line')
+            .attr('x1', 100).attr('y1', pivotY)
+            .attr('x2', cx - 18).attr('y2', pivotY)
+            .attr('stroke', darkText).attr('stroke-width', 2).attr('stroke-opacity', 0.3);
+
+        svg.append('line')
+            .attr('x1', cx + 18).attr('y1', pivotY)
+            .attr('x2', W - 100).attr('y2', pivotY)
+            .attr('stroke', darkText).attr('stroke-width', 2).attr('stroke-opacity', 0.3);
+
+        // Central diamond pivot marker
+        svg.append('rect')
+            .attr('x', cx - 8).attr('y', pivotY - 8)
+            .attr('width', 16).attr('height', 16)
+            .attr('fill', darkText)
+            .attr('transform', 'rotate(45,' + cx + ',' + pivotY + ')');
+
+        // ══════════════════════════════════════════════
+        // LOWER ZONE — The right question (bold, present)
+        // ══════════════════════════════════════════════
+
+        // Subtle background tint for right-question zone
+        svg.append('rect')
+            .attr('x', 60).attr('y', 240)
+            .attr('width', W - 120).attr('height', 130)
+            .attr('rx', 4)
+            .attr('fill', '#ecfdf5');
+
+        // "The useful question:"
+        svg.append('text')
+            .attr('x', cx).attr('y', 274)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('fill', '#065f46')
+            .text('The useful question:');
+
+        // The right question — large, bold, full weight
+        svg.append('text')
+            .attr('x', cx).attr('y', 324)
+            .attr('text-anchor', 'middle').attr('font-size', '28px')
+            .attr('font-weight', '700').attr('fill', '#065f46')
+            .text('\u201CWhat does AI change about the act of building?\u201D');
+
+        // Underline emphasis
+        var underW = 560;
+        svg.append('line')
+            .attr('x1', cx - underW / 2).attr('y1', 336)
+            .attr('x2', cx + underW / 2).attr('y2', 336)
+            .attr('stroke', '#065f46').attr('stroke-width', 2)
+            .attr('stroke-opacity', 0.25);
+
+        // ══════════════════════════════════════════════
+        // TAKEAWAY — anchoring the bottom
+        // ══════════════════════════════════════════════
+
+        // Divider
+        svg.append('line')
+            .attr('x1', 160).attr('y1', 400)
+            .attr('x2', W - 160).attr('y2', 400)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.15);
+
+        // Takeaway
+        svg.append('text')
+            .attr('x', cx).attr('y', 436)
+            .attr('text-anchor', 'middle').attr('font-size', '15px')
+            .attr('fill', darkText).attr('font-weight', '600')
+            .text('The capability is not the transformation.');
+
+        svg.append('text')
+            .attr('x', cx).attr('y', 460)
+            .attr('text-anchor', 'middle').attr('font-size', '15px')
+            .attr('fill', darkText).attr('font-weight', '600')
+            .text('The transformation is what changes in the practice of building.');
+
+        // Comment / expanded blob
+        svg.append('text')
+            .attr('x', cx).attr('y', 500)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#6b7280').attr('font-style', 'italic')
+            .text('Let\u2019s try to recalibrate our thinking about the role of AI in development.');
+
+        // ── Bauhaus bottom rule ──
+        svg.append('line')
+            .attr('x1', 40).attr('y1', H - 4)
+            .attr('x2', W - 40).attr('y2', H - 4)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.12);
+    }
+
+
+    // ─── SYLLABIC MIXING (cross-domain discovery) ─────────────
+    function syllabicMixing(container, config) {
+        var W = 1050, H = 560;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', 'white').attr('fill-opacity', 0);
+
+        var darkText = '#1f2937';
+        var cx = W / 2;
+
+        // ── Top title ──
+        svg.append('text')
+            .attr('x', cx).attr('y', 26)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('fill', '#374151').attr('font-weight', '700')
+            .attr('letter-spacing', '2px')
+            .text('SYLLABIC MIXING \u2014 AI AS CROSS-DOMAIN CONSULTANT');
+
+        // ── Seven language sources ──
+        var languages = [
+            { name: 'Finnish', rule: 'Vowel harmony', color: '#1e3a5f' },
+            { name: 'Georgian', rule: 'Consonant clusters', color: '#5b21b6' },
+            { name: 'Yoruba', rule: 'Tonal patterns', color: '#065f46' },
+            { name: 'Japanese', rule: 'CV syllables', color: '#991b1b' },
+            { name: 'Welsh', rule: 'Mutation rules', color: '#92400e' },
+            { name: 'Swahili', rule: 'Agglutination', color: '#0e7490' },
+            { name: 'Hungarian', rule: 'Stress patterns', color: '#7c3aed' }
+        ];
+
+        var blockW = 110, blockH = 70;
+        var langGap = 18;
+        var totalLangW = languages.length * blockW + (languages.length - 1) * langGap;
+        var langStartX = (W - totalLangW) / 2;
+        var langY = 50;
+
+        languages.forEach(function (lang, i) {
+            var bx = langStartX + i * (blockW + langGap);
+            var bCx = bx + blockW / 2;
+
+            // Block
+            svg.append('rect')
+                .attr('x', bx).attr('y', langY)
+                .attr('width', blockW).attr('height', blockH)
+                .attr('rx', 3)
+                .attr('fill', lang.color).attr('fill-opacity', 0.08)
+                .attr('stroke', lang.color).attr('stroke-width', 1.5);
+
+            // Top color accent bar
+            svg.append('rect')
+                .attr('x', bx).attr('y', langY)
+                .attr('width', blockW).attr('height', 4)
+                .attr('rx', 2).attr('fill', lang.color);
+            svg.append('rect')
+                .attr('x', bx).attr('y', langY + 2)
+                .attr('width', blockW).attr('height', 2)
+                .attr('fill', lang.color);
+
+            // Language name
+            svg.append('text')
+                .attr('x', bCx).attr('y', langY + 30)
+                .attr('text-anchor', 'middle').attr('font-size', '13px')
+                .attr('font-weight', '700').attr('fill', lang.color)
+                .text(lang.name);
+
+            // Rule
+            svg.append('text')
+                .attr('x', bCx).attr('y', langY + 48)
+                .attr('text-anchor', 'middle').attr('font-size', '10px')
+                .attr('fill', '#4b5563')
+                .text(lang.rule);
+
+            // Convergence line down to mixing zone
+            svg.append('line')
+                .attr('x1', bCx).attr('y1', langY + blockH)
+                .attr('x2', cx).attr('y2', 200)
+                .attr('stroke', lang.color).attr('stroke-width', 1.5)
+                .attr('stroke-opacity', 0.3)
+                .attr('stroke-dasharray', '4,3');
+        });
+
+        // ── Mixing zone (central) ──
+        var mixY = 190, mixH = 70, mixW = 360;
+        var mixX = cx - mixW / 2;
+
+        svg.append('rect')
+            .attr('x', mixX).attr('y', mixY)
+            .attr('width', mixW).attr('height', mixH)
+            .attr('rx', 6)
+            .attr('fill', '#f8fafc')
+            .attr('stroke', '#374151').attr('stroke-width', 2);
+
+        svg.append('text')
+            .attr('x', cx).attr('y', mixY + 28)
+            .attr('text-anchor', 'middle').attr('font-size', '15px')
+            .attr('font-weight', '700').attr('fill', darkText)
+            .text('Syllabic Mixing Engine');
+
+        svg.append('text')
+            .attr('x', cx).attr('y', mixY + 48)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#4b5563')
+            .text('Combine phonemic blocks according to each language\u2019s rules');
+
+        // ── Arrow down from mixing zone ──
+        var arrowTopY = mixY + mixH + 6;
+        var arrowBotY = arrowTopY + 30;
+        svg.append('line')
+            .attr('x1', cx).attr('y1', arrowTopY)
+            .attr('x2', cx).attr('y2', arrowBotY)
+            .attr('stroke', '#374151').attr('stroke-width', 2);
+        svg.append('polygon')
+            .attr('points',
+                cx + ',' + (arrowBotY + 2) + ' ' +
+                (cx - 5) + ',' + (arrowBotY - 6) + ' ' +
+                (cx + 5) + ',' + (arrowBotY - 6))
+            .attr('fill', '#374151');
+
+        // ── Two-axis outcome diagram ──
+        var chartX = 160, chartY = 310, chartW = 340, chartH = 180;
+
+        // Background
+        svg.append('rect')
+            .attr('x', chartX).attr('y', chartY)
+            .attr('width', chartW).attr('height', chartH)
+            .attr('fill', '#f9fafb')
+            .attr('stroke', '#e5e7eb').attr('stroke-width', 1);
+
+        // Quadrant shading — top-left is the sweet spot
+        svg.append('rect')
+            .attr('x', chartX).attr('y', chartY)
+            .attr('width', chartW / 2).attr('height', chartH / 2)
+            .attr('fill', '#065f46').attr('fill-opacity', 0.06);
+
+        // Y-axis: "Is a real name" (bottom=low, top=high)
+        svg.append('line')
+            .attr('x1', chartX).attr('y1', chartY)
+            .attr('x2', chartX).attr('y2', chartY + chartH)
+            .attr('stroke', '#374151').attr('stroke-width', 1.5);
+
+        svg.append('text')
+            .attr('x', chartX - 10).attr('y', chartY + 8)
+            .attr('text-anchor', 'end').attr('font-size', '11px')
+            .attr('fill', '#374151').attr('font-weight', '600')
+            .text('High');
+        svg.append('text')
+            .attr('x', chartX - 10).attr('y', chartY + chartH)
+            .attr('text-anchor', 'end').attr('font-size', '11px')
+            .attr('fill', '#374151').attr('font-weight', '600')
+            .text('Low');
+
+        // Y-axis label (rotated)
+        svg.append('text')
+            .attr('x', chartX - 42).attr('y', chartY + chartH / 2)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#374151').attr('font-weight', '600')
+            .attr('transform', 'rotate(-90,' + (chartX - 42) + ',' + (chartY + chartH / 2) + ')')
+            .text('Sounds like a name');
+
+        // X-axis: "Sounds like a name" (left=low, right=high)
+        svg.append('line')
+            .attr('x1', chartX).attr('y1', chartY + chartH)
+            .attr('x2', chartX + chartW).attr('y2', chartY + chartH)
+            .attr('stroke', '#374151').attr('stroke-width', 1.5);
+
+        svg.append('text')
+            .attr('x', chartX).attr('y', chartY + chartH + 18)
+            .attr('font-size', '11px')
+            .attr('fill', '#374151').attr('font-weight', '600')
+            .text('Low');
+        svg.append('text')
+            .attr('x', chartX + chartW).attr('y', chartY + chartH + 18)
+            .attr('text-anchor', 'end').attr('font-size', '11px')
+            .attr('fill', '#374151').attr('font-weight', '600')
+            .text('High');
+
+        // X-axis label
+        svg.append('text')
+            .attr('x', chartX + chartW / 2).attr('y', chartY + chartH + 34)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#374151').attr('font-weight', '600')
+            .text('Is a real name');
+
+        // ── Data point: syllabic mixing output (top-left sweet spot) ──
+        var dotX = chartX + chartW * 0.18;
+        var dotY = chartY + chartH * 0.15;
+
+        svg.append('circle')
+            .attr('cx', dotX).attr('cy', dotY).attr('r', 10)
+            .attr('fill', '#065f46').attr('fill-opacity', 0.2)
+            .attr('stroke', '#065f46').attr('stroke-width', 2.5);
+
+        svg.append('text')
+            .attr('x', dotX + 18).attr('y', dotY + 4)
+            .attr('font-size', '13px').attr('font-weight', '700')
+            .attr('fill', '#065f46')
+            .text('Syllabic mixing output');
+
+        svg.append('text')
+            .attr('x', dotX + 18).attr('y', dotY + 20)
+            .attr('font-size', '11px')
+            .attr('fill', '#4b5563').attr('font-style', 'italic')
+            .text('Sounds real, isn\u2019t real');
+
+        // ── Quadrant labels ──
+        svg.append('text')
+            .attr('x', chartX + chartW * 0.75).attr('y', chartY + chartH * 0.2)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('fill', '#6b7280')
+            .text('Real names');
+
+        svg.append('text')
+            .attr('x', chartX + chartW * 0.75).attr('y', chartY + chartH * 0.8)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('fill', '#6b7280')
+            .text('Random strings');
+
+        // ── Right side: cross-domain insight panel ──
+        var panelX = 580, panelY = 310, panelW = 420, panelH = 180;
+
+        svg.append('rect')
+            .attr('x', panelX).attr('y', panelY)
+            .attr('width', panelW).attr('height', panelH)
+            .attr('rx', 4)
+            .attr('fill', '#eff6ff')
+            .attr('stroke', '#1e3a5f').attr('stroke-width', 1.5);
+
+        // Panel header
+        svg.append('text')
+            .attr('x', panelX + panelW / 2).attr('y', panelY + 26)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', '#1e3a5f')
+            .attr('letter-spacing', '1px')
+            .text('THE CROSS-DOMAIN MOMENT');
+
+        svg.append('line')
+            .attr('x1', panelX + 20).attr('y1', panelY + 38)
+            .attr('x2', panelX + panelW - 20).attr('y2', panelY + 38)
+            .attr('stroke', '#1e3a5f').attr('stroke-width', 1).attr('stroke-opacity', 0.2);
+
+        // User's domain
+        svg.append('text')
+            .attr('x', panelX + 20).attr('y', panelY + 60)
+            .attr('font-size', '12px').attr('font-weight', '600')
+            .attr('fill', '#991b1b')
+            .text('Your domain:');
+        svg.append('text')
+            .attr('x', panelX + 110).attr('y', panelY + 60)
+            .attr('font-size', '12px')
+            .attr('fill', '#374151')
+            .text('Software / Pathology Informatics');
+
+        // Arrow
+        svg.append('text')
+            .attr('x', panelX + panelW / 2).attr('y', panelY + 84)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('fill', '#374151')
+            .text('\u2193  AI surfaces approach from  \u2193');
+
+        // Solution domain
+        svg.append('text')
+            .attr('x', panelX + 20).attr('y', panelY + 108)
+            .attr('font-size', '12px').attr('font-weight', '600')
+            .attr('fill', '#065f46')
+            .text('Found field:');
+        svg.append('text')
+            .attr('x', panelX + 110).attr('y', panelY + 108)
+            .attr('font-size', '12px')
+            .attr('fill', '#374151')
+            .text('Computational Linguistics');
+
+        // Divider
+        svg.append('line')
+            .attr('x1', panelX + 20).attr('y1', panelY + 122)
+            .attr('x2', panelX + panelW - 20).attr('y2', panelY + 122)
+            .attr('stroke', '#1e3a5f').attr('stroke-width', 1).attr('stroke-opacity', 0.15);
+
+        // Key insight
+        svg.append('text')
+            .attr('x', panelX + panelW / 2).attr('y', panelY + 148)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('font-weight', '700').attr('fill', '#1e3a5f')
+            .text('The model didn\u2019t just write the code.');
+
+        svg.append('text')
+            .attr('x', panelX + panelW / 2).attr('y', panelY + 168)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('font-weight', '700').attr('fill', '#1e3a5f')
+            .text('It found the field.');
+
+        // ── Bottom takeaway ──
+        svg.append('text')
+            .attr('x', cx).attr('y', H - 12)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('fill', darkText).attr('font-style', 'italic')
+            .text('I described the constraint. The model surfaced an approach from linguistics I would not have reached independently.');
+
+        // ── Bauhaus bottom rule ──
+        svg.append('line')
+            .attr('x1', 40).attr('y1', H - 4)
+            .attr('x2', W - 40).attr('y2', H - 4)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.12);
+    }
+
+
     // ─── EVALUATION COST (option space expansion) ─────────────
     function evaluationCost(container, config) {
         var W = 1050, H = 560;
@@ -3686,6 +4752,415 @@ const VizLibrary = (function () {
     }
 
 
+    // ─── XENONYM SYNTHESIS (horizon expansion) ──────────────
+    function xenonymSynthesis(container, config) {
+        var W = 1100, H = 560;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', 'white').attr('fill-opacity', 0);
+
+        var darkText = '#1f2937';
+        var cx = W / 2;
+
+        // ── Color palette ──
+        var seedColor = '#991b1b';
+        var aiColor = '#1e3a5f';
+        var emergeColor = '#065f46';
+        var accentGold = '#92400e';
+
+        // ══════════════════════════════════════════════
+        // TOP ANNOTATION
+        // ══════════════════════════════════════════════
+        svg.append('text')
+            .attr('x', cx).attr('y', 22)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', '#6b7280').attr('letter-spacing', '1.5px')
+            .text('WHAT XENONYM ILLUSTRATES');
+
+        // ══════════════════════════════════════════════
+        // LEFT: THE SEED PROBLEM (narrow)
+        // ══════════════════════════════════════════════
+        var seedX = 40, seedY = 60, seedW = 180, seedH = 130;
+
+        svg.append('rect')
+            .attr('x', seedX).attr('y', seedY)
+            .attr('width', seedW).attr('height', seedH)
+            .attr('rx', 3)
+            .attr('fill', '#fef2f2')
+            .attr('stroke', seedColor).attr('stroke-width', 2);
+
+        // Top accent bar
+        svg.append('rect')
+            .attr('x', seedX).attr('y', seedY)
+            .attr('width', seedW).attr('height', 5)
+            .attr('fill', seedColor);
+
+        svg.append('text')
+            .attr('x', seedX + seedW / 2).attr('y', seedY + 34)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', seedColor)
+            .text('Seed Problem');
+
+        svg.append('text')
+            .attr('x', seedX + seedW / 2).attr('y', seedY + 56)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('fill', '#4b5563')
+            .text('"I need safe test names"');
+
+        svg.append('text')
+            .attr('x', seedX + seedW / 2).attr('y', seedY + 76)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', '#6b7280')
+            .text('Narrow, specific,');
+        svg.append('text')
+            .attr('x', seedX + seedW / 2).attr('y', seedY + 90)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', '#6b7280')
+            .text('single-use intent');
+
+        // Label below seed
+        svg.append('text')
+            .attr('x', seedX + seedW / 2).attr('y', seedY + seedH + 18)
+            .attr('text-anchor', 'middle').attr('font-size', '9px')
+            .attr('fill', seedColor).attr('letter-spacing', '1.5px')
+            .text('WOULD NOT HAVE BEEN BUILT');
+
+        // ══════════════════════════════════════════════
+        // EXPANSION ARROW: seed → AI zone
+        // ══════════════════════════════════════════════
+        var arrowX1 = seedX + seedW + 12;
+        var arrowX2 = 290;
+        var arrowY = seedY + seedH / 2;
+
+        svg.append('line')
+            .attr('x1', arrowX1).attr('y1', arrowY)
+            .attr('x2', arrowX2).attr('y2', arrowY)
+            .attr('stroke', darkText).attr('stroke-width', 2);
+        svg.append('polygon')
+            .attr('points',
+                arrowX2 + ',' + arrowY + ' ' +
+                (arrowX2 - 8) + ',' + (arrowY - 4) + ' ' +
+                (arrowX2 - 8) + ',' + (arrowY + 4))
+            .attr('fill', darkText);
+
+        svg.append('text')
+            .attr('x', (arrowX1 + arrowX2) / 2).attr('y', arrowY - 10)
+            .attr('text-anchor', 'middle').attr('font-size', '9px')
+            .attr('fill', '#6b7280').attr('font-style', 'italic')
+            .text('AI made it feasible');
+
+        // ══════════════════════════════════════════════
+        // CENTER: AI INTERVENTION — THREE FACETS
+        // ══════════════════════════════════════════════
+        var aiZoneX = 300, aiZoneY = 40, aiZoneW = 460, aiZoneH = 180;
+
+        // Subtle background for the AI zone
+        svg.append('rect')
+            .attr('x', aiZoneX).attr('y', aiZoneY)
+            .attr('width', aiZoneW).attr('height', aiZoneH)
+            .attr('rx', 4)
+            .attr('fill', '#eff6ff')
+            .attr('stroke', aiColor).attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '8,4');
+
+        svg.append('text')
+            .attr('x', aiZoneX + aiZoneW / 2).attr('y', aiZoneY + 22)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-weight', '700').attr('fill', aiColor)
+            .attr('letter-spacing', '1.5px')
+            .text('AI EXPANDED THE HORIZON');
+
+        // Three facet cards inside the AI zone
+        var facets = [
+            {
+                title: 'Cross-Domain',
+                title2: 'Discovery',
+                body: 'Surfaced computational',
+                body2: 'linguistics — a domain',
+                body3: 'you would not have searched',
+                icon: 'diamond'
+            },
+            {
+                title: 'Edge Case',
+                title2: 'Anticipation',
+                body: 'Systematic adversarial',
+                body2: 'testing before production',
+                body3: 'needs it',
+                icon: 'square'
+            },
+            {
+                title: 'Architectural',
+                title2: 'Generalization',
+                body: 'Recognized the pattern',
+                body2: 'is more general: flexible',
+                body3: 'schema, not predefined',
+                icon: 'circle'
+            }
+        ];
+
+        var fCardW = 136, fCardH = 120, fCardGap = 12;
+        var fStartX = aiZoneX + (aiZoneW - (facets.length * fCardW + (facets.length - 1) * fCardGap)) / 2;
+        var fStartY = aiZoneY + 36;
+
+        facets.forEach(function (f, i) {
+            var fx = fStartX + i * (fCardW + fCardGap);
+            var fCx = fx + fCardW / 2;
+
+            svg.append('rect')
+                .attr('x', fx).attr('y', fStartY)
+                .attr('width', fCardW).attr('height', fCardH)
+                .attr('rx', 3)
+                .attr('fill', 'white')
+                .attr('stroke', aiColor).attr('stroke-width', 1.5);
+
+            // Bauhaus icon
+            var iconY = fStartY + 20;
+            var iconSize = 14;
+            if (f.icon === 'diamond') {
+                svg.append('rect')
+                    .attr('x', fCx - iconSize / 2).attr('y', iconY - iconSize / 2)
+                    .attr('width', iconSize).attr('height', iconSize)
+                    .attr('fill', 'none').attr('stroke', aiColor).attr('stroke-width', 2)
+                    .attr('transform', 'rotate(45,' + fCx + ',' + iconY + ')');
+            } else if (f.icon === 'square') {
+                svg.append('rect')
+                    .attr('x', fCx - iconSize / 2).attr('y', iconY - iconSize / 2)
+                    .attr('width', iconSize).attr('height', iconSize)
+                    .attr('fill', 'none').attr('stroke', aiColor).attr('stroke-width', 2);
+            } else {
+                svg.append('circle')
+                    .attr('cx', fCx).attr('cy', iconY).attr('r', iconSize / 2)
+                    .attr('fill', 'none').attr('stroke', aiColor).attr('stroke-width', 2);
+            }
+
+            // Title (two lines)
+            svg.append('text')
+                .attr('x', fCx).attr('y', iconY + 24)
+                .attr('text-anchor', 'middle').attr('font-size', '12px')
+                .attr('font-weight', '700').attr('fill', aiColor)
+                .text(f.title);
+            svg.append('text')
+                .attr('x', fCx).attr('y', iconY + 38)
+                .attr('text-anchor', 'middle').attr('font-size', '12px')
+                .attr('font-weight', '700').attr('fill', aiColor)
+                .text(f.title2);
+
+            // Body (three lines)
+            svg.append('text')
+                .attr('x', fCx).attr('y', iconY + 58)
+                .attr('text-anchor', 'middle').attr('font-size', '10px')
+                .attr('fill', '#4b5563')
+                .text(f.body);
+            svg.append('text')
+                .attr('x', fCx).attr('y', iconY + 72)
+                .attr('text-anchor', 'middle').attr('font-size', '10px')
+                .attr('fill', '#4b5563')
+                .text(f.body2);
+            svg.append('text')
+                .attr('x', fCx).attr('y', iconY + 86)
+                .attr('text-anchor', 'middle').attr('font-size', '10px')
+                .attr('fill', '#4b5563')
+                .text(f.body3);
+        });
+
+        // ══════════════════════════════════════════════
+        // EXPANSION ARROW: AI zone → emerged tool
+        // ══════════════════════════════════════════════
+        var arrow2X1 = aiZoneX + aiZoneW + 12;
+        var arrow2X2 = 830;
+        var arrow2Y = aiZoneY + aiZoneH / 2;
+
+        svg.append('line')
+            .attr('x1', arrow2X1).attr('y1', arrow2Y)
+            .attr('x2', arrow2X2).attr('y2', arrow2Y)
+            .attr('stroke', darkText).attr('stroke-width', 2);
+        svg.append('polygon')
+            .attr('points',
+                arrow2X2 + ',' + arrow2Y + ' ' +
+                (arrow2X2 - 8) + ',' + (arrow2Y - 4) + ' ' +
+                (arrow2X2 - 8) + ',' + (arrow2Y + 4))
+            .attr('fill', darkText);
+
+        // ══════════════════════════════════════════════
+        // RIGHT: WHAT EMERGED (wide, open)
+        // ══════════════════════════════════════════════
+        var emergeX = 840, emergeY = 42, emergeW = 230, emergeH = 175;
+
+        svg.append('rect')
+            .attr('x', emergeX).attr('y', emergeY)
+            .attr('width', emergeW).attr('height', emergeH)
+            .attr('rx', 3)
+            .attr('fill', '#ecfdf5')
+            .attr('stroke', emergeColor).attr('stroke-width', 2);
+
+        // Top accent bar
+        svg.append('rect')
+            .attr('x', emergeX).attr('y', emergeY)
+            .attr('width', emergeW).attr('height', 5)
+            .attr('fill', emergeColor);
+
+        svg.append('text')
+            .attr('x', emergeX + emergeW / 2).attr('y', emergeY + 30)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', emergeColor)
+            .text('What Emerged');
+
+        svg.append('text')
+            .attr('x', emergeX + emergeW / 2).attr('y', emergeY + 52)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('fill', '#374151')
+            .text('A general-purpose');
+        svg.append('text')
+            .attr('x', emergeX + emergeW / 2).attr('y', emergeY + 66)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('fill', '#374151')
+            .text('supplementary tool');
+
+        svg.append('text')
+            .attr('x', emergeX + emergeW / 2).attr('y', emergeY + 90)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', '#4b5563')
+            .text('Flexible schema');
+        svg.append('text')
+            .attr('x', emergeX + emergeW / 2).attr('y', emergeY + 104)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', '#4b5563')
+            .text('Adversarial edge cases');
+        svg.append('text')
+            .attr('x', emergeX + emergeW / 2).attr('y', emergeY + 118)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', '#4b5563')
+            .text('Fully public');
+
+        // Label below emerge
+        svg.append('text')
+            .attr('x', emergeX + emergeW / 2).attr('y', emergeY + emergeH + 18)
+            .attr('text-anchor', 'middle').attr('font-size', '9px')
+            .attr('fill', emergeColor).attr('letter-spacing', '1.5px')
+            .text('WOULD NOT HAVE EXISTED');
+
+        // ══════════════════════════════════════════════
+        // BOTTOM: INTEGRITY BY CONSTRUCTION
+        // ══════════════════════════════════════════════
+        var intY = 280;
+
+        // Divider line
+        svg.append('line')
+            .attr('x1', 60).attr('y1', intY)
+            .attr('x2', W - 60).attr('y2', intY)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.15);
+
+        // Section heading
+        svg.append('text')
+            .attr('x', cx).attr('y', intY + 30)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-weight', '700').attr('fill', accentGold)
+            .attr('letter-spacing', '1.5px')
+            .text('SYSTEM INTEGRITY BY CONSTRUCTION, NOT BY RESTRICTION');
+
+        // Two contrasting approaches
+        var contrastY = intY + 50;
+        var contrastW = 420, contrastH = 130, contrastGap = 60;
+        var leftX = cx - contrastW - contrastGap / 2;
+        var rightX = cx + contrastGap / 2;
+
+        // Left: restriction approach (faded, struck)
+        svg.append('rect')
+            .attr('x', leftX).attr('y', contrastY)
+            .attr('width', contrastW).attr('height', contrastH)
+            .attr('rx', 3)
+            .attr('fill', '#fef2f2')
+            .attr('stroke', seedColor).attr('stroke-width', 1)
+            .attr('stroke-opacity', 0.4);
+
+        svg.append('text')
+            .attr('x', leftX + contrastW / 2).attr('y', contrastY + 26)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', seedColor)
+            .attr('fill-opacity', 0.5)
+            .text('By Restriction');
+
+        var restrictLines = [
+            'Hide real data behind access controls',
+            'Hope edge cases don\u2019t appear in production',
+            'Restrict inputs to avoid breakage'
+        ];
+        restrictLines.forEach(function (line, i) {
+            svg.append('text')
+                .attr('x', leftX + contrastW / 2).attr('y', contrastY + 54 + i * 20)
+                .attr('text-anchor', 'middle').attr('font-size', '11px')
+                .attr('fill', seedColor).attr('fill-opacity', 0.45)
+                .text(line);
+        });
+
+        // Strike-through across left panel
+        svg.append('line')
+            .attr('x1', leftX + 30).attr('y1', contrastY + contrastH / 2)
+            .attr('x2', leftX + contrastW - 30).attr('y2', contrastY + contrastH / 2)
+            .attr('stroke', seedColor).attr('stroke-width', 2)
+            .attr('stroke-opacity', 0.35);
+
+        // Right: construction approach (bold, present)
+        svg.append('rect')
+            .attr('x', rightX).attr('y', contrastY)
+            .attr('width', contrastW).attr('height', contrastH)
+            .attr('rx', 3)
+            .attr('fill', '#ecfdf5')
+            .attr('stroke', emergeColor).attr('stroke-width', 2);
+
+        svg.append('text')
+            .attr('x', rightX + contrastW / 2).attr('y', contrastY + 26)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', emergeColor)
+            .text('By Construction');
+
+        var constructLines = [
+            'Generate adversarial cases deliberately',
+            'Test edge cases before they reach production',
+            'The data itself ensures integrity'
+        ];
+        constructLines.forEach(function (line, i) {
+            svg.append('text')
+                .attr('x', rightX + contrastW / 2).attr('y', contrastY + 54 + i * 20)
+                .attr('text-anchor', 'middle').attr('font-size', '11px')
+                .attr('fill', '#374151')
+                .text(line);
+        });
+
+        // ══════════════════════════════════════════════
+        // BOTTOM: TAKEAWAY
+        // ══════════════════════════════════════════════
+        var takeY = contrastY + contrastH + 40;
+
+        svg.append('line')
+            .attr('x1', 160).attr('y1', takeY)
+            .attr('x2', W - 160).attr('y2', takeY)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.15);
+
+        svg.append('text')
+            .attr('x', cx).attr('y', takeY + 32)
+            .attr('text-anchor', 'middle').attr('font-size', '16px')
+            .attr('font-weight', '700').attr('fill', darkText)
+            .text('AI qualitatively transformed the development of supplementary technologies.');
+
+        svg.append('text')
+            .attr('x', cx).attr('y', takeY + 56)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('fill', '#374151').attr('font-style', 'italic')
+            .text('Tools that were never worth building now emerge naturally from the work.');
+
+        // ── Bauhaus bottom rule ──
+        svg.append('line')
+            .attr('x1', 40).attr('y1', H - 4)
+            .attr('x2', W - 40).attr('y2', H - 4)
+            .attr('stroke', darkText).attr('stroke-width', 1).attr('stroke-opacity', 0.12);
+    }
+
+
     // ─── REGISTRY (map name → function) ──────────────────────
     var registry = {
         'workflow-pipeline': workflowPipeline,
@@ -3714,7 +5189,12 @@ const VizLibrary = (function () {
         'blank-page': blankPage,
         'three-observations': threeObservations,
         'institutional-context': institutionalContext,
-        'evaluation-cost': evaluationCost
+        'evaluation-cost': evaluationCost,
+        'architectural-judgment': architecturalJudgment,
+        'tacit-knowledge': tacitKnowledge,
+        'syllabic-mixing': syllabicMixing,
+        'wrong-question': wrongQuestion,
+        'xenonym-synthesis': xenonymSynthesis
     };
 
     function render(name, container, config) {
