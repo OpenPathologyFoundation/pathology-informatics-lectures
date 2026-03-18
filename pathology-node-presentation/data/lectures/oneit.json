@@ -1,0 +1,533 @@
+{
+  "meta": {
+    "title": "The Transformative Effects of AI-Assisted Software Development",
+    "shortTitle": "AI-Assisted Development",
+    "presenter": "Peter Gershkovich, M.D., M.H.A.",
+    "institution": "Yale University",
+    "date": "2026",
+    "theme": {
+      "primary": "#1B3A5C",
+      "secondary": "#2E6DA4",
+      "accent": "#C0392B"
+    },
+    "glossary": [
+      { "term": "DevSecOps", "definition": "Development + Security + Operations — integrating security practices into every phase of the software development lifecycle." },
+      { "term": "Keycloak", "definition": "An open-source identity and access management solution supporting SAML, OAuth 2.0, and OpenID Connect for enterprise single sign-on." },
+      { "term": "Meilisearch", "definition": "A lightweight, open-source search engine designed for fast, typo-tolerant full-text search with minimal configuration." },
+      { "term": "Elasticsearch", "definition": "A distributed, RESTful search and analytics engine built on Apache Lucene, widely used for log analytics and full-text search at scale." },
+      { "term": "Xenonym", "definition": "An open-source synthetic name generator that produces linguistically plausible names belonging to no real person — built for safe test data generation." },
+      { "term": "HIPAA", "definition": "Health Insurance Portability and Accountability Act — U.S. federal law governing the privacy and security of patient health information." },
+      { "term": "HL7", "definition": "Health Level 7 — a set of standards for transferring clinical and administrative data between hospital information systems." },
+      { "term": "FOSSA", "definition": "A software composition analysis tool that performs deep dependency analysis and exploitability scoring for open-source components." },
+      { "term": "CVE", "definition": "Common Vulnerabilities and Exposures — a standardized list of publicly known cybersecurity vulnerabilities." },
+      { "term": "Docker", "definition": "A containerization platform that packages software with all its dependencies so it runs identically everywhere." },
+      { "term": "JSON", "definition": "JavaScript Object Notation — a lightweight, human-readable data format used to store and exchange structured data." },
+      { "term": "Tufte", "definition": "Edward Tufte — Yale professor and information design pioneer who published influential critiques of PowerPoint's cognitive impact." },
+      { "term": "Epic", "definition": "A major electronic health record (EHR) vendor used by many large healthcare systems, including Yale." },
+      { "term": "Beaker", "definition": "Epic's laboratory information system module for managing clinical laboratory workflows." },
+      { "term": "SAML", "definition": "Security Assertion Markup Language — an XML-based standard for exchanging authentication and authorization data between parties." },
+      { "term": "OAuth", "definition": "An open standard for access delegation, commonly used for token-based authentication on the web." },
+      { "term": "OpenID Connect", "definition": "An identity layer on top of OAuth 2.0 that allows clients to verify user identity and obtain basic profile information." },
+      { "term": "LLM", "definition": "Large Language Model — an AI model trained on vast text corpora, capable of generating and analyzing natural language and code." },
+      { "term": "PR", "definition": "Pull Request — a method of submitting contributions to a codebase where changes are reviewed before being merged." },
+      { "term": "Svelte", "definition": "A modern JavaScript framework that compiles components into efficient vanilla JavaScript at build time." },
+      { "term": "React", "definition": "A JavaScript library (by Meta) for building user interfaces from reusable components." }
+    ]
+  },
+  "slides": [
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "fade",
+      "title": "The Transformative Effects of AI-Assisted Software Development",
+      "subtitle": "Yale OneIT Conference",
+      "presenter": "Peter Gershkovich, M.D., M.H.A.",
+      "institution": "Director of Pathology Informatics & Cancer Data Science — Yale University — 19 years",
+      "date": "2026"
+    },
+
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter's independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "realm-operations",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "meta",
+      "title": "What We Build — The Operational Landscape",
+      "subtitle": "REALM: Rapidly Evolving Agile Laboratory Modules — 19 years of systems across the continuum of care",
+      "vizType": "realm-diagram",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "This is not a slide. It is a live interactive systems map — the kind of information density that PowerPoint cannot express.",
+        "comment": "Pause on this. Let the audience explore it visually. Point out that systems span the continuum — they are not siloed. The colors encode status and role simultaneously. This is Tufte: multiple data streams in a single graphic."
+      }
+    },
+
+    {
+      "id": "wrong-question",
+      "type": "content",
+      "transition": "fade",
+      "title": "The Wrong Question",
+      "bullets": [
+        "Most conversations about AI-assisted development ask: <strong><em style='text-decoration:line-through; opacity:0.5;'>What can AI build?</em></strong>",
+        "That is the wrong question.",
+        "The useful question: <strong>What does AI change about the act of building?</strong>"
+      ],
+      "fragments": true,
+      "takeaway": {
+        "text": "The capability is not the transformation. The transformation is what changes in the practice of building.",
+        "comment": "Let's try to recalibrate our thinking about the role of AI in development."
+      }
+    },
+
+    {
+      "id": "governing-principle",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "The Governing Principle",
+      "vizType": "governing-principle",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Most tool adoption runs in the opposite direction — we buy what's available and adapt our work to it. This talk is about a different mode.",
+        "comment": "The earliest clinical and laboratory systems were born exactly this way — pioneers automated their own workflows, not someone else's idea of a workflow. Read any early publication on hospital information systems and the pattern is transparent: clinicians built what they needed."
+      }
+    },
+
+    {
+      "id": "cognitive-load",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Cognitive Load Redistribution",
+      "subtitle": "Where developer effort concentrates — a structural model informed by industry research",
+      "vizType": "cognitive-load",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Freeing up cognitive load is only valuable if you have something worth thinking about.",
+        "comment": "Think of every time you've looked up how to configure a Hibernate mapping you've configured forty times before. That look-up is not thinking. AI absorbs it. What remains — should remain — is the decision about whether Hibernate is the right tool at all. Sources: Microsoft Time Warp (2024), JetBrains DevEco 2025, METR RCT (2025 + Feb 2026 update) — see Sources slide."
+      }
+    },
+
+    {
+      "id": "feedback-loop",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Compression of the Feedback Loop",
+      "subtitle": "The speed change is not linear — it changes the character of design decisions",
+      "vizType": "feedback-loop",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Speed doesn't just change how fast you work. It changes how you think.",
+        "comment": "When a design decision takes two hours to implement and test, you commit to fewer of them. You defend your first approach because the cost of abandonment is high. Compress the loop and the economics change."
+      }
+    },
+
+    {
+      "id": "blank-page",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "The Blank Page Problem",
+      "subtitle": "Two metaphors for the same terror — and what dissolved it",
+      "vizType": "blank-page",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "You traded the blank page for a plausible wrong answer. Learn to tell the difference.",
+        "comment": "Malevich called the Black Square the 'zero point of painting' — the void before creation. Every developer knows that void: the empty file, the blinking cursor. AI didn't fill the void. It made the first mark free. The work shifted from generation to judgment. Everyone in this room has experienced the blank file. The trap is assuming the first output is good because it exists."
+      }
+    },
+
+    {
+      "id": "domain-knowledge",
+      "type": "content",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "Domain Knowledge Is Not Transferable",
+      "bullets": [
+        "<strong>AI doesn't know:</strong>",
+        "What a diagnostic clause means in surgical pathology",
+        "What the Hermes HL7 broker expects on the wire",
+        "Why the pre-analytical/analytical/post-analytical framework maps poorly onto anatomic pathology",
+        "Which Epic constraint will block your integration in 6 months",
+        "That knowledge lives in <strong>you</strong>. AI amplifies it. It cannot replace it.",
+        "The practitioner with deep domain knowledge and AI assistance is not slightly better than the one without AI. <strong>The gap is qualitative.</strong>"
+      ],
+      "takeaway": {
+        "text": "Domain knowledge just became more valuable, not less.",
+        "comment": "The pathology examples are intentional — they are specific, and they signal to the audience that this is a practitioner's perspective, not a vendor pitch."
+      }
+    },
+
+    {
+      "id": "architectural-judgment",
+      "type": "content",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "Architectural Judgment Remains Scarce",
+      "bullets": [
+        "AI accelerates <strong>implementation</strong>. AI does not clarify <strong>intent</strong>.",
+        "The decision about <em>what to build</em> — the right abstraction, the right data model, the right decomposition — is unchanged.",
+        "Vague requirements now produce working code that <strong>does the wrong thing</strong>.",
+        "Precision of thought is no longer optional.",
+        "The cost of poor architectural decisions does not go down with AI assistance. <strong>It scales.</strong>"
+      ],
+      "takeaway": {
+        "text": "AI makes the cost of a bad architecture decision scale. It doesn't eliminate it.",
+        "comment": "AI will produce correct, compiling, well-formatted code for the wrong problem. Faster than ever. If you don't know what you're building, AI will build the wrong thing at previously impossible speed."
+      }
+    },
+
+    {
+      "id": "institutional-context",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "institutional-context",
+      "speakerNotes": "Every system you build exists inside a web of constraints. Epic integrations and Beaker timelines. Departmental ownership boundaries. Regulatory requirements you inherit, not choose. Organizational readiness for change. The colleague whose cooperation you need and whose judgment you trust. AI has no access to any of it. The model can only see the innermost layer — your code, your system. Everything outside that boundary — the institutional context — is invisible to it. This is the OneIT point: shared institutional knowledge just became a competitive advantage, not an overhead cost."
+    },
+
+    {
+      "id": "evaluation-cost",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "evaluation-cost",
+      "speakerNotes": "Old constraint: the option space was bounded by what you already knew. Evaluating an unfamiliar technology required days of environment setup, documentation reading, a colleague who already knew it. That was the evaluation tax. New reality: with AI + Docker, you can stage, configure, and run an unfamiliar system in hours — sometimes minutes. The option space is now bounded by what actually exists, not what you happened to know. The area ratio on this slide is real — it's roughly 3.6 times the explorable space. This is not about being faster at what you already do. This is about reaching into a space of options you would not previously have considered. The shift is qualitative, not quantitative."
+    },
+
+    {
+      "id": "keycloak",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "Keycloak — Enterprise SSO in an Afternoon",
+      "left": {
+        "heading": "The Challenge",
+        "bullets": [
+          "Enterprise-grade authentication is a significant integration project",
+          "<strong>Keycloak:</strong> SAML, OAuth 2.0, OpenID Connect compliant",
+          "Biometric authentication support on capable devices",
+          "Mature, production-grade, widely used in enterprise environments"
+        ]
+      },
+      "right": {
+        "heading": "What Changed",
+        "highlight": true,
+        "bullets": [
+          "AI-assisted Docker configuration: <strong>hours, not days</strong>",
+          "Not because AI configured it for you — because AI knew what configuration questions to answer",
+          "You can now evaluate before you commit. <strong>That is architecturally new.</strong>"
+        ]
+      },
+      "takeaway": {
+        "text": "You can now evaluate before you commit. That is architecturally new.",
+        "comment": "Maybe you already have something equivalent. Maybe Keycloak is better. Maybe it introduces a dependency you can't absorb. Now you know — based on actual experience, not documentation."
+      }
+    },
+
+    {
+      "id": "selection-problem",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "The Stack Is Now a Selection Problem",
+      "subtitle": "Elasticsearch vs. Meilisearch — different tools, different trade-offs",
+      "vizType": "stack-comparison",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "AI gives you access to more options. It does not tell you which one to pick.",
+        "comment": "The question is never 'what's the most interesting technology?' It's 'what fits the problem, and what fits the institution?' If you can't answer the second question, the first question is premature."
+      }
+    },
+
+    {
+      "id": "names-problem",
+      "type": "content",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "The Problem: Names That Don't Exist",
+      "subtitle": "Case Study — Xenonym · github.com/OpenPathologyFoundation/xenonym",
+      "bullets": [
+        "<strong>The context:</strong> You are building a system that handles patient data.",
+        "You need realistic test data — data that exercises schema, validation, rendering, and integration.",
+        "You cannot use real patients. HIPAA is not a suggestion.",
+        "<strong>The requirement:</strong> Names that sound like names, but belong to no one.",
+        "This is not a trivial problem. And it is the kind of problem where you would not historically think to consult a language model."
+      ],
+      "takeaway": {
+        "text": "Fake-sounding names are a different class of failure, not the same failure as real names.",
+        "comment": "The boring solution is to use obviously fake names — John Doe, Jane Smith. But that tests almost nothing, because real data is irregular, surprising, and occasionally adversarial."
+      }
+    },
+
+    {
+      "id": "syllabic-mixing",
+      "type": "content",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "The AI Conversation — Syllabic Mixing",
+      "subtitle": "AI as cross-domain design consultant — not code generator.",
+      "bullets": [
+        "<strong>The design challenge presented to AI:</strong> \"How do you generate names that feel linguistically plausible but are structurally foreign to any single language?\"",
+        "<strong>The solution it surfaced:</strong> syllabic mixing across seven languages",
+        "Take the phonemic and syllabic building blocks from 7 unrelated languages",
+        "Combine them according to each language's internal rules — consonant clusters, vowel harmony, stress patterns",
+        "<strong>Probability that the combination is a real name:</strong> vanishingly small",
+        "<strong>Probability that it sounds like a name to a human ear:</strong> high"
+      ],
+      "takeaway": {
+        "text": "The model didn't write the code. It found the field.",
+        "comment": "I did not search for this solution. I described the constraint and the model surfaced an approach from linguistics that I would not have reached independently. AI functioning as a cross-domain consultant."
+      }
+    },
+
+    {
+      "id": "jennifer-null",
+      "type": "content",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "Nontra Null — The Names That Break Systems",
+      "bullets": [
+        "<strong>Nontra Null</strong> — a real person whose last name crashes databases, blocks visa applications, and erases hotel reservations. (<a href='https://www.wsj.com/lifestyle/null-last-name-computer-scientists-forms-f0a43b08' target='_blank'>WSJ, Feb 2025</a>)",
+        "\"NULL\" interpreted as absence of value, not as a string. The record either failed silently or threw an error that looked like something else entirely.",
+        "<strong>Xenonym generates these deliberately:</strong>",
+        "Names containing NULL, DROP, DELETE, SELECT",
+        "Bobby Tables is not a joke. It is a test case.",
+        "Names with diacritics: Müller, Čapek, Ñoño — real names in real systems",
+        "<strong>If your system cannot store Nontra Null, that is a bug.</strong> Depending on context, it is also a compliance failure."
+      ],
+      "takeaway": {
+        "text": "The test suite should contain the names that break things. That's the point of a test suite.",
+        "comment": "Nontra Null (née Yantaprasert) is a documented real-world case — a clothing designer in Burbank whose married name breaks systems from Indian visa consulates to hotel booking sites. We generate this name deliberately. Edward De Leet. Selekt Jones. You want to know if your system handles them safely before you encounter them in the field. Source: WSJ, Feb 2025."
+      }
+    },
+
+    {
+      "id": "xenonym-live",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "interactive",
+      "title": "Xenonym Live — Schema-Driven Synthetic Data",
+      "subtitle": "Live at <a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a>",
+      "vizType": "xenonym-browser",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The whole system is publicly accessible, costs nothing, and was built to solve a real problem — not to demonstrate a capability.",
+        "comment": "Click the Open Live link to switch directly to the running application — you are already in the browser. That transition itself is the argument."
+      }
+    },
+
+    {
+      "id": "xenonym-synthesis",
+      "type": "two-column",
+      "transition": "fade",
+      "title": "What Xenonym Illustrates",
+      "left": {
+        "heading": "What Happened",
+        "bullets": [
+          "AI suggested syllabic mixing — a linguistic solution to a data problem",
+          "Nontra Null cases generated deliberately",
+          "Schema generalization emerged from the seed problem",
+          "Application is fully public — no sensitive data"
+        ]
+      },
+      "right": {
+        "heading": "Which Argument It Demonstrates",
+        "highlight": true,
+        "bullets": [
+          "The architectural horizon expands — AI knows domains you don't",
+          "Building block thinking — adversarial cases before you need them",
+          "Architectural judgment: recognizing when a solution is more general than the problem that produced it",
+          "<strong>Security by construction, not by restriction</strong>"
+        ]
+      },
+      "takeaway": {
+        "text": "Security by construction, not by restriction. That phrase carries us into the next section.",
+        "comment": "Xenonym exists because I needed safe test data. It was built with AI as a design partner, tested against adversarial inputs that AI helped identify, and deployed publicly precisely because it contains nothing sensitive."
+      }
+    },
+
+    {
+      "id": "code-review-theater",
+      "type": "content",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "Code Review as Theater",
+      "subtitle": "The problem with code review at scale:",
+      "bullets": [
+        "<span style='font-size:1.15em; font-style:italic; color:#4A5568;'>\"That looks good to me.\"</span><br><span style='font-size:0.85em; color:#7f8c8d;'>— Every reviewer, under time pressure, reviewing code they didn't write</span>",
+        "When the reviewer did not write the code, is under time pressure, and has no structural tool to anchor their attention…",
+        "…the review is a <strong>compliance ritual</strong>, not a quality gate.",
+        "AI can change this. Not by replacing the reviewer. By giving the reviewer something specific to evaluate."
+      ],
+      "takeaway": {
+        "text": "The review record is not the same thing as the review.",
+        "comment": "Everyone in this room knows this. Nobody says it out loud in a formal meeting. A code review where the reviewer says 'looks good to me' thirty seconds after opening the pull request has served its organizational function while having served almost no quality function."
+      }
+    },
+
+    {
+      "id": "ai-in-pr",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "AI in the Pull Request",
+      "left": {
+        "heading": "The Implementation",
+        "bullets": [
+          "AI (AWS-based LLM) embedded in the PR review pipeline",
+          "Enterprise GitHub for transparency and audit trail",
+          "FOSSA for deep dependency analysis and exploitability scoring",
+          "Human reviewer receives targeted findings, not a blank canvas"
+        ]
+      },
+      "right": {
+        "heading": "What AI Flags",
+        "highlight": true,
+        "bullets": [
+          "Method complexity too high",
+          "Test coverage insufficient for this path",
+          "Locale handling missing from parsing routine",
+          "Dependency with known CVE introduced transitively",
+          "<strong>The reviewer's job becomes evaluation of specific findings, not a scan of the whole surface.</strong>"
+        ]
+      },
+      "takeaway": {
+        "text": "The reviewer's job is now discernment, not surveillance.",
+        "comment": "The human in the loop is now exercising judgment on a short list of targeted, specific issues. The distinction — right but contextually overkill — is judgment. That's what you're paying a human for."
+      }
+    },
+
+    {
+      "id": "devsecops-pattern",
+      "type": "content",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "DevSecOps as Institutional Pattern",
+      "bullets": [
+        "This pattern did not emerge from tooling. It emerged from <strong>sustained collaboration with the security team over four to five years.</strong>",
+        "<strong>DevSecOps:</strong> development, security, and operations as a unified practice — not sequential handoffs",
+        "Security embedded from the start, not bolted on at delivery",
+        "Well-vetted patterns stored in version control — transparent, repeatable",
+        "<strong>AI amplified a practice that already existed.</strong> The sequencing matters."
+      ],
+      "takeaway": {
+        "text": "AI amplified what was already there. Build the culture first.",
+        "comment": "Organizations that try to put AI tooling into a dysfunctional security culture will get a dysfunctional process that runs faster. This is the kind of cross-organizational pattern this conference exists to propagate."
+      }
+    },
+
+    {
+      "id": "tufte-problem",
+      "type": "visualization",
+      "transition": "convex",
+      "title": "The Tufte Problem",
+      "subtitle": "Yale's own Edward Tufte — 23 years of being right, and nothing changed. Hover events for detail.",
+      "vizType": "tufte-timeline",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Tufte was right. He didn't give us anywhere to go. AI changed the price of leaving.",
+        "comment": "This slide was a bulleted list. Now it is a Minard-style visualization encoding three variables — PowerPoint dominance, critique milestones, and switching cost — across 23 years. The medium is the argument. The irony resolves itself."
+      }
+    },
+
+    {
+      "id": "what-this-is",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "meta",
+      "title": "What This Presentation Actually Is",
+      "subtitle": "What you have been looking at for the last 40 minutes:",
+      "vizType": "presentation-architecture",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The liberation from PowerPoint did not come from a better argument. It came from the switching cost collapsing.",
+        "comment": "Remember the first slide. The presentation is a JSON document rendered through a browser application. There is no PowerPoint file. Each slide is a component. The medium made the argument possible."
+      }
+    },
+
+    {
+      "id": "liberation-pattern",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "The Pattern: Every Liberation Has the Same Structure",
+      "subtitle": "Four constraints. Same structural collapse. AI changed the price.",
+      "vizType": "liberation-pattern",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The constraint was never necessary. It was just expensive.",
+        "comment": "Every section of this talk has been an example of a constraint that everyone accepted as necessary — that turned out to be a switching cost that was too high. AI did not eliminate the problems. It reduced the cost of solving them below the threshold where we had stopped trying."
+      }
+    },
+
+    {
+      "id": "three-observations",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "three-observations",
+      "speakerNotes": "These are observations, not prescriptions. I'm reporting what I've seen over years of building with AI. (1) Domain knowledge — the person who knows what a diagnostic clause means, what the institution's history is, what the workflow requires — is MORE valuable when AI handles the generic. (2) Architectural clarity — vague requirements now produce working code that does the wrong thing. The cost of imprecision went UP. (3) The human in the loop — not the model, not the tool. The person who knows what they're building and why. All three converge on the same point: the differentiator was always you. AI made human judgment more consequential, not less necessary."
+    },
+
+    {
+      "id": "question-returns",
+      "type": "content",
+      "transition": "fade",
+      "title": "The Question Returns",
+      "bullets": [
+        "<span style='font-size:1.3em; font-weight:300; color:#4A5568; line-height:1.6;'>The question was never<br><em style='text-decoration:line-through; opacity:0.5;'>\"What can AI build?\"</em></span>",
+        "<span style='font-size:1.3em; font-weight:600; color:#1B3A5C; line-height:1.6;'>The question is<br>\"Do you know what you want to build —<br>clearly enough to recognize it when it appears?\"</span>"
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "The clarity is the work.",
+        "comment": "If the answer is yes, everything in this talk is an accelerant. And if the answer is not yet — the clarity is the work. AI will wait."
+      }
+    },
+
+    {
+      "id": "sources",
+      "type": "content",
+      "transition": "fade",
+      "title": "Sources & Further Reading",
+      "subtitle": "Research informing the models presented in this lecture",
+      "bullets": [
+        "<strong>Cognitive Load Redistribution (Slide 6)</strong> — Structural model. 'Before' column informed by:",
+        "<a href='https://www.microsoft.com/en-us/research/wp-content/uploads/2024/11/Time-Warp-Developer-Productivity-Study.pdf' target='_blank'>Microsoft Research: Time Warp — Developer Productivity Study (2024, n=484)</a> — developers spend ~32% writing code, 35% on maintenance/testing",
+        "<a href='https://blog.jetbrains.com/research/2025/10/state-of-developer-ecosystem-2025/' target='_blank'>JetBrains: State of Developer Ecosystem 2025 (n=24,534)</a> — 85% use AI tools; repetitive tasks delegated, design retained",
+        "<a href='https://www.infoworld.com/article/3831759/developers-spend-most-of-their-time-not-coding-idc-report.html' target='_blank'>IDC Report: Developers spend most of their time not coding</a> — majority spend ≤50% of day on actual code",
+        "<strong>'After AI' column — projected redistribution</strong>, informed by:",
+        "<a href='https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/' target='_blank'>METR: Measuring AI Impact on Experienced OS Developer Productivity (RCT, July 2025)</a> — initial finding: AI increased task time 19% for experts; evaluation overhead significant",
+        "<a href='https://metr.org/blog/2026-02-24-uplift-update/' target='_blank'>METR: Uplift Update (Feb 2026)</a> — revised: returning developers now show ~18% speedup (CI: −38% to +9%); original slowdown likely reflected tool immaturity; selection bias noted as developers refused non-AI tasks",
+        "<a href='https://arxiv.org/abs/2507.03156' target='_blank'>arXiv: Impact of LLM-Assistants on Developer Productivity — Systematic Literature Review (2025)</a> — 37 studies; boilerplate reduced, cognitive offloading concerns noted",
+        "<a href='https://stackoverflow.co/labs/developer-sentiment-ai-ml/' target='_blank'>Stack Overflow: 2025 Developer Survey — AI Sentiment</a> — 84% using AI tools, only 16.3% report significant productivity gain",
+        "<strong>Nontra Null — The Names That Break Systems (Slide 18)</strong>",
+        "<a href='https://www.wsj.com/lifestyle/null-last-name-computer-scientists-forms-f0a43b08' target='_blank'>WSJ: When Null Is Your Name, Nothing Works (Feb 2025)</a> — Nontra Null (née Yantaprasert): last name crashes databases, blocks visa applications, erases hotel reservations"
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions & Discussion",
+      "contact": "Peter Gershkovich, M.D., M.H.A.<br>Director of Pathology Informatics & Cancer Data Science<br>Yale University<br><br><em>A question to start:</em><br>\"Someone in this room is about to adopt an AI development tool because their team asked for it. What is the one thing they should decide before they do?\"<br><br><a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a>"
+    }
+  ]
+}

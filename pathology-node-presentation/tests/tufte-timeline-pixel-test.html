@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tufte Timeline — Pixel Verification Tests</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; color: #1e293b; padding: 24px; }
+        h1 { font-size: 20px; margin-bottom: 4px; }
+        .subtitle { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+        #viz-container { width: 1100px; max-width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; margin-bottom: 24px; position: relative; }
+        #results { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.8; }
+        .pass { color: #16a34a; } .pass::before { content: '✓ '; }
+        .fail { color: #dc2626; font-weight: 600; } .fail::before { content: '✗ '; }
+        .warn { color: #d97706; } .warn::before { content: '⚠ '; }
+        .section { font-weight: 700; margin-top: 12px; font-size: 14px; color: #0f172a; }
+        .summary { margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+        .summary.ok { background: #dcfce7; color: #166534; }
+        .summary.bad { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <h1>Tufte Timeline — Runtime Pixel Tests</h1>
+    <div class="subtitle">Renders the visualization in a real browser, then inspects SVG element bounding boxes to verify layout accuracy.</div>
+
+    <div id="viz-container"></div>
+    <div id="results"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../js/viz-library.js"></script>
+    <script>
+    (function() {
+        var container = document.getElementById('viz-container');
+        var results = document.getElementById('results');
+        var passed = 0, failed = 0, warned = 0;
+
+        function log(cls, msg) {
+            var d = document.createElement('div');
+            d.className = cls;
+            d.textContent = msg;
+            results.appendChild(d);
+            if (cls === 'pass') passed++;
+            else if (cls === 'fail') failed++;
+            else if (cls === 'warn') warned++;
+        }
+        function section(title) {
+            var d = document.createElement('div');
+            d.className = 'section';
+            d.textContent = '━━━ ' + title + ' ━━━';
+            results.appendChild(d);
+        }
+
+        // Render the visualization
+        VizLibrary.render('tufte-timeline', container, {});
+
+        // Wait for DOM to settle (animations use transitions)
+        setTimeout(function() {
+            var svg = container.querySelector('svg');
+            if (!svg) { log('fail', 'No SVG element rendered'); return; }
+
+            // ── 1. SVG exists with correct viewBox ──
+            section('SVG Structure');
+            var vb = svg.getAttribute('viewBox');
+            if (vb === '0 0 1100 460') {
+                log('pass', 'ViewBox is 0 0 1100 460');
+            } else {
+                log('fail', 'ViewBox mismatch: ' + vb);
+            }
+
+            // ── 2. Collect all text elements with their bboxes ──
+            section('Label Overlap Detection');
+            var allTexts = svg.querySelectorAll('text');
+            var labelBoxes = []; // { text, bbox, x, y }
+
+            allTexts.forEach(function(t) {
+                var text = t.textContent.trim();
+                if (!text) return; // skip empty
+                try {
+                    var bbox = t.getBBox();
+                    labelBoxes.push({ text: text, x: bbox.x, y: bbox.y, w: bbox.width, h: bbox.height, el: t });
+                } catch(e) { /* getBBox can fail on hidden elements */ }
+            });
+
+            log('pass', 'Found ' + labelBoxes.length + ' non-empty text elements');
+
+            // Group labels in the event zone (y roughly 190-260 in viewBox coords)
+            var eventLabels = labelBoxes.filter(function(b) {
+                return b.y >= 180 && b.y <= 270 && b.w > 5;
+            });
+
+            log('pass', 'Found ' + eventLabels.length + ' labels in event zone (y 180-270)');
+
+            // Check pairwise horizontal overlap among event-zone labels at similar y
+            var overlapCount = 0;
+            for (var i = 0; i < eventLabels.length; i++) {
+                for (var j = i + 1; j < eventLabels.length; j++) {
+                    var a = eventLabels[i], b = eventLabels[j];
+                    // Only check if vertically overlapping (same row)
+                    var vOverlap = !(a.y + a.h < b.y || b.y + b.h < a.y);
+                    if (!vOverlap) continue;
+                    // Horizontal overlap
+                    var hOverlap = !(a.x + a.w < b.x || b.x + b.w < a.x);
+                    if (hOverlap) {
+                        overlapCount++;
+                        log('fail', 'Label overlap: "' + a.text + '" ↔ "' + b.text + '"');
+                    }
+                }
+            }
+            if (overlapCount === 0) {
+                log('pass', 'No overlapping labels detected in event zone');
+            }
+
+            // ── 3. Verify band and cost chart vertical separation ──
+            section('Vertical Region Separation');
+
+            // Find the cost line path (stroke #c0392b)
+            var paths = svg.querySelectorAll('path');
+            var costPath = null, pptPath = null, altPath = null;
+            paths.forEach(function(p) {
+                var stroke = p.getAttribute('stroke');
+                var fill = p.getAttribute('fill');
+                if (stroke === '#c0392b' && fill === 'none') costPath = p;
+                if (stroke === '#e67e22' && fill && fill.includes('ppt-band')) pptPath = p;
+                if (stroke === '#27ae60' && fill && fill.includes('alt-band')) altPath = p;
+            });
+
+            if (costPath) {
+                var costBBox = costPath.getBBox();
+                log('pass', 'Cost line found: y=' + costBBox.y.toFixed(0) + ' to ' + (costBBox.y + costBBox.height).toFixed(0));
+
+                // Check event labels don't overlap cost chart
+                var costTop = costBBox.y;
+                eventLabels.forEach(function(lb) {
+                    var labelBottom = lb.y + lb.h;
+                    if (labelBottom > costTop) {
+                        log('warn', 'Label "' + lb.text + '" (bottom=' + labelBottom.toFixed(0) + ') near cost chart (top=' + costTop.toFixed(0) + ')');
+                    }
+                });
+            } else {
+                log('warn', 'Could not identify cost line path by stroke color');
+            }
+
+            if (pptPath) {
+                var pptBBox = pptPath.getBBox();
+                log('pass', 'PPT band found: y=' + pptBBox.y.toFixed(0) + ' h=' + pptBBox.height.toFixed(0));
+            }
+
+            if (altPath) {
+                var altBBox = altPath.getBBox();
+                log('pass', 'Alt band found: y=' + altBBox.y.toFixed(0) + ' h=' + altBBox.height.toFixed(0));
+
+                // Event dots (circles) should be below alt band
+                var circles = svg.querySelectorAll('circle');
+                var dotsBelowBand = true;
+                circles.forEach(function(c) {
+                    var cy = parseFloat(c.getAttribute('cy'));
+                    var r = parseFloat(c.getAttribute('r'));
+                    if (cy - r < altBBox.y + altBBox.height) {
+                        dotsBelowBand = false;
+                    }
+                });
+                if (dotsBelowBand) {
+                    log('pass', 'All event dots are below alt band bottom');
+                } else {
+                    log('warn', 'Some event dots overlap alt band (may be intentional for early years where alt band is thin)');
+                }
+            }
+
+            // ── 4. Hover interaction test ──
+            section('Hover Interactions');
+
+            if (pptPath) {
+                // Verify cursor style
+                var cursor = pptPath.style.cursor;
+                if (cursor === 'pointer') {
+                    log('pass', 'PPT band has pointer cursor');
+                } else {
+                    log('fail', 'PPT band missing pointer cursor: ' + cursor);
+                }
+            }
+
+            if (altPath) {
+                var cursor2 = altPath.style.cursor;
+                if (cursor2 === 'pointer') {
+                    log('pass', 'Alt band has pointer cursor');
+                } else {
+                    log('fail', 'Alt band missing pointer cursor');
+                }
+            }
+
+            // Check tooltip container exists
+            var tooltip = container.querySelector('.viz-tooltip');
+            if (tooltip) {
+                log('pass', 'Tooltip element present');
+            } else {
+                log('fail', 'No tooltip element found');
+            }
+
+            // Check hit areas (transparent rects) exist for events
+            var hitAreas = svg.querySelectorAll('rect[fill="transparent"][cursor="pointer"]');
+            if (hitAreas.length >= 8) {
+                log('pass', hitAreas.length + ' event hit areas found');
+            } else {
+                log('fail', 'Expected ≥8 event hit areas, found ' + hitAreas.length);
+            }
+
+            // ── 5. X-axis labels within SVG bounds ──
+            section('Bounds Check');
+
+            var svgBBox = svg.getBBox();
+            var outOfBounds = 0;
+            labelBoxes.forEach(function(lb) {
+                if (lb.x + lb.w > 1100 || lb.y + lb.h > 460) {
+                    outOfBounds++;
+                }
+            });
+            if (outOfBounds === 0) {
+                log('pass', 'All text elements within SVG viewBox bounds');
+            } else {
+                log('fail', outOfBounds + ' text elements extend beyond SVG bounds');
+            }
+
+            // ── Summary ──
+            var summaryDiv = document.createElement('div');
+            summaryDiv.className = 'summary ' + (failed === 0 ? 'ok' : 'bad');
+            summaryDiv.textContent = passed + ' passed  |  ' + failed + ' failed  |  ' + warned + ' warnings';
+            results.appendChild(summaryDiv);
+
+        }, 500); // Wait for initial render
+    })();
+    </script>
+</body>
+</html>
