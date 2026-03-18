@@ -19,3 +19,17 @@ Thumbs.db
 
 # Large binary files (store originals elsewhere)
 *.pptx
+*.docx
+
+# Test artifacts & Playwright
+pw-results/
+test-results/
+playwright-report/
+.playwright/
+blob-report/
+
+# package-lock (root level — each sub-project manages its own)
+/package-lock.json
+
+# Playwright config (generated, not project config)
+pathology-node-presentation/playwright.config.js
