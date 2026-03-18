@@ -6,11 +6,15 @@ Interactive web-based lectures for pathology residents, built with Reveal.js, D3
 
 ## Available Lectures
 
-| # | Title | Docs |
-| --- | ----- | ---- |
-| 1 | Regulations, Technology, and the Future of Pathology | [Outline](docs/updated_outline.md) · [PRD](docs/PRD.md) |
-| 2 | Software Development for Clinical Use in Pathology | [Outline](docs/software_dev_clinical_outline.md) · [Overview](docs/software_dev_clinical_use.md) |
-| 3 | Relevance of Pathology Informatics *(interactive, JSON-driven)* | [Outline](docs/Introduction/intro.md) |
+| # | Title | Slides | Type | Docs |
+| --- | ----- | ------ | ---- | ---- |
+| ★ | **The Transformative Effects of AI-Assisted Software Development** (Yale OneIT) | 29 | Interactive · JSON-driven | — |
+| 1 | Relevance of Pathology Informatics | 41 | Interactive · JSON-driven | [Outline](docs/Introduction/intro.md) |
+| 2 | Custom Software Development in Pathology | 37 | Interactive · JSON-driven | — |
+| 3 | Software Development for Clinical Use (Original) | 14 | Reveal.js | [Outline](docs/software_dev_clinical_outline.md) · [Overview](docs/software_dev_clinical_use.md) |
+| 4 | Regulations, Technology, and the Future of Pathology | 30+ | Reveal.js | [Outline](docs/updated_outline.md) · [PRD](docs/PRD.md) |
+
+All interactive lectures feature D3.js visualizations, live polls, and speaker notes.
 
 ## Quick Start
 
@@ -52,11 +56,11 @@ pathology-informatics-lectures/
 
 ## JSON-Driven Lecture System
 
-Lecture 3+ uses a modular architecture:
+The interactive lectures (OneIT, Relevance of Pathology Informatics, Custom Software Development) use a modular architecture:
 
-- **`data/lectures/*.json`** — slide content and structure
+- **`data/lectures/*.json`** — slide content, structure, speaker notes, and takeaways
 - **`js/slide-engine.js`** — renders slides from JSON into Reveal.js sections
-- **`js/viz-library.js`** — D3.js visualizations (workflow pipeline, abstraction layers, etc.)
+- **`js/viz-library.js`** — D3.js visualizations (Tufte timeline, Bauhaus kinetic typography, workflow pipeline, abstraction layers, Xenonym synthesis, and more)
 - **`js/widgets.js`** — interactive polls, micro-case voting, timers
 
 To create a new lecture, add a JSON file to `data/lectures/` and access it at `/lecture/<name>`.

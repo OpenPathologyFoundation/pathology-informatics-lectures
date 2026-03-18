@@ -8,6 +8,10 @@ ppt_gen/venv/
 .idea/
 *.code-workspace
 
+# Environment variables
+.env
+.env.*
+
 # OS generated files
 .DS_Store
 .DS_Store?
