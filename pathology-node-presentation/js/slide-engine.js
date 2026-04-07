@@ -378,7 +378,9 @@ var SlideEngine = (function () {
         var s = el('section', 'intro-slide');
         s.setAttribute('data-viz', slide.vizType);
         applyBadge(s, slide.badge);
-        s.appendChild(el('h2', '', slide.title));
+        if (slide.title) {
+            s.appendChild(el('h2', '', slide.title));
+        }
 
         if (slide.subtitle) {
             var sub = el('p', 'slide-subtitle', slide.subtitle);
@@ -387,6 +389,9 @@ var SlideEngine = (function () {
 
         var vizDiv = el('div', 'viz-container');
         vizDiv.id = 'viz-' + slide.id;
+        if (!slide.title && !slide.subtitle) {
+            vizDiv.classList.add('viz-fullbleed');
+        }
         s.appendChild(vizDiv);
 
         addTakeaway(s, slide.takeaway);

@@ -5161,6 +5161,502 @@ const VizLibrary = (function () {
     }
 
 
+    // ─── IBIS FLOW — natural-language search + provenance pathway ──
+    function ibisFlow(container, config) {
+        var W = 1200, H = 700;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        // Transparent bg for test harness
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', 'white').attr('fill-opacity', 0);
+
+        var ink     = '#1f2937';
+        var subInk  = '#4b5563';
+        var muted   = '#6b7280';
+        var rule    = '#cbd5e1';
+        var accent  = '#1B3A5C';
+        var green   = '#065f46';
+        var crimson = '#991b1b';
+
+        // ─── TITLE BLOCK (centered) ─────────────────────────
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 56)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '26px').attr('font-weight', '700')
+            .attr('fill', accent)
+            .text('IBIS — Natural-Language Search Over Pathology Data');
+
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 84)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('fill', subInk)
+            .text('What a small team can now deliver — live demo');
+
+        svg.append('line')
+            .attr('x1', 80).attr('y1', 102).attr('x2', W - 80).attr('y2', 102)
+            .attr('stroke', rule).attr('stroke-width', 1);
+
+        // ─── REGISTER 1: WHAT THE USER DOES ─────────────────
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 128)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-weight', '700')
+            .attr('fill', muted).attr('letter-spacing', '2.5px')
+            .text('REGISTER 1   ·   WHAT THE USER DOES');
+
+        var topY = 220;
+
+        // Node 1: Clinician (left)
+        var n1x = 170, nodeR = 52;
+        svg.append('circle')
+            .attr('cx', n1x).attr('cy', topY).attr('r', nodeR)
+            .attr('fill', 'white').attr('stroke', ink).attr('stroke-width', 2);
+        svg.append('text')
+            .attr('x', n1x).attr('y', topY - 4)
+            .attr('text-anchor', 'middle').attr('font-size', '15px')
+            .attr('font-weight', '700').attr('fill', ink)
+            .text('Clinician');
+        svg.append('text')
+            .attr('x', n1x).attr('y', topY + 16)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('fill', subInk).text('Researcher');
+
+        // IBIS box (center)
+        var ibisW = 240, ibisH = 110;
+        var ibisCx = 600;
+        var ibisX = ibisCx - ibisW / 2;
+        var ibisY = topY - ibisH / 2;
+
+        svg.append('rect')
+            .attr('x', ibisX).attr('y', ibisY)
+            .attr('width', ibisW).attr('height', ibisH)
+            .attr('fill', 'white').attr('stroke', accent).attr('stroke-width', 2.5);
+        svg.append('text')
+            .attr('x', ibisCx).attr('y', topY - 22)
+            .attr('text-anchor', 'middle').attr('font-size', '24px')
+            .attr('font-weight', '700').attr('fill', accent).text('IBIS');
+        svg.append('text')
+            .attr('x', ibisCx).attr('y', topY + 2)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', subInk).text('natural language → query');
+        svg.append('text')
+            .attr('x', ibisCx).attr('y', topY + 22)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', subInk).text('over structured + unstructured data');
+
+        // Cohort answer (right)
+        var ansW = 200, ansH = 110;
+        var ansCx = 980;
+        var ansX = ansCx - ansW / 2;
+        var ansY = topY - ansH / 2;
+        svg.append('rect')
+            .attr('x', ansX).attr('y', ansY)
+            .attr('width', ansW).attr('height', ansH)
+            .attr('fill', 'white').attr('stroke', ink).attr('stroke-width', 2);
+        svg.append('text')
+            .attr('x', ansCx).attr('y', ansY + 22)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-weight', '700').attr('fill', subInk)
+            .attr('letter-spacing', '1.5px').text('COHORT · 187 CASES');
+
+        // sparkline bars
+        var bars = [22, 38, 31, 47, 58, 44, 62];
+        var barW = 18, barGap = 6;
+        var barsTotalW = bars.length * barW + (bars.length - 1) * barGap;
+        var barsStartX = ansCx - barsTotalW / 2;
+        var barBaseY = ansY + ansH - 14;
+        bars.forEach(function (v, i) {
+            svg.append('rect')
+                .attr('x', barsStartX + i * (barW + barGap))
+                .attr('y', barBaseY - v)
+                .attr('width', barW).attr('height', v)
+                .attr('fill', accent).attr('fill-opacity', 0.85);
+        });
+
+        // Arrow 1: clinician → IBIS  (cleared from clinician edge to IBIS edge)
+        svg.append('line')
+            .attr('x1', n1x + nodeR + 6).attr('y1', topY)
+            .attr('x2', ibisX - 8).attr('y2', topY)
+            .attr('stroke', ink).attr('stroke-width', 1.5);
+        svg.append('path')
+            .attr('d', 'M' + (ibisX - 8) + ',' + topY + ' l-9,-5 l0,10 z')
+            .attr('fill', ink);
+
+        // Arrow 2: IBIS → cohort
+        svg.append('line')
+            .attr('x1', ibisX + ibisW + 8).attr('y1', topY)
+            .attr('x2', ansX - 8).attr('y2', topY)
+            .attr('stroke', ink).attr('stroke-width', 1.5);
+        svg.append('path')
+            .attr('d', 'M' + (ansX - 8) + ',' + topY + ' l-9,-5 l0,10 z')
+            .attr('fill', ink);
+
+        // Question annotation — italicized, ABOVE arrow 1, well clear of nodes
+        var arrow1Mid = (n1x + nodeR + 6 + ibisX - 8) / 2;
+        svg.append('text')
+            .attr('x', arrow1Mid).attr('y', topY - 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('fill', accent)
+            .attr('font-style', 'italic')
+            .text('"How many invasive ductal carcinomas');
+        svg.append('text')
+            .attr('x', arrow1Mid).attr('y', topY - 22)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('fill', accent)
+            .attr('font-style', 'italic')
+            .text('with HER2 amplification in the last 18 months?"');
+
+        // "SECONDS, NOT WEEKS" — under arrow 2
+        var arrow2Mid = (ibisX + ibisW + 8 + ansX - 8) / 2;
+        svg.append('text')
+            .attr('x', arrow2Mid).attr('y', topY + 22)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('fill', muted).attr('letter-spacing', '1.5px')
+            .text('SECONDS, NOT WEEKS');
+
+        // "no SQL · no analyst queue" — under cohort
+        svg.append('text')
+            .attr('x', ansCx).attr('y', ansY + ansH + 18)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', green).attr('font-style', 'italic')
+            .text('no SQL · no analyst queue');
+
+        // ─── DIVIDING RULE ─────────────────────────────────
+        svg.append('line')
+            .attr('x1', 80).attr('y1', 340).attr('x2', W - 80).attr('y2', 340)
+            .attr('stroke', rule).attr('stroke-width', 1);
+
+        // ─── REGISTER 2: THE PATHWAY IN ─────────────────────
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 366)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-weight', '700')
+            .attr('fill', muted).attr('letter-spacing', '2.5px')
+            .text('REGISTER 2   ·   THE PATHWAY IN');
+
+        // ── Bottom register: outside Yale → perimeter → inside Yale ──
+        var perimX = W / 2;
+        var boxW = 480, boxH = 190;
+        var bottomBoxY = 410;     // top of boxes
+        var leftBoxX = perimX - boxW - 30;
+        var rightBoxX = perimX + 30;
+
+        // YALE SECURITY PERIMETER — label above
+        svg.append('text')
+            .attr('x', perimX).attr('y', bottomBoxY - 16)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('font-weight', '700').attr('fill', crimson)
+            .attr('letter-spacing', '2px')
+            .text('YALE SECURITY PERIMETER');
+
+        // LEFT region (outside)
+        svg.append('rect')
+            .attr('x', leftBoxX).attr('y', bottomBoxY)
+            .attr('width', boxW).attr('height', boxH)
+            .attr('fill', 'white').attr('stroke', muted)
+            .attr('stroke-width', 1).attr('stroke-dasharray', '5,4');
+
+        svg.append('text')
+            .attr('x', leftBoxX + boxW / 2).attr('y', bottomBoxY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-weight', '700')
+            .attr('fill', muted).attr('letter-spacing', '2px')
+            .text('OUTSIDE YALE   ·   PROTOTYPE');
+
+        var leftItems = [
+            'AI-assisted build',
+            'Docker-based stack (Elasticsearch)',
+            'Synthetic data only — no PHI',
+            'Demonstrated from external machine'
+        ];
+        leftItems.forEach(function (txt, i) {
+            var ly = bottomBoxY + 64 + i * 28;
+            svg.append('circle')
+                .attr('cx', leftBoxX + 38).attr('cy', ly - 4)
+                .attr('r', 2.5).attr('fill', subInk);
+            svg.append('text')
+                .attr('x', leftBoxX + 50).attr('y', ly)
+                .attr('font-size', '13px').attr('fill', subInk).text(txt);
+        });
+
+        // RIGHT region (inside)
+        svg.append('rect')
+            .attr('x', rightBoxX).attr('y', bottomBoxY)
+            .attr('width', boxW).attr('height', boxH)
+            .attr('fill', 'white').attr('stroke', accent).attr('stroke-width', 2);
+
+        svg.append('text')
+            .attr('x', rightBoxX + boxW / 2).attr('y', bottomBoxY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-weight', '700')
+            .attr('fill', accent).attr('letter-spacing', '2px')
+            .text('INSIDE YALE   ·   PRODUCTION');
+
+        var rightItems = [
+            'Brought in as open source',
+            'Adopted to internal data model',
+            'Enterprise GitHub  →  SPA review',
+            'CI/CD · continuous integration'
+        ];
+        rightItems.forEach(function (txt, i) {
+            var ry = bottomBoxY + 64 + i * 28;
+            svg.append('circle')
+                .attr('cx', rightBoxX + 38).attr('cy', ry - 4)
+                .attr('r', 2.5).attr('fill', accent);
+            svg.append('text')
+                .attr('x', rightBoxX + 50).attr('y', ry)
+                .attr('font-size', '13px').attr('fill', ink).text(txt);
+        });
+
+        // Vertical dashed perimeter line
+        svg.append('line')
+            .attr('x1', perimX).attr('y1', bottomBoxY - 6)
+            .attr('x2', perimX).attr('y2', bottomBoxY + boxH + 6)
+            .attr('stroke', crimson).attr('stroke-width', 2.5)
+            .attr('stroke-dasharray', '6,4');
+
+        // Crossing arrow under boxes
+        var crossArrowY = bottomBoxY + boxH + 26;
+        svg.append('line')
+            .attr('x1', leftBoxX + boxW - 30).attr('y1', crossArrowY)
+            .attr('x2', rightBoxX + 30).attr('y2', crossArrowY)
+            .attr('stroke', accent).attr('stroke-width', 1.5);
+        svg.append('path')
+            .attr('d', 'M' + (rightBoxX + 30) + ',' + crossArrowY + ' l-9,-5 l0,10 z')
+            .attr('fill', accent);
+        svg.append('text')
+            .attr('x', perimX).attr('y', crossArrowY - 6)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-style', 'italic').attr('fill', subInk)
+            .text('the responsible pathway in');
+
+        // ─── BOTTOM RULE & CLOSING LINE ─────────────────────
+        svg.append('line')
+            .attr('x1', 80).attr('y1', H - 42).attr('x2', W - 80).attr('y2', H - 42)
+            .attr('stroke', rule).attr('stroke-width', 1);
+        svg.append('text')
+            .attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-style', 'italic').attr('fill', subInk)
+            .text('Better still: build it inside Yale from the start.   —   switch to live IBIS demo   —');
+    }
+
+    // ─── THE ASK — proven assets meet institutional gates ──
+    function theAsk(container, config) {
+        var W = 1200, H = 700;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%');
+
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', 'white').attr('fill-opacity', 0);
+
+        var ink = '#1f2937';
+        var subInk = '#4b5563';
+        var muted = '#6b7280';
+        var rule = '#cbd5e1';
+        var accent = '#1B3A5C';
+        var green = '#065f46';
+        var crimson = '#991b1b';
+
+        // ── Top section header ──
+        svg.append('text')
+            .attr('x', 60).attr('y', 56)
+            .attr('font-size', '11px').attr('font-weight', '700')
+            .attr('fill', muted).attr('letter-spacing', '2px')
+            .text('WHAT EXISTS   ·   WHAT IS MISSING   ·   WHAT IT UNLOCKS');
+        svg.append('line')
+            .attr('x1', 60).attr('y1', 70).attr('x2', W - 60).attr('y2', 70)
+            .attr('stroke', rule).attr('stroke-width', 1);
+
+        // Layout columns
+        var leftX = 90;
+        var leftW = 280;
+        var perimX = 580;
+        var rightStartX = 640;
+        var destX = 1010;
+        var destW = 150;
+        var midY = 360;
+
+        // ── LEFT: PROVEN assets ──
+        svg.append('text')
+            .attr('x', leftX).attr('y', 120)
+            .attr('font-size', '13px').attr('font-weight', '700')
+            .attr('fill', green).attr('letter-spacing', '1.5px')
+            .text('PROVEN');
+        svg.append('line')
+            .attr('x1', leftX).attr('y1', 130)
+            .attr('x2', leftX + leftW).attr('y2', 130)
+            .attr('stroke', green).attr('stroke-width', 1.5);
+
+        var assets = [
+            { label: 'Methodology',
+              detail: 'DevSecOps inside Yale\u2019s perimeter — version control, dependency analysis, security review, CI/CD' },
+            { label: 'Track record',
+              detail: 'Twenty years building clinical software in pathology informatics' },
+            { label: 'Velocity',
+              detail: '~100× less effort to reach the same regulated quality bar with AI in the loop' },
+            { label: 'Working tools',
+              detail: 'Xenonym, IBIS, this presentation — all built with the methodology you just saw' }
+        ];
+
+        assets.forEach(function (a, i) {
+            var ay = 170 + i * 100;
+
+            // checkmark
+            svg.append('path')
+                .attr('d', 'M' + leftX + ',' + ay + ' l8,8 l16,-18')
+                .attr('fill', 'none').attr('stroke', green)
+                .attr('stroke-width', 2.5)
+                .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+
+            svg.append('text')
+                .attr('x', leftX + 36).attr('y', ay + 6)
+                .attr('font-size', '15px').attr('font-weight', '700')
+                .attr('fill', ink).text(a.label);
+
+            // wrap detail in two lines
+            var words = a.detail.split(' ');
+            var line1 = '', line2 = '';
+            var maxChars = 38;
+            words.forEach(function (w) {
+                if (line1.length + w.length + 1 <= maxChars) {
+                    line1 += (line1 ? ' ' : '') + w;
+                } else {
+                    line2 += (line2 ? ' ' : '') + w;
+                }
+            });
+            svg.append('text')
+                .attr('x', leftX + 36).attr('y', ay + 24)
+                .attr('font-size', '11px').attr('fill', subInk).text(line1);
+            if (line2) {
+                svg.append('text')
+                    .attr('x', leftX + 36).attr('y', ay + 40)
+                    .attr('font-size', '11px').attr('fill', subInk).text(line2);
+            }
+        });
+
+        // ── PERIMETER: vertical dashed line ──
+        var perimTop = 110, perimBot = 600;
+        svg.append('line')
+            .attr('x1', perimX).attr('y1', perimTop)
+            .attr('x2', perimX).attr('y2', perimBot)
+            .attr('stroke', crimson).attr('stroke-width', 2.5)
+            .attr('stroke-dasharray', '6,4');
+
+        // Rotated label
+        svg.append('text')
+            .attr('x', perimX).attr('y', perimTop - 14)
+            .attr('text-anchor', 'middle').attr('font-size', '10px')
+            .attr('font-weight', '700').attr('fill', crimson)
+            .attr('letter-spacing', '1.5px')
+            .text('YALE SECURITY PERIMETER');
+
+        // ── DESTINATION on the right ──
+        var destH = 200;
+        var destY = midY - destH / 2;
+        svg.append('rect')
+            .attr('x', destX).attr('y', destY)
+            .attr('width', destW).attr('height', destH)
+            .attr('fill', 'white').attr('stroke', accent).attr('stroke-width', 2.5);
+        svg.append('text')
+            .attr('x', destX + destW / 2).attr('y', destY + destH / 2 - 28)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-weight', '700').attr('fill', muted)
+            .attr('letter-spacing', '1.5px').text('UNLOCKS');
+        svg.append('text')
+            .attr('x', destX + destW / 2).attr('y', destY + destH / 2 - 4)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', accent).text('Sustained');
+        svg.append('text')
+            .attr('x', destX + destW / 2).attr('y', destY + destH / 2 + 12)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', accent).text('AI-assisted');
+        svg.append('text')
+            .attr('x', destX + destW / 2).attr('y', destY + destH / 2 + 28)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('font-weight', '700').attr('fill', accent).text('clinical software');
+        svg.append('text')
+            .attr('x', destX + destW / 2).attr('y', destY + destH / 2 + 50)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('fill', subInk).attr('font-style', 'italic').text('inside Yale');
+
+        // ── THREE GATES (asks) — arrows piercing the perimeter ──
+        var asks = [
+            { num: '1', label: 'Enterprise LLM licenses',
+              detail: 'sanctioned access to frontier models for research and clinical software development' },
+            { num: '2', label: 'Ephemeral provider contracts',
+              detail: 'short-lived, task-scoped agreements — no persistent data-sharing relationship' },
+            { num: '3', label: 'Sanctioned development pathway',
+              detail: 'an institutional route others can adopt, audit, and trust' }
+        ];
+
+        var gateYs = [200, 360, 520];
+
+        asks.forEach(function (ask, i) {
+            var gy = gateYs[i];
+
+            // numeric badge on the left of perimeter
+            var badgeX = perimX - 22;
+            svg.append('circle')
+                .attr('cx', badgeX).attr('cy', gy)
+                .attr('r', 14).attr('fill', 'white')
+                .attr('stroke', crimson).attr('stroke-width', 2);
+            svg.append('text')
+                .attr('x', badgeX).attr('y', gy + 5)
+                .attr('text-anchor', 'middle').attr('font-size', '14px')
+                .attr('font-weight', '700').attr('fill', crimson)
+                .text(ask.num);
+
+            // The "gate" — a gap in the perimeter at this y, drawn as a small white block
+            svg.append('rect')
+                .attr('x', perimX - 4).attr('y', gy - 8)
+                .attr('width', 8).attr('height', 16)
+                .attr('fill', 'white');
+
+            // arrow from badge through the perimeter to destination box
+            svg.append('line')
+                .attr('x1', perimX + 8).attr('y1', gy)
+                .attr('x2', destX - 6).attr('y2', gy)
+                .attr('stroke', accent).attr('stroke-width', 1.5);
+            svg.append('path')
+                .attr('d', 'M' + (destX - 6) + ',' + gy + ' l-8,-5 l0,10 z')
+                .attr('fill', accent);
+
+            // label above the arrow
+            svg.append('text')
+                .attr('x', perimX + 24).attr('y', gy - 14)
+                .attr('font-size', '14px').attr('font-weight', '700')
+                .attr('fill', ink).text(ask.label);
+
+            // detail below the arrow
+            svg.append('text')
+                .attr('x', perimX + 24).attr('y', gy + 18)
+                .attr('font-size', '11px').attr('fill', subInk)
+                .attr('font-style', 'italic').text(ask.detail);
+        });
+
+        // ── Bottom rule and closing line ──
+        svg.append('line')
+            .attr('x1', 60).attr('y1', H - 60).attr('x2', W - 60).attr('y2', H - 60)
+            .attr('stroke', rule).attr('stroke-width', 1);
+        svg.append('text')
+            .attr('x', W / 2).attr('y', H - 32)
+            .attr('text-anchor', 'middle').attr('font-size', '14px')
+            .attr('font-weight', '700').attr('fill', accent)
+            .text('The constraint is institutional, not technical — and it is solvable.');
+        svg.append('text')
+            .attr('x', W / 2).attr('y', H - 14)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-style', 'italic').attr('fill', muted)
+            .text('I am not asking for a budget. I am asking for a pathway.');
+    }
+
+
     // ─── REGISTRY (map name → function) ──────────────────────
     var registry = {
         'workflow-pipeline': workflowPipeline,
@@ -5194,7 +5690,9 @@ const VizLibrary = (function () {
         'tacit-knowledge': tacitKnowledge,
         'syllabic-mixing': syllabicMixing,
         'wrong-question': wrongQuestion,
-        'xenonym-synthesis': xenonymSynthesis
+        'xenonym-synthesis': xenonymSynthesis,
+        'ibis-flow': ibisFlow,
+        'the-ask': theAsk
     };
 
     function render(name, container, config) {

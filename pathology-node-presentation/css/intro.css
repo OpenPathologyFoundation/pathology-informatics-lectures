@@ -684,6 +684,16 @@ a.poll-qr, a.poll-qr:hover {
     position: relative;
 }
 .viz-container svg { max-width: 100%; max-height: 100%; }
+.viz-container.viz-fullbleed {
+    max-height: none;
+    height: 100%;
+    margin: 0 auto;
+}
+.viz-container.viz-fullbleed svg {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+}
 .pipeline-phase { transition: opacity 0.6s ease; }
 .pipeline-step  { transition: all 0.3s ease; cursor: default; }
 .pipeline-step:hover { filter: brightness(1.05); }
