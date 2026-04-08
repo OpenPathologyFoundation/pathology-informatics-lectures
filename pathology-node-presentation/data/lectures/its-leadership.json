@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Pathology Informatics at Yale — The Ask",
+    "shortTitle": "ITS Leadership Ask",
+    "presenter": "Peter Gershkovich, M.D., M.H.A.",
+    "institution": "Yale University",
+    "date": "2026",
+    "theme": {
+      "primary": "#1B3A5C",
+      "secondary": "#2E6DA4",
+      "accent": "#C0392B"
+    },
+    "glossary": [
+      { "term": "AI", "definition": "Artificial Intelligence — in this context, large language models (LLMs) used as development assistants for code generation, design consultation, and review automation." },
+      { "term": "Beaker", "definition": "Epic's laboratory information system (LIS) module — a vintage system that serves a predominantly clerical function, managing specimen tracking, test ordering, and result reporting in clinical laboratories." },
+      { "term": "CI/CD", "definition": "Continuous Integration / Continuous Deployment — automated pipelines that build, test, and release software on every change, making delivery safe and repeatable." },
+      { "term": "DevSecOps", "definition": "Development + Security + Operations as a unified practice — security embedded from the start, not bolted on at delivery." },
+      { "term": "Epic", "definition": "A major electronic health record (EHR) vendor — a vintage system that serves a predominantly clerical function within health systems, managing patient records, scheduling, billing, and clinical documentation across large healthcare organizations including Yale." },
+      { "term": "Ephemeral Contract", "definition": "A short-lived, task-scoped agreement with a model provider — established for the duration of a specific workload rather than as a persistent data-sharing relationship." },
+      { "term": "FOSSA", "definition": "A software composition analysis tool that scans project dependencies for open-source license compliance issues and known security vulnerabilities with exploitability scoring." },
+      { "term": "IBIS", "definition": "Integrated Biospecimen and Informatics System — a natural-language search layer over pathology data built at Yale to make structured and unstructured clinical information accessible without writing queries." },
+      { "term": "LLM", "definition": "Large Language Model — an AI system trained on vast text and code corpora, capable of generating natural language, writing code, and reasoning across domains." },
+      { "term": "QMS", "definition": "Quality Management System — a formal framework of policies, processes, and controls used in regulated software development (including Software as a Medical Device) to ensure safety and traceability." },
+      { "term": "SaMD", "definition": "Software as a Medical Device — software intended for medical purposes that performs those purposes without being part of a hardware device; governed by FDA and international regulatory frameworks." },
+      { "term": "Security Perimeter", "definition": "The boundary of systems, networks, and data flows that an institution controls and monitors — work performed outside it is invisible to institutional security and compliance." },
+      { "term": "SPA", "definition": "Security Planning Assessment — Yale's formal security review process for software projects that touch protected data." },
+      { "term": "Xenonym", "definition": "An open-source synthetic name generator that produces linguistically plausible names belonging to no real person — built for safe, HIPAA-compliant test data generation using syllabic mixing across seven languages." },
+      { "term": "Yale Enterprise GitHub", "definition": "Yale's institutionally managed GitHub environment, providing version control, audit trails, and pull-request workflows within the university's security perimeter." }
+    ]
+  },
+  "slides": [
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "fade",
+      "title": "Pathology Informatics at Yale",
+      "subtitle": "What we've built, what changed, and what we need next",
+      "presenter": "Peter Gershkovich, M.D., M.H.A.",
+      "institution": "Director of Pathology Informatics & Cancer Data Science — Yale University",
+      "date": "2026"
+    },
+
+    {
+      "id": "context-landscape",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "Beat 1 · Context",
+      "title": "The Operational Landscape",
+      "subtitle": "Pathology has not fully crossed into the digital era — and the economics explain why",
+      "vizType": "realm-diagram",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Pathology is the last broad clinical domain still waiting for its digital transformation.",
+        "comment": "Beat 1 — 90 seconds. Pathology sits at the center of oncology decisions, but outside a handful of vendor islands, the field hasn't crossed into digital workflow. The reason is not scientific — it's economic. Building clinical-grade software historically required teams, years, and capital that academic pathology departments don't have. That is the constraint this talk is about. Don't mention specific YNHHS financials — 'significant operating losses in the health system' is sufficient framing."
+      }
+    },
+
+    {
+      "id": "what-weve-built",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 2 · Track Record",
+      "title": "Twenty Years of Building Inside Yale",
+      "subtitle": "Enterprise GitHub · FOSSA · CI/CD · SPA Review — the institutional pattern was already there",
+      "vizType": "dev-lifecycle-loop",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "AI did not create our methodology. It amplified a methodology that already worked.",
+        "comment": "Beat 2, part 1. The track record matters: we have been building clinical software inside Yale's security perimeter for two decades, long before AI. The discipline — version control, dependency analysis, CI/CD, security review — was established. That foundation is what made it safe to bring AI into the loop."
+      }
+    },
+
+    {
+      "id": "velocity-change",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 2 · Velocity",
+      "title": "What AI Changed — Two Orders of Magnitude",
+      "subtitle": "Same methodology, same review gates, same quality bar — dramatically compressed cost",
+      "vizType": "feedback-loop",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Roughly 100× less effort to reach the same quality bar. That is the transformation.",
+        "comment": "Beat 2, part 2. The SaMD/QMS principles don't change with AI in the loop — requirements, design controls, verification, traceability, audit trail. What changed is the cost of satisfying them. Work that used to take a team of engineers months now takes one informaticist weeks. Two orders of magnitude is not a rhetorical flourish — it's what we measure in our own throughput. This is why a small academic group can now build what only vendors used to build."
+      }
+    },
+
+    {
+      "id": "xenonym-illustration",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 2 · Illustration",
+      "title": "",
+      "subtitle": "",
+      "vizType": "xenonym-synthesis",
+      "vizConfig": {},
+      "speakerNotes": "Beat 2, illustration. Xenonym is a small open-source tool we built to generate realistic but entirely synthetic patient names for safe test data — HIPAA-compliant by construction. I describe it here for one reason: it is a tool that was never worth building before. The effort was disproportionate to the benefit. AI collapsed that cost. The model surfaced syllabic mixing across seven unrelated languages — a technique from computational linguistics I would not have searched. The point is not the tool. The point is that supplementary technologies that were never worth building now emerge naturally from the work. That is what two orders of magnitude buys you.",
+      "takeaway": {
+        "text": "Tools that were never worth building now emerge naturally from the work.",
+        "comment": "Keep this fast — 45 seconds. The Xenonym story is the concrete anchor for the abstract claim on the previous slide."
+      }
+    },
+
+    {
+      "id": "presentation-as-code",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 2 · Evidence",
+      "title": "This Presentation Is Also Evidence",
+      "subtitle": "No PowerPoint. A JSON document rendered through a browser application — built the same way.",
+      "vizType": "presentation-architecture",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The medium is the argument. This deck was built in hours using the same methodology.",
+        "comment": "Beat 2, closing beat. Everything you are watching right now is a JSON file rendered by a small Node/Reveal.js application, version-controlled, diff-able, reproducible. I built it the way I build clinical tools. It is itself an artifact of the transformation I'm describing."
+      }
+    },
+
+    {
+      "id": "ibis-demo",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "Beat 3 · Demo",
+      "title": "",
+      "subtitle": "",
+      "vizType": "ibis-flow",
+      "vizConfig": {},
+      "speakerNotes": "Beat 3 — 2 to 3 minutes. Important framing: I built this outside Yale, on entirely synthetic data, using a Docker-based Elasticsearch stack and AI-assisted development. What you're seeing runs on an external machine. The pathway in is the right one — bring it in as open source, adopt it to our internal data model, then it goes through Enterprise GitHub, SPA review, and our normal CI/CD. That's the responsible route. But the point I want to make is that it would have been much better to develop this kind of technology inside Yale from the start — which is exactly what the ask in the next beats is about. Switch to the live IBIS environment, show 2 or 3 natural-language queries, then come back. The demo is not the point — the ask is."
+    },
+
+    {
+      "id": "the-friction",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 4 · Friction",
+      "title": "",
+      "subtitle": "",
+      "vizType": "institutional-context",
+      "speakerNotes": "Beat 4, part 1. Here is the uncomfortable part. Everything I just showed you — the methodology, the velocity, Xenonym, IBIS, this presentation — was built using AI models that are not currently available to me through Yale. I worked around the perimeter, not inside it. I am not proud of that. I am telling you because the workaround is not sustainable, and because the pattern I just demonstrated cannot spread inside the institution until the tools that made it possible are available inside the institution. The institutional context — the concentric rings on this slide — is invisible to the model. But the model has been invisible to the institution too. That is the gap we need to close."
+    },
+
+    {
+      "id": "the-ask",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 4 · The Ask",
+      "title": "",
+      "subtitle": "",
+      "vizType": "the-ask",
+      "vizConfig": {},
+      "speakerNotes": "Beat 4, the ask. Land this cleanly. End here. Do not add content after the ask. The closing line to say aloud: 'I am not asking for a budget. I am asking for a pathway. Everything else — the methodology, the people, the discipline — is already at Yale.'"
+    },
+
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions & Discussion",
+      "contact": "Peter Gershkovich, M.D., M.H.A.<br>Director of Pathology Informatics & Cancer Data Science<br>Yale University<br><br><em>A question to start the conversation:</em><br>\"What would a sanctioned pathway for AI-assisted development inside Yale's security perimeter look like — and who needs to be at the table to build it?\""
+    }
+  ]
+}
