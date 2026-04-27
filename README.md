@@ -9,6 +9,7 @@ Interactive web-based lectures for pathology residents, built with Reveal.js, D3
 | # | Title | Slides | Type | Docs |
 | --- | ----- | ------ | ---- | ---- |
 | ★ | **The Transformative Effects of AI-Assisted Software Development** (Yale OneIT) | 29 | Interactive · JSON-driven | — |
+| ★ | **Pathology Informatics in the Age of AI** | 37 | Interactive · JSON-driven | — |
 | 1 | Relevance of Pathology Informatics | 41 | Interactive · JSON-driven | [Outline](docs/Introduction/intro.md) |
 | 2 | Custom Software Development in Pathology | 37 | Interactive · JSON-driven | — |
 | 3 | Software Development for Clinical Use (Original) | 14 | Reveal.js | [Outline](docs/software_dev_clinical_outline.md) · [Overview](docs/software_dev_clinical_use.md) |

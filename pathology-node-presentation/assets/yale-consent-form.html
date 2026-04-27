@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Yale Informed Consent — Research Participation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body { background: #FAF8F3; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    /* Hide horizontal scrollbar */
+    body { overflow-x: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ---------- Theme tokens ----------
+    const YALE_BLUE = "#00356B";
+    const YALE_BLUE_DARK = "#0F1E33";
+    const YALE_GOLD = "#BD9B60";
+    const PAPER = "#FAF8F3";
+    const INK = "#141414";
+    const RULE = "#E5E0D5";
+    const MUTED = "#6B6457";
+
+    const serif = { fontFamily: "'Spectral', 'Source Serif Pro', Georgia, serif" };
+    const sans = { fontFamily: "'IBM Plex Sans', system-ui, sans-serif" };
+    const mono = { fontFamily: "'IBM Plex Mono', ui-monospace, monospace" };
+
+    // ---------- Sample study metadata (read-only header info) ----------
+    const STUDY = {
+      title:
+        "Evaluation of a Whole Slide Imaging Workflow for Routine Surgical Pathology Sign-Out",
+      pi: "Jane Doe, MD, PhD",
+      department: "Department of Pathology, Yale School of Medicine",
+      funding: "Internal departmental funds — Yale Department of Pathology",
+      hic: "2000099417",
+      protocolVersion: "v3.2 — 17 March 2026",
+      contactPI: "jane.doe@yale.edu · (203) 785-0000",
+      contactHRPP: "hrpp@yale.edu · (203) 785-4688",
+    };
+
+    // ---------- Section content ----------
+    const SECTIONS = [
+      {
+        id: "invitation",
+        label: "Invitation & Description",
+        body: (
+          <>
+            <p>You are being invited to take part in a research study conducted at the Yale School of Medicine. Before you decide whether to participate, it is important that you understand why the research is being done and what it will involve. Please take time to read the following information carefully and ask questions about anything that is unclear.</p>
+            <p>The purpose of this study is to evaluate whether a whole slide imaging (WSI) workflow can support primary diagnostic sign-out in surgical pathology with diagnostic concordance equivalent to conventional light microscopy. Approximately 600 cases drawn from consented participants will be reviewed in parallel using both modalities by board-certified pathologists.</p>
+          </>
+        ),
+      },
+      {
+        id: "procedures",
+        label: "Procedures",
+        body: (
+          <>
+            <p>If you agree to participate, the tissue specimens already obtained as part of your standard clinical care will be scanned at high resolution. Pathologists will review your case using both the original glass slides and the digital whole slide images. No additional tissue, blood, or other biological samples will be collected from you for this study.</p>
+            <p>Your participation is limited to authorizing the use of your de-identified images and pathology report data. Expected duration of your involvement is approximately 12 months from the date of consent, during which images may be referenced for the study.</p>
+          </>
+        ),
+      },
+      {
+        id: "risks",
+        label: "Risks & Inconveniences",
+        body: (
+          <>
+            <p>Because no additional procedures are being performed on you, there are no physical risks beyond those already associated with your standard pathology workup. The principal foreseeable risk is a loss of confidentiality. We have implemented technical and administrative safeguards (described below) to minimize this risk.</p>
+            <p>A second category of risk relates to discordant findings. If a pathologist participating in this research identifies a clinically significant discrepancy between the digital and glass review of your case, the standard departmental amended-report procedure will be followed and your treating clinician will be notified.</p>
+          </>
+        ),
+      },
+      {
+        id: "benefits",
+        label: "Benefits",
+        body: (<p>There is no direct medical benefit to you from participation. The knowledge gained from this study may help establish whether digital pathology workflows are safe and reliable for routine diagnostic use, potentially benefiting future patients.</p>),
+      },
+      {
+        id: "compensation",
+        label: "Compensation",
+        body: (<p>You will not receive payment for your participation in this study. There are no costs to you. Your decision to participate or not participate will not affect the cost or quality of the medical care you receive.</p>),
+      },
+      {
+        id: "alternatives",
+        label: "Alternatives",
+        body: (<p>The alternative to participating in this study is not to participate. If you choose not to participate, your medical care will continue unchanged.</p>),
+      },
+      {
+        id: "confidentiality",
+        label: "Confidentiality",
+        body: (
+          <>
+            <p>Any identifiable information obtained in connection with this study will remain confidential and will be disclosed only with your permission or as required by U.S. or State law. Whole slide images and associated metadata will be stored on Yale-managed encrypted systems behind institutional access controls, with direct identifiers replaced by study-specific codes.</p>
+            <p>Authorized representatives of the Yale Human Research Protection Program, the Yale Institutional Review Board, and federal regulatory authorities (such as the U.S. Department of Health and Human Services or the FDA) may inspect study records. When study results are published, no information that could identify you will be included.</p>
+          </>
+        ),
+      },
+      {
+        id: "injury",
+        label: "In Case of Injury",
+        body: (<p>Because this study does not involve any additional procedures performed on you, no physical injury is expected as a result of your participation. If you believe you have been harmed in any way by this research, please contact the Principal Investigator immediately.</p>),
+      },
+      {
+        id: "voluntary",
+        label: "Voluntary Participation",
+        body: (
+          <>
+            <p>Your participation in this study is entirely voluntary. You are free to choose not to take part, and you may withdraw your consent at any time without penalty and without affecting your medical care or your relationship with your physicians or with Yale-New Haven Hospital.</p>
+            <p>If you decide to withdraw, please notify the Principal Investigator in writing. Information already collected and analyzed prior to your withdrawal may continue to be used to preserve the integrity of the research, but no new information will be collected from your records.</p>
+          </>
+        ),
+      },
+      {
+        id: "questions",
+        label: "Questions & Contacts",
+        body: (
+          <>
+            <p>If you have questions about the research, contact the Principal Investigator: <strong>{STUDY.pi}</strong> ({STUDY.contactPI}).</p>
+            <p>If you have questions about your rights as a research participant, or wish to report a concern, contact the Yale Human Research Protection Program at <strong>{STUDY.contactHRPP}</strong>.</p>
+          </>
+        ),
+      },
+    ];
+
+    function todayISO() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function SignaturePad({ onChange, value }) {
+      const canvasRef = useRef(null);
+      const drawing = useRef(false);
+      const last = useRef({ x: 0, y: 0 });
+      const hasInk = useRef(false);
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ratio = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * ratio;
+        canvas.height = rect.height * ratio;
+        const ctx = canvas.getContext("2d");
+        ctx.scale(ratio, ratio);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.6;
+        if (value) {
+          const img = new Image();
+          img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+          img.src = value;
+          hasInk.current = true;
+        }
+      }, []);
+
+      const pos = (e) => {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const t = e.touches ? e.touches[0] : e;
+        return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+      };
+      const start = (e) => { e.preventDefault(); drawing.current = true; last.current = pos(e); };
+      const move = (e) => {
+        if (!drawing.current) return;
+        e.preventDefault();
+        const ctx = canvasRef.current.getContext("2d");
+        const p = pos(e);
+        ctx.beginPath(); ctx.moveTo(last.current.x, last.current.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+        last.current = p; hasInk.current = true;
+      };
+      const end = () => { if (!drawing.current) return; drawing.current = false; if (hasInk.current) onChange(canvasRef.current.toDataURL("image/png")); };
+      const clear = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasInk.current = false; onChange(null);
+      };
+
+      return (
+        <div>
+          <div className="relative rounded-sm overflow-hidden" style={{ background: "#fff", border: `1px solid ${RULE}` }}>
+            <canvas ref={canvasRef} className="block w-full touch-none" style={{ height: 160, cursor: "crosshair" }}
+              onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
+              onTouchStart={start} onTouchMove={move} onTouchEnd={end} />
+            <div className="absolute left-3 right-3 pointer-events-none" style={{ bottom: 14, borderTop: `1px solid ${RULE}`, opacity: 0.7 }} />
+            <div className="absolute left-3 pointer-events-none uppercase tracking-widest" style={{ bottom: 4, ...sans, fontSize: 9, color: MUTED, letterSpacing: 2 }}>Signature</div>
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <span style={{ ...sans, fontSize: 11, color: MUTED }}>Sign with your mouse, trackpad, or finger.</span>
+            <button type="button" onClick={clear} className="underline-offset-2 hover:underline" style={{ ...sans, fontSize: 11, color: MUTED }}>Clear</button>
+          </div>
+        </div>
+      );
+    }
+
+    function Ack({ checked, onChange }) {
+      return (
+        <label className="flex items-start gap-3 mt-6 pt-5 cursor-pointer select-none" style={{ borderTop: `1px dashed ${RULE}` }}>
+          <span className="flex items-center justify-center mt-0.5 transition-all" style={{ width: 18, height: 18, background: checked ? YALE_BLUE : "transparent", border: `1.5px solid ${checked ? YALE_BLUE : "#9A9385"}`, borderRadius: 2, flexShrink: 0 }}>
+            {checked && (
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 5.5L4.5 8L9 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </span>
+          <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
+          <span style={{ ...sans, fontSize: 13.5, color: INK, lineHeight: 1.55 }}>I have read and understand this section.</span>
+        </label>
+      );
+    }
+
+    function Field({ label, value, onChange, type = "text", required, optional }) {
+      return (
+        <label className="block">
+          <span className="block uppercase tracking-widest mb-1.5" style={{ ...sans, fontSize: 10, letterSpacing: 1.8, color: MUTED }}>
+            {label}
+            {required && <span style={{ color: YALE_BLUE, marginLeft: 4 }}>*</span>}
+            {optional && <span style={{ color: MUTED, marginLeft: 6, opacity: 0.6 }}>(optional)</span>}
+          </span>
+          <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-transparent outline-none transition-colors"
+            style={{ ...sans, fontSize: 14.5, color: INK, padding: "8px 0", borderBottom: `1px solid ${RULE}` }}
+            onFocus={(e) => (e.target.style.borderBottom = `1px solid ${YALE_BLUE}`)}
+            onBlur={(e) => (e.target.style.borderBottom = `1px solid ${RULE}`)} />
+        </label>
+      );
+    }
+
+    function YaleMark() {
+      return (
+        <div className="flex items-center justify-center" style={{ width: 44, height: 44, background: YALE_BLUE, color: PAPER, ...serif, fontSize: 22, fontWeight: 600, letterSpacing: -1 }}>Y</div>
+      );
+    }
+
+    function Meta({ label, value }) {
+      return (
+        <div>
+          <div className="uppercase tracking-widest mb-1.5" style={{ ...sans, fontSize: 9.5, letterSpacing: 2, color: YALE_GOLD, opacity: 0.9 }}>{label}</div>
+          <div style={{ ...sans, fontSize: 13, color: PAPER, lineHeight: 1.5 }}>{value}</div>
+        </div>
+      );
+    }
+
+    function TocItem({ num, label, active, done, onClick }) {
+      return (
+        <button type="button" onClick={onClick} className="flex items-start gap-3 py-2.5 w-full text-left transition-colors group" style={{ ...sans, fontSize: 13, color: active ? INK : MUTED }}>
+          <span style={{ ...mono, fontSize: 10, color: active ? YALE_BLUE : "#A39C8C", marginTop: 2, letterSpacing: 0.5, minWidth: 22 }}>{num}</span>
+          <span className="flex-1 transition-colors" style={{ fontWeight: active ? 500 : 400, color: active ? INK : MUTED, borderLeft: active ? `2px solid ${YALE_BLUE}` : "2px solid transparent", paddingLeft: 10, marginLeft: -2, lineHeight: 1.4 }}>{label}</span>
+          {done && (
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style={{ marginTop: 5 }}>
+              <circle cx="5.5" cy="5.5" r="5.5" fill={YALE_BLUE} />
+              <path d="M3 5.5L4.8 7.2L8 4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+      );
+    }
+
+    function SectionProse({ children }) {
+      return (
+        <div className="space-y-5">
+          {children}
+          <style>{`.prose-block p { margin-bottom: 1.1em; } .prose-block p:last-child { margin-bottom: 0; }`}</style>
+        </div>
+      );
+    }
+
+    function Section({ id, num, label, intro, children }) {
+      return (
+        <section id={id} className="mb-16 scroll-mt-8" style={{ scrollMarginTop: 24 }}>
+          <div className="flex items-baseline gap-4 mb-5">
+            <span style={{ ...mono, fontSize: 11, color: YALE_BLUE, letterSpacing: 1.5 }}>{num}</span>
+            <h2 style={{ ...serif, fontSize: 24, color: INK, fontWeight: 500, letterSpacing: -0.2, lineHeight: 1.2 }}>{label}</h2>
+          </div>
+          {intro && (
+            <p className="mb-2" style={{ ...sans, fontSize: 13.5, color: MUTED, lineHeight: 1.6, fontStyle: "italic" }}>{intro}</p>
+          )}
+          <div style={{ ...serif, fontSize: 16, lineHeight: 1.75, color: INK }}>
+            <SectionProse>{children}</SectionProse>
+          </div>
+        </section>
+      );
+    }
+
+    function ReadOnlyField({ label, value, mono: useMono }) {
+      return (
+        <div>
+          <div className="uppercase tracking-widest mb-1" style={{ ...sans, fontSize: 9.5, letterSpacing: 1.8, color: MUTED }}>{label}</div>
+          <div style={{ ...(useMono ? mono : sans), fontSize: useMono ? 13 : 13.5, color: INK, lineHeight: 1.5 }}>{value}</div>
+        </div>
+      );
+    }
+
+    function Check({ ok, text }) {
+      return (
+        <div className="flex items-center gap-2.5 py-1">
+          <span className="flex items-center justify-center" style={{ width: 14, height: 14, borderRadius: 7, background: ok ? YALE_BLUE : "transparent", border: `1.2px solid ${ok ? YALE_BLUE : "#C4BEAF"}` }}>
+            {ok && (
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                <path d="M1.5 4L3.3 5.5L6.5 2.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </span>
+          <span style={{ ...sans, fontSize: 12.5, color: ok ? INK : MUTED }}>{text}</span>
+        </div>
+      );
+    }
+
+    function SubmittedView({ participant, printedName, signedDate, signatureData, onReset }) {
+      const refNum = "YH-" + String(Date.now()).slice(-8) + "-" + Math.floor(Math.random() * 900 + 100);
+      return (
+        <div className="min-h-screen w-full" style={{ background: PAPER, color: INK, ...sans }}>
+          <div className="max-w-3xl mx-auto px-6 lg:px-10 py-16">
+            <div className="flex items-center gap-3 mb-10">
+              <div className="flex items-center justify-center" style={{ width: 40, height: 40, background: YALE_BLUE, borderRadius: 20 }}>
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M3.5 9L7.5 13L14.5 5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <div className="uppercase tracking-widest" style={{ ...sans, fontSize: 10, letterSpacing: 2.2, color: MUTED }}>Submitted</div>
+                <div style={{ ...serif, fontSize: 22, fontWeight: 500, color: INK, marginTop: 1 }}>Consent recorded</div>
+              </div>
+            </div>
+            <p style={{ ...serif, fontSize: 17, lineHeight: 1.7, color: INK, marginBottom: 32 }}>
+              Thank you, <strong>{participant.fullName}</strong>. Your signed consent for participation in <em>{STUDY.title}</em> has been recorded. A copy has been sent to <span style={mono}>{participant.email}</span>. The study team will be in touch with next steps.
+            </p>
+            <div className="p-7" style={{ background: "#fff", border: `1px solid ${RULE}` }}>
+              <div className="flex items-center justify-between pb-5 mb-5" style={{ borderBottom: `1px solid ${RULE}` }}>
+                <div className="uppercase tracking-widest" style={{ ...sans, fontSize: 10, letterSpacing: 2, color: MUTED }}>Consent Receipt</div>
+                <div style={{ ...mono, fontSize: 11, color: MUTED }}>{refNum}</div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-8 gap-y-5">
+                <ReadOnlyField label="Protocol" value={STUDY.title} />
+                <ReadOnlyField label="HIC Number" value={STUDY.hic} mono />
+                <ReadOnlyField label="Participant" value={participant.fullName} />
+                <ReadOnlyField label="Date of Birth" value={participant.dob} />
+                <ReadOnlyField label="Email" value={participant.email} mono />
+                <ReadOnlyField label="Phone" value={participant.phone || "—"} mono />
+                <ReadOnlyField label="Printed Name" value={printedName} />
+                <ReadOnlyField label="Signed On" value={signedDate} mono />
+              </div>
+              <div className="mt-7 pt-6" style={{ borderTop: `1px solid ${RULE}` }}>
+                <div className="uppercase tracking-widest mb-3" style={{ ...sans, fontSize: 9.5, letterSpacing: 1.8, color: MUTED }}>Signature</div>
+                <div style={{ background: "#FAF8F3", border: `1px solid ${RULE}`, padding: 12 }}>
+                  {signatureData && <img src={signatureData} alt="Signature" style={{ maxHeight: 100, display: "block" }} />}
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button type="button" onClick={() => window.print()} style={{ ...sans, fontSize: 12.5, letterSpacing: 1.5, textTransform: "uppercase", padding: "14px 22px", background: YALE_BLUE, color: "#fff", border: "none", cursor: "pointer", fontWeight: 500 }}>Download / Print PDF</button>
+              <button type="button" onClick={onReset} style={{ ...sans, fontSize: 12.5, letterSpacing: 1.5, textTransform: "uppercase", padding: "14px 22px", background: "transparent", color: INK, border: `1px solid ${INK}`, cursor: "pointer", fontWeight: 500 }}>Edit & Re-Sign</button>
+            </div>
+            <div className="mt-12 pt-6" style={{ borderTop: `1px solid ${RULE}`, ...sans, fontSize: 11.5, color: MUTED, lineHeight: 1.7 }}>
+              Questions? Contact the study team at <span style={mono}>{STUDY.contactPI}</span>. For questions about your rights as a participant, contact the Yale HRPP at <span style={mono}>{STUDY.contactHRPP}</span>.
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function YaleConsentForm() {
+      const [acks, setAcks] = useState({});
+      const [participant, setParticipant] = useState({ fullName: "", dob: "", email: "", phone: "" });
+      const [printedName, setPrintedName] = useState("");
+      const [signedDate, setSignedDate] = useState(todayISO());
+      const [signatureData, setSignatureData] = useState(null);
+      const [submitted, setSubmitted] = useState(false);
+      const [activeSection, setActiveSection] = useState("study");
+
+      useEffect(() => {
+        const link = document.createElement("link");
+        link.href = "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap";
+        link.rel = "stylesheet";
+        document.head.appendChild(link);
+        return () => { try { document.head.removeChild(link); } catch (e) {} };
+      }, []);
+
+      useEffect(() => {
+        if (submitted) return;
+        const handler = () => {
+          const ids = ["study", "participant", ...SECTIONS.map((s) => s.id), "sign"];
+          let current = ids[0];
+          for (const id of ids) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
+            if (rect.top < 200) current = id;
+          }
+          setActiveSection(current);
+        };
+        window.addEventListener("scroll", handler, { passive: true });
+        handler();
+        return () => window.removeEventListener("scroll", handler);
+      }, [submitted]);
+
+      const completedSections = SECTIONS.filter((s) => acks[s.id]).length;
+      const allAcked = completedSections === SECTIONS.length;
+      const participantValid = participant.fullName.trim().length > 1 && participant.dob && participant.email.includes("@");
+      const canSign = allAcked && participantValid && printedName.trim().length > 1 && signatureData;
+
+      const scrollTo = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+      const handleSubmit = () => { if (!canSign) return; setSubmitted(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+      if (submitted) {
+        return <SubmittedView participant={participant} printedName={printedName} signedDate={signedDate} signatureData={signatureData} onReset={() => setSubmitted(false)} />;
+      }
+
+      return (
+        <div className="min-h-screen w-full" style={{ background: PAPER, color: INK, ...sans }}>
+          <style>{`::selection { background: ${YALE_BLUE}; color: white; } input::placeholder { color: #B5AFA0; }`}</style>
+
+          <header className="border-b" style={{ borderColor: RULE, background: PAPER }}>
+            <div className="max-w-6xl mx-auto px-6 lg:px-10 py-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <YaleMark />
+                <div>
+                  <div className="uppercase tracking-widest" style={{ ...sans, fontSize: 10, letterSpacing: 2.2, color: MUTED }}>Yale School of Medicine</div>
+                  <div style={{ ...serif, fontSize: 17, color: INK, fontWeight: 500, marginTop: 1 }}>Human Research Protection Program</div>
+                </div>
+              </div>
+              <div className="hidden md:block text-right" style={{ ...mono, fontSize: 11, color: MUTED }}>
+                <div>HIC# {STUDY.hic}</div>
+                <div style={{ marginTop: 2 }}>{STUDY.protocolVersion}</div>
+              </div>
+            </div>
+          </header>
+
+          <div className="border-b" style={{ background: YALE_BLUE_DARK, borderColor: YALE_BLUE_DARK, color: PAPER }}>
+            <div className="max-w-6xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
+              <div className="uppercase tracking-widest mb-3" style={{ ...sans, fontSize: 10.5, letterSpacing: 3, color: YALE_GOLD }}>Consent for Participation in a Research Project</div>
+              <h1 style={{ ...serif, fontSize: 36, lineHeight: 1.15, fontWeight: 500, maxWidth: 820, letterSpacing: -0.4 }} className="lg:text-[44px]">{STUDY.title}</h1>
+              <div className="mt-8 grid sm:grid-cols-3 gap-6 pt-6" style={{ borderTop: `1px solid rgba(255,255,255,0.15)` }}>
+                <Meta label="Principal Investigator" value={STUDY.pi} />
+                <Meta label="Department" value={STUDY.department} />
+                <Meta label="Funding" value={STUDY.funding} />
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto px-6 lg:px-10 py-10 lg:py-16">
+            <div className="grid lg:grid-cols-[240px_1fr] gap-12">
+              <aside className="hidden lg:block">
+                <div className="sticky top-8">
+                  <div className="uppercase tracking-widest mb-5" style={{ ...sans, fontSize: 10, letterSpacing: 2.2, color: MUTED }}>Form Sections</div>
+                  <TocItem num="00" label="Study Information" active={activeSection === "study"} done={false} onClick={() => scrollTo("study")} />
+                  <TocItem num="01" label="Your Information" active={activeSection === "participant"} done={participantValid} onClick={() => scrollTo("participant")} />
+                  {SECTIONS.map((s, i) => (
+                    <TocItem key={s.id} num={String(i + 2).padStart(2, "0")} label={s.label} active={activeSection === s.id} done={!!acks[s.id]} onClick={() => scrollTo(s.id)} />
+                  ))}
+                  <TocItem num={String(SECTIONS.length + 2).padStart(2, "0")} label="Sign & Submit" active={activeSection === "sign"} done={!!signatureData} onClick={() => scrollTo("sign")} />
+                  <div className="mt-8 pt-5" style={{ borderTop: `1px solid ${RULE}` }}>
+                    <div className="uppercase tracking-widest mb-2" style={{ ...sans, fontSize: 9.5, letterSpacing: 2, color: MUTED }}>Progress</div>
+                    <div className="h-1 w-full overflow-hidden" style={{ background: RULE, borderRadius: 1 }}>
+                      <div className="h-full transition-all duration-500" style={{ background: YALE_BLUE, width: `${(completedSections / SECTIONS.length) * 100}%` }} />
+                    </div>
+                    <div className="mt-2" style={{ ...mono, fontSize: 11, color: MUTED }}>{completedSections} / {SECTIONS.length} sections acknowledged</div>
+                  </div>
+                </div>
+              </aside>
+
+              <article style={{ maxWidth: 680 }}>
+                <Section id="study" num="00" label="Study Information">
+                  <div className="grid sm:grid-cols-2 gap-x-10 gap-y-5 p-6 mt-2" style={{ background: "#fff", border: `1px solid ${RULE}` }}>
+                    <ReadOnlyField label="Protocol Title" value={STUDY.title} />
+                    <ReadOnlyField label="HIC Number" value={STUDY.hic} mono />
+                    <ReadOnlyField label="Principal Investigator" value={STUDY.pi} />
+                    <ReadOnlyField label="Protocol Version" value={STUDY.protocolVersion} mono />
+                    <ReadOnlyField label="Funding Source" value={STUDY.funding} />
+                    <ReadOnlyField label="Department" value={STUDY.department} />
+                  </div>
+                  <p className="mt-5" style={{ ...sans, fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+                    The information above is provided by the study team and has been reviewed by the Yale Institutional Review Board. If anything appears incorrect, do not sign this form — contact the study team using the information at the bottom of the document.
+                  </p>
+                </Section>
+
+                <Section id="participant" num="01" label="Your Information" intro="Please confirm the information below before reading the consent sections that follow.">
+                  <div className="grid sm:grid-cols-2 gap-x-10 gap-y-7 mt-6">
+                    <Field label="Full Legal Name" value={participant.fullName} onChange={(v) => setParticipant((p) => ({ ...p, fullName: v }))} required />
+                    <Field label="Date of Birth" type="date" value={participant.dob} onChange={(v) => setParticipant((p) => ({ ...p, dob: v }))} required />
+                    <Field label="Email" type="email" value={participant.email} onChange={(v) => setParticipant((p) => ({ ...p, email: v }))} required />
+                    <Field label="Phone" type="tel" value={participant.phone} onChange={(v) => setParticipant((p) => ({ ...p, phone: v }))} optional />
+                  </div>
+                </Section>
+
+                {SECTIONS.map((s, i) => (
+                  <Section key={s.id} id={s.id} num={String(i + 2).padStart(2, "0")} label={s.label}>
+                    <div className="prose-block">{s.body}</div>
+                    <Ack checked={!!acks[s.id]} onChange={(v) => setAcks((a) => ({ ...a, [s.id]: v }))} />
+                  </Section>
+                ))}
+
+                <Section id="sign" num={String(SECTIONS.length + 2).padStart(2, "0")} label="Authorization & Signature" intro="By signing below, you confirm that you have read the information above, that the study team has answered your questions to your satisfaction, and that you voluntarily agree to participate in this research.">
+                  <div className="mt-8 grid sm:grid-cols-2 gap-x-10 gap-y-7">
+                    <Field label="Printed Name" value={printedName} onChange={setPrintedName} required />
+                    <Field label="Date" type="date" value={signedDate} onChange={setSignedDate} required />
+                  </div>
+                  <div className="mt-8">
+                    <div className="uppercase tracking-widest mb-3" style={{ ...sans, fontSize: 10, letterSpacing: 1.8, color: MUTED }}>
+                      Signature<span style={{ color: YALE_BLUE, marginLeft: 4 }}>*</span>
+                    </div>
+                    <SignaturePad onChange={setSignatureData} value={signatureData} />
+                  </div>
+                  <div className="mt-8 p-5" style={{ background: "#fff", border: `1px solid ${RULE}` }}>
+                    <div className="uppercase tracking-widest mb-3" style={{ ...sans, fontSize: 9.5, letterSpacing: 2, color: MUTED }}>Before you submit</div>
+                    <Check ok={participantValid} text="Your information is complete" />
+                    <Check ok={allAcked} text={`All ${SECTIONS.length} sections acknowledged (${completedSections}/${SECTIONS.length})`} />
+                    <Check ok={printedName.trim().length > 1} text="Printed name provided" />
+                    <Check ok={!!signatureData} text="Signature provided" />
+                  </div>
+                  <button type="button" onClick={handleSubmit} disabled={!canSign} className="mt-8 w-full transition-all"
+                    style={{ ...sans, fontSize: 13, letterSpacing: 2, background: canSign ? YALE_BLUE : "#D6D2C7", color: canSign ? "#fff" : "#8C8676", padding: "20px 28px", textTransform: "uppercase", fontWeight: 500, cursor: canSign ? "pointer" : "not-allowed", border: "none" }}
+                    onMouseEnter={(e) => { if (canSign) e.currentTarget.style.background = YALE_BLUE_DARK; }}
+                    onMouseLeave={(e) => { if (canSign) e.currentTarget.style.background = YALE_BLUE; }}>
+                    Submit Signed Consent
+                  </button>
+                </Section>
+
+                <footer className="mt-20 pt-8" style={{ borderTop: `1px solid ${RULE}`, ...sans, fontSize: 11.5, color: MUTED, lineHeight: 1.7 }}>
+                  Yale University · Human Research Protection Program · 2 Church Street South, Suite 410, New Haven, CT 06519 · <span style={mono}>hrpp@yale.edu</span> · (203) 785-4688
+                  <div style={{ marginTop: 8, fontSize: 10.5, opacity: 0.7 }}>
+                    Form modeled on Yale HRPP Procedure 200 PR.1 — Informed Consent for Research Participation. The required elements (45 CFR 46.116) include study purpose, procedures, risks, benefits, alternatives, confidentiality, and voluntary participation.
+                  </div>
+                </footer>
+              </article>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<YaleConsentForm />);
+  </script>
+</body>
+</html>

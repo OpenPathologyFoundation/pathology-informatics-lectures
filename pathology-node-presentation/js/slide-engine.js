@@ -608,11 +608,15 @@ var SlideEngine = (function () {
         return s;
     }
 
-    // ─── INFOGRAPHIC SLIDE (rich HTML card layout, dark bg) ──
+    // ─── INFOGRAPHIC SLIDE (rich HTML card layout) ──
+    // Accepts optional slide.theme === "light" to render on a warm-cream
+    // surface using the deck's standard palette instead of the dark default.
     function renderInfographic(slide, meta) {
         var s = el('section', 'intro-slide infographic-slide');
-        s.setAttribute('data-background-color', slide.bgColor || '#0f172a');
-        s.classList.add('dark-slide');
+        var isLight = slide.theme === 'light';
+        var defaultBg = isLight ? '#faf7f1' : '#0f172a';
+        s.setAttribute('data-background-color', slide.bgColor || defaultBg);
+        s.classList.add(isLight ? 'light-theme' : 'dark-slide');
         applyBadge(s, slide.badge);
 
         // Title with gradient

@@ -1145,6 +1145,44 @@ a.poll-qr, a.poll-qr:hover {
     line-height: 1.35;
 }
 
+/* ── LIGHT THEME — pastel "New England" surface, deck-palette accents ── */
+.infographic-slide.light-theme {
+    color: #1f1a14;
+}
+.infographic-slide.light-theme .infographic-title,
+.infographic-slide.light-theme h2,
+.reveal .infographic-slide.light-theme h2 {
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    -webkit-text-fill-color: initial !important;
+    background-clip: initial !important;
+    color: #1B3A5C !important;
+}
+.infographic-slide.light-theme .infographic-subtitle {
+    color: #6b5c48 !important;
+    font-style: italic;
+}
+.infographic-slide.light-theme .infographic-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(168, 156, 133, 0.45) !important;
+    border-top: 3px solid #3d5b73 !important;  /* per-card accentColor still wins via inline style */
+    backdrop-filter: none !important;
+    box-shadow: 0 2px 10px rgba(31, 26, 20, 0.06);
+}
+.infographic-slide.light-theme .infographic-card:hover {
+    box-shadow: 0 8px 24px rgba(31, 26, 20, 0.10);
+    border-top-color: inherit;
+}
+.infographic-slide.light-theme .infographic-card-label {
+    color: #6b5c48 !important;
+}
+.infographic-slide.light-theme .infographic-card-value {
+    color: #1B3A5C !important;
+}
+.infographic-slide.light-theme .infographic-card-desc {
+    color: #3a3024 !important;
+}
+
 /* Dark slide overrides */
 .dark-slide h2,
 .reveal .dark-slide h2 {
@@ -1152,13 +1190,159 @@ a.poll-qr, a.poll-qr:hover {
     border-bottom-color: rgba(59,130,246,0.4) !important;
 }
 .dark-slide .takeaway-accent {
-    background: rgba(39,174,96,0.12);
-    border-left-color: #34d399;
-    color: #cbd5e1;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+    border-left: 4px solid #34d399;
+    color: #f1f5f9;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
-.dark-slide .takeaway-accent strong { color: #34d399; }
+.dark-slide .takeaway-accent strong { color: #6ee7b7; }
 .dark-slide .slide-subtitle { color: #cbd5e1 !important; }
 .dark-slide .slide-note { color: #94a3b8 !important; }
+
+/* ============================================================
+   HELP OVERLAY — floating ? button + shortcuts modal
+   ============================================================ */
+.help-fab {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 23, 42, 0.78);
+    color: #f1f5f9;
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    z-index: 9998;
+    transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    opacity: 0.55;
+}
+.help-fab:hover {
+    opacity: 1;
+    background: #0e6e8c;
+    transform: scale(1.08);
+}
+
+.help-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    overflow-y: auto;
+}
+.help-overlay--open { display: flex; }
+
+.help-modal {
+    position: relative;
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 32px 40px 28px;
+    max-width: 920px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    color: #1a202c;
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+}
+.help-modal h2 {
+    margin: 0 0 20px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #0e6e8c;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+.help-modal h3 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0e6e8c;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.help-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    font-size: 26px;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 50%;
+    line-height: 1;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.help-close:hover { background: #e2e8f0; color: #1a202c; }
+
+.help-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px 40px;
+}
+.help-grid section { min-width: 0; }
+
+.help-modal dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(90px, auto) 1fr;
+    gap: 6px 16px;
+    font-size: 14px;
+    line-height: 1.45;
+}
+.help-modal dt {
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+}
+.help-modal dd {
+    margin: 0;
+    color: #334155;
+}
+
+.help-modal kbd {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0e6e8c;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.help-footer {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 12px;
+    font-style: italic;
+    color: #64748b;
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .help-grid { grid-template-columns: 1fr; }
+    .help-modal { padding: 22px 20px; }
+}
 
 /* ============================================================
    ENHANCED D3 VIZ STYLES — hover effects, glassmorphism
@@ -1230,6 +1414,14 @@ a.poll-qr, a.poll-qr:hover {
     cursor: help;
     transition: border-color 0.2s, background 0.2s;
     border-radius: 2px;
+    /* Raise the term above any sibling overlays that might intercept the
+       cursor (dock edges, badge ribbons, etc.). z-index requires a
+       positioning context — relative is the lightest one. */
+    position: relative;
+    z-index: 100;
+    /* Make sure the cursor actually reaches us even if a parent set
+       pointer-events: none (some Reveal builds do this on inactive slides). */
+    pointer-events: auto;
 }
 .gl-term:hover,
 .gl-term.gl-term--active {

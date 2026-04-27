@@ -26,13 +26,14 @@ var Glossary = (function () {
             return b.term.length - a.term.length;
         });
 
-        // Build regex for each term — word-boundary match, case-sensitive
+        // Build regex for each term — word-boundary match.
+        // Case-insensitive by default so common nouns ("cohort", "biorepository")
+        // light up regardless of casing in slide text. Acronyms still match
+        // because their canonical capitalization is preserved in the data-gl
+        // attribute used by the tooltip.
         _terms.forEach(function (item) {
-            // Escape regex special chars in term
             var escaped = item.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // For short acronyms (all caps, ≤5 chars), require word boundaries
-            // For longer terms, also use word boundaries
-            item.regex = new RegExp('(?<![\\w-])' + escaped + '(?![\\w-])', 'g');
+            item.regex = new RegExp('(?<![\\w-])' + escaped + '(?![\\w-])', 'gi');
         });
 
         _createTooltip();
@@ -52,11 +53,19 @@ var Glossary = (function () {
 
     // Walk DOM text nodes, wrap matched terms
     function _scanNode(root) {
-        // Collect text nodes (skip <code>, <a>, <script>, already-wrapped)
+        // Collect text nodes (skip <code>, <a>, <script>, SVG content,
+        // and anything already wrapped). Wrapping SVG <text> content with
+        // an HTML <span> silently breaks SVG rendering — the text vanishes
+        // because <text> elements only accept <tspan> or text node children.
         var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
             acceptNode: function (node) {
                 var parent = node.parentElement;
                 if (!parent) return NodeFilter.FILTER_REJECT;
+                // Reject ANY text node inside an SVG subtree
+                if (parent.namespaceURI === 'http://www.w3.org/2000/svg' ||
+                    parent.closest('svg')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
                 var tag = parent.tagName.toLowerCase();
                 if (tag === 'code' || tag === 'script' || tag === 'style' || tag === 'a') {
                     return NodeFilter.FILTER_REJECT;
@@ -96,15 +105,20 @@ var Glossary = (function () {
                 item.regex.lastIndex = 0;
                 if (item.regex.test(html)) {
                     item.regex.lastIndex = 0;
-                    // Replace only the first match
                     var done = false;
                     html = html.replace(item.regex, function (match) {
                         if (done) return match;
                         done = true;
                         replaced = true;
                         section._glWrapped[item.term] = true;
+                        // Native title attr is a guaranteed-working fallback
+                        // that the browser renders even if our JS tooltip is
+                        // suppressed by an overlay or transform issue.
+                        var nativeTip = (item.term + ' — ' + item.definition)
+                            .replace(/"/g, '&quot;');
                         return '<span class="gl-term" data-gl="' +
-                            item.term.replace(/"/g, '&quot;') + '">' +
+                            item.term.replace(/"/g, '&quot;') + '"' +
+                            ' title="' + nativeTip + '">' +
                             match + '</span>';
                     });
                 }
@@ -114,6 +128,17 @@ var Glossary = (function () {
                 var span = document.createElement('span');
                 span.innerHTML = html;
                 textNode.parentNode.replaceChild(span, textNode);
+                // Attach direct per-span listeners as a belt-and-suspenders
+                // backup to the document-level delegation. This works even if
+                // some Reveal handler swallows mouseover on the document.
+                span.querySelectorAll('.gl-term').forEach(function (gt) {
+                    gt.addEventListener('mouseenter', function (e) {
+                        _onTermEnter({ target: gt });
+                    });
+                    gt.addEventListener('mouseleave', function (e) {
+                        _onTermLeave({ target: gt });
+                    });
+                });
             }
         });
     }
@@ -122,55 +147,74 @@ var Glossary = (function () {
     function _createTooltip() {
         _tooltip = document.createElement('div');
         _tooltip.className = 'gl-tooltip';
+        _tooltip.setAttribute('role', 'tooltip');
         _tooltip.innerHTML = '<div class="gl-tooltip-term"></div><div class="gl-tooltip-def"></div>';
-        document.body.appendChild(_tooltip);
+        // Append to documentElement (not body) so the tooltip is unaffected by
+        // any CSS transforms Reveal applies to body or .reveal — those would
+        // turn position:fixed into position:absolute relative to the
+        // transformed ancestor, sending the tooltip off-screen. Also bump
+        // z-index above every Reveal layer.
+        _tooltip.style.zIndex = '999999';
+        document.documentElement.appendChild(_tooltip);
 
-        // Event delegation for hover on .gl-term
-        document.addEventListener('mouseover', function (e) {
-            var el = e.target.closest('.gl-term');
-            if (!el) return;
+        // Event delegation for hover on .gl-term — covers everything wrapped
+        // by scanSlides plus anything added later.
+        document.addEventListener('mouseover', _onTermEnter, true);
+        document.addEventListener('mouseout',  _onTermLeave, true);
+        // Touch devices: tap to show, tap elsewhere to hide.
+        document.addEventListener('touchstart', function (e) {
+            var el = e.target.closest && e.target.closest('.gl-term');
+            if (el) { _onTermEnter({ target: el }); }
+            else if (_tooltip) { _onTermLeave({ target: document }); }
+        }, { passive: true });
+    }
 
-            var termName = el.getAttribute('data-gl');
-            var item = _findTerm(termName);
-            if (!item) return;
+    function _onTermEnter(e) {
+        var el = e.target.closest && e.target.closest('.gl-term');
+        if (!el || !_tooltip) return;
 
-            _tooltip.querySelector('.gl-tooltip-term').textContent = item.term;
-            _tooltip.querySelector('.gl-tooltip-def').textContent = item.definition;
+        var termName = el.getAttribute('data-gl');
+        var item = _findTerm(termName);
+        if (!item) return;
 
-            // Position near the element
-            var rect = el.getBoundingClientRect();
-            var tipW = 340;
-            var left = rect.left + rect.width / 2 - tipW / 2;
-            if (left < 8) left = 8;
-            if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
+        _tooltip.querySelector('.gl-tooltip-term').textContent = item.term;
+        _tooltip.querySelector('.gl-tooltip-def').textContent  = item.definition;
 
-            var top = rect.top - 8;
-            _tooltip.style.width = tipW + 'px';
-            _tooltip.style.left = left + 'px';
+        var rect = el.getBoundingClientRect();
+        var tipW = 340;
+        var left = rect.left + rect.width / 2 - tipW / 2;
+        if (left < 8) left = 8;
+        if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
 
-            // Measure tooltip height to decide above/below
-            _tooltip.classList.add('gl-tooltip--visible', 'gl-tooltip--above');
-            _tooltip.style.top = 'auto';
-            _tooltip.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        _tooltip.style.width = tipW + 'px';
+        _tooltip.style.left  = left + 'px';
 
-            var tipRect = _tooltip.getBoundingClientRect();
-            if (tipRect.top < 4) {
-                // Not enough room above — show below
-                _tooltip.classList.remove('gl-tooltip--above');
-                _tooltip.classList.add('gl-tooltip--below');
-                _tooltip.style.bottom = 'auto';
-                _tooltip.style.top = (rect.bottom + 8) + 'px';
-            }
+        // Try ABOVE first
+        _tooltip.classList.add('gl-tooltip--visible', 'gl-tooltip--above');
+        _tooltip.classList.remove('gl-tooltip--below');
+        _tooltip.style.top    = 'auto';
+        _tooltip.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
 
-            el.classList.add('gl-term--active');
-        });
+        // If clipped at top, flip BELOW
+        var tipRect = _tooltip.getBoundingClientRect();
+        if (tipRect.top < 4) {
+            _tooltip.classList.remove('gl-tooltip--above');
+            _tooltip.classList.add('gl-tooltip--below');
+            _tooltip.style.bottom = 'auto';
+            _tooltip.style.top    = (rect.bottom + 8) + 'px';
+        }
 
-        document.addEventListener('mouseout', function (e) {
-            var el = e.target.closest('.gl-term');
-            if (!el) return;
-            _tooltip.classList.remove('gl-tooltip--visible', 'gl-tooltip--above', 'gl-tooltip--below');
-            el.classList.remove('gl-term--active');
-        });
+        el.classList.add('gl-term--active');
+    }
+
+    function _onTermLeave(e) {
+        var el = e.target.closest && e.target.closest('.gl-term');
+        if (!_tooltip) return;
+        _tooltip.classList.remove('gl-tooltip--visible', 'gl-tooltip--above', 'gl-tooltip--below');
+        if (el) el.classList.remove('gl-term--active');
+        // Also wipe any active marker that may have been left behind.
+        var actives = document.querySelectorAll('.gl-term--active');
+        actives.forEach(function (n) { n.classList.remove('gl-term--active'); });
     }
 
     function _findTerm(name) {

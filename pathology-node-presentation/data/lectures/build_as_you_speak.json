@@ -1,0 +1,806 @@
+{
+  "meta": {
+    "title": "Build As You Speak: Applied Informatics for Clinical Research",
+    "shortTitle": "Build As You Speak",
+    "presenter": "Peter Gershkovich, MD. MHA",
+    "institution": "Yale University School of Medicine",
+    "date": "2026",
+    "theme": {
+      "primary": "#1B3A5C",
+      "secondary": "#2E6DA4",
+      "accent": "#D97706"
+    },
+    "glossary": [
+      { "term": "Applied Informatics Team", "definition": "A small, embedded group of domain-fluent informaticists, research engineers, data stewards, and clinical subject-matter experts that operates inside an institution's security perimeter and partners directly with investigators to translate research questions into validated software." },
+      { "term": "AI", "definition": "Artificial Intelligence \u2014 in this context, large language models (LLMs) used as development assistants for code generation, design consultation, and review automation." },
+      { "term": "Cohort", "definition": "A defined group of patients or specimens selected for a research question by criteria such as diagnosis, treatment, biomarker status, or temporal window." },
+      { "term": "Cohort Discovery", "definition": "The process of finding the patients or specimens that match a research question \u2014 historically the slowest step in clinical research because it depends on querying multiple incompatible data sources." },
+      { "term": "CRU", "definition": "Clinical Research Unit \u2014 an institution-level group that supports investigator-initiated and sponsored clinical research with regulatory, operational, and data infrastructure." },
+      { "term": "CTMS", "definition": "Clinical Trial Management System \u2014 software for managing the operational, financial, and regulatory aspects of a clinical trial." },
+      { "term": "CTSA", "definition": "Clinical and Translational Science Award \u2014 an NIH-funded program at U.S. academic medical centers that supports translational research infrastructure." },
+      { "term": "Data Steward", "definition": "A person accountable for the quality, lineage, access policy, and appropriate use of a defined dataset within an institution." },
+      { "term": "Docker", "definition": "A containerization platform that packages software with all its dependencies into portable containers, ensuring it runs identically on any machine." },
+      { "term": "EHR", "definition": "Electronic Health Record \u2014 a digital version of a patient's medical chart, maintained by healthcare providers across encounters and settings." },
+      { "term": "Elasticsearch", "definition": "A distributed, open-source search and analytics engine \u2014 widely used for log analytics, monitoring, and full-text search at enterprise scale." },
+      { "term": "Ephemeral Contract", "definition": "A short-lived, task-scoped agreement with a model provider \u2014 established for the duration of a specific workload rather than as a persistent data-sharing relationship." },
+      { "term": "ETL", "definition": "Extract, Transform, Load \u2014 the process of pulling data from one source, reshaping it, and depositing it into another. Most one-off research data pulls are unacknowledged ETL." },
+      { "term": "Functionality Gap", "definition": "A workflow need that is technically attainable but absent from vendor software \u2014 the central concept from Gershkovich & Sinard (2015)." },
+      { "term": "HIPAA", "definition": "Health Insurance Portability and Accountability Act \u2014 U.S. federal law governing the privacy and security of protected health information (PHI)." },
+      { "term": "IBIS", "definition": "Integrated Biospecimen and Informatics System \u2014 a natural-language search layer over pathology data built at Yale to make structured and unstructured clinical information accessible without writing queries." },
+      { "term": "IRB", "definition": "Institutional Review Board \u2014 the body that reviews and approves research involving human subjects to ensure ethical conduct and regulatory compliance." },
+      { "term": "JSON", "definition": "JavaScript Object Notation \u2014 a lightweight, human-readable data format used to store and exchange structured data between systems and applications." },
+      { "term": "LIS", "definition": "Laboratory Information System \u2014 software that manages clinical laboratory operations including specimen tracking, test ordering, result reporting, and quality control." },
+      { "term": "LLM", "definition": "Large Language Model \u2014 an AI system trained on vast text and code corpora, capable of generating natural language, writing code, and reasoning across domains." },
+      { "term": "PHI", "definition": "Protected Health Information \u2014 any patient data covered by HIPAA privacy regulations." },
+      { "term": "PI", "definition": "Principal Investigator \u2014 the researcher leading and accountable for a study." },
+      { "term": "REALM", "definition": "Rapidly Evolving Agile Laboratory Modules \u2014 the family of clinical and research informatics applications built inside Yale Pathology over nearly two decades." },
+      { "term": "REDCap", "definition": "Research Electronic Data Capture \u2014 a widely used, web-based platform for building and managing data collection instruments for clinical research." },
+      { "term": "Schema", "definition": "The structural definition of a dataset \u2014 the fields, types, and relationships that determine what can and cannot be represented within it." },
+      { "term": "SME", "definition": "Subject-Matter Expert \u2014 a person with deep, often tacit, knowledge of a specific clinical or operational domain." },
+      { "term": "URS", "definition": "User Requirements Specification \u2014 a document that defines what a system must do from the user's perspective, written in plain language." },
+      { "term": "Xenonym", "definition": "An open-source synthetic name generator that produces linguistically plausible names belonging to no real person \u2014 built for safe, HIPAA-compliant test data generation using syllabic mixing across seven languages." }
+    ]
+  },
+  "slides": [
+
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "zoom",
+      "title": "Build As You Speak",
+      "subtitle": "Applied Informatics for Clinical Research \u2014 from question to enterprise-grade tool, in weeks",
+      "presenter": "Peter Gershkovich, MD. MHA",
+      "institution": "Yale University School of Medicine",
+      "date": "2026"
+    },
+
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter's independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "hook-question-that-died",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "hook",
+      "bgColor": "#0f172a",
+      "title": "The Research Question That Quietly Died",
+      "subtitle": "Not because it was wrong \u2014 because the infrastructure said no",
+      "cards": [
+        { "icon": "\uD83D\uDD0D", "label": "The Cohort Question", "value": "Untranslatable", "description": "\u201CHow many patients with mismatch repair-deficient colon cancer received adjuvant therapy and recurred within 24 months?\u201D \u2014 lived only in free-text reports.", "accentColor": "#60a5fa" },
+        { "icon": "\u23F1\uFE0F", "label": "The Analyst Queue", "value": "14 weeks", "description": "Pull request submitted; the cohort would be ready by the time the question was no longer interesting.", "accentColor": "#fbbf24" },
+        { "icon": "\uD83E\uDDF1", "label": "The Schema Mismatch", "value": "Unrepresentable", "description": "REDCap form built for the previous protocol; the new variable doesn\u2019t fit. Add a column, add a year.", "accentColor": "#a78bfa" },
+        { "icon": "\uD83D\uDCC4", "label": "The Different Question", "value": "Compromised", "description": "The question that finally got asked was the one the data could answer \u2014 not the one the science needed.", "accentColor": "#f87171" }
+      ],
+      "takeaway": {
+        "text": "Researchers have been shaping questions to fit infrastructure. That equation just inverted.",
+        "comment": "Don\u2019t editorialize this slide. Read the four scenarios, pause, and let the room recognize their own questions. The recognition does the work for you."
+      }
+    },
+
+    {
+      "id": "thesis",
+      "type": "two-column",
+      "transition": "fade",
+      "title": "Thesis: The Metaphor Became Practical",
+      "subtitle": "\u201CSoftware should be the immediate result of your thought\u201D \u2014 once aspirational, now operational (Lincoln &amp; Korpman, 1980)",
+      "left": {
+        "heading": "What Has Not Changed",
+        "bullets": [
+          "Clinical research is built on <em>logical sciences</em> \u2014 representation, inference, decision, system behavior",
+          "The hardest research problems are semantic: cohort definition, time windows, provenance, missingness",
+          "These require <strong>domain expertise</strong> \u2014 the kind PIs and clinical fellows already have"
+        ]
+      },
+      "right": {
+        "heading": "What AI Changed",
+        "highlight": true,
+        "bullets": [
+          "Not what needs to be built \u2014 the <strong>economics</strong> of building it",
+          "The gap between \u201CI know what this should do\u201D and \u201Cit exists\u201D <strong>collapsed</strong>",
+          "~100\u00D7 reduction in effort to reach the same regulated quality bar"
+        ]
+      },
+      "takeaway": {
+        "text": "The bottleneck was never the idea \u2014 it was the cost of implementation. That cost just dropped by two orders of magnitude.",
+        "comment": "Slow down on \u201Cimmediate.\u201D That\u2019s the verb that just changed. Lincoln &amp; Korpman wrote about clinical practice, but the principle generalizes: any domain expert with a precise question can now have a tool built to answer it."
+      }
+    },
+
+    {
+      "id": "objectives",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "learning-objectives",
+      "vizConfig": {},
+      "speakerNotes": "Five objectives that build on each other for a research audience: (1) Identify a question in your own program that current infrastructure cannot answer in a reasonable timeframe. (2) Describe the research functionality gap and recognize workarounds as evidence rather than user failure. (3) Explain how AI changed the cost \u2014 not the quality bar \u2014 of building research tooling. (4) Distinguish a vendor product, a service center, and an applied informatics team \u2014 and recognize which is the right partner for which question. (5) Draft a one-page specification for a tool you wish existed in your research workflow. The visualization on screen shows the underlying progression \u2014 from understanding to action \u2014 that all five objectives share."
+    },
+
+    {
+      "id": "who-this-is-for",
+      "type": "content",
+      "transition": "fade",
+      "title": "Who This Talk Is For",
+      "subtitle": "Look around the room \u2014 if any of these describe you, you are exactly the audience",
+      "bullets": [
+        "<strong>The PI with a question that didn\u2019t survive the analyst queue</strong> \u2014 the cohort that would have been ready six months too late.",
+        "<strong>The fellow who learned to want the answerable question</strong> \u2014 the one the data <em>could</em> support, not the one the science needed.",
+        "<strong>The investigator who keeps a personal spreadsheet</strong> \u2014 the shadow database that holds what the official system can\u2019t represent.",
+        "<strong>The researcher who has built a thing or two</strong> \u2014 and has never been told that what they did was a legitimate scientific act.",
+        "<strong>The leader who funds research infrastructure</strong> \u2014 and suspects the current operating model is not the right one for the next decade."
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "If you are any of these, the rest of this talk is addressed to you specifically.",
+        "comment": "Look up from the slides for this one. This is the slide where you tell the room they belong here. The next 40 minutes lands harder once they\u2019ve heard themselves named."
+      }
+    },
+
+    {
+      "id": "research-as-information-flow",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "bgColor": "#0f172a",
+      "title": "Every Research Action Is an Information Event",
+      "subtitle": "The work is scientific \u2014 the optimization is informatics",
+      "cards": [
+        { "icon": "\uD83C\uDFAF", "label": "Cohort Definition", "value": "Identity", "description": "Who counts \u2014 inclusion/exclusion criteria expressed against a real, messy, multi-source data substrate", "accentColor": "#2dd4bf" },
+        { "icon": "\uD83D\uDCE6", "label": "Data Extraction", "value": "Provenance", "description": "Where each value came from, when, under what definition \u2014 the audit trail your reviewers will ask for", "accentColor": "#60a5fa" },
+        { "icon": "\uD83D\uDD17", "label": "Harmonization", "value": "Meaning", "description": "Codes vs. text vs. units vs. eras \u2014 making variables comparable across time and source", "accentColor": "#a78bfa" },
+        { "icon": "\u2699\uFE0F", "label": "Analysis &amp; Iteration", "value": "Feedback", "description": "Re-pull, re-define, re-cut. The first cohort is almost never the final cohort.", "accentColor": "#fbbf24" }
+      ],
+      "takeaway": {
+        "text": "The science is inseparable from information flow. AI makes the optimization newly affordable; informatics makes it correct.",
+        "comment": "You don\u2019t \u201Cdo informatics\u201D by clicking buttons in REDCap. You face informatics problems whenever you have to reason about identity, meaning, provenance, and downstream consequences before you can analyze. Informatics is how we redesign the flow so the system carries more of the cognitive burden."
+      }
+    },
+
+    {
+      "id": "the-research-gap",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "title": "The Research Functionality Gap",
+      "subtitle": "Vendor stack vs. your specific question \u2014 where they don\u2019t meet (<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich &amp; Sinard, 2015</a>, applied to research)",
+      "left": {
+        "heading": "What the Vendor Stack Was Designed For",
+        "bullets": [
+          "EHR \u2014 billing, compliance, encounter documentation",
+          "LIS \u2014 specimen tracking, result reporting",
+          "REDCap \u2014 forms-based data capture for the protocol you anticipated",
+          "CTMS \u2014 trial operations, regulatory binders, finance",
+          "Data warehouse \u2014 the queries someone else wrote for someone else"
+        ]
+      },
+      "right": {
+        "heading": "What Your Question Actually Needs",
+        "highlight": true,
+        "bullets": [
+          "<strong>Cohort discovery</strong> over both structured and free-text data",
+          "<strong>Variables</strong> the protocol didn\u2019t exist to capture two years ago",
+          "<strong>Joins</strong> across systems that were never designed to talk",
+          "<strong>Iteration</strong> \u2014 the third cohort, not the first, is the one you analyze",
+          "<strong>Provenance</strong> a reviewer can audit"
+        ]
+      },
+      "takeaway": {
+        "text": "Vendor research infrastructure solves the general case. Your study is a specific case. The gap between them is where workarounds live \u2014 and where errors do.",
+        "comment": "This is not anti-vendor. The general-purpose research stack is essential. But it cannot anticipate your study\u2019s specifics, and the moment you try to bend it to the specific case, the friction starts. That friction is the gap."
+      }
+    },
+
+    {
+      "id": "anatomy-of-a-cohort-delay",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "title": "Anatomy of a Cohort Delay",
+      "subtitle": "Where the model breaks \u2014 step-level granularity, not phase-level labels",
+      "vizType": "case-timeline",
+      "vizConfig": {
+        "steps": [
+          { "label": "Question", "minutes": 10, "detail": "Investigator formulates the cohort question. The expensive part starts here." },
+          { "label": "IRB", "minutes": 240, "detail": "Protocol amendment or exempt-determination request. Necessary; not on your critical path." },
+          { "label": "Pull request", "minutes": 30, "detail": "Submitted to data warehouse / honest broker / cancer registry. The clock starts." },
+          { "label": "Analyst queue", "minutes": 14400, "delay": true, "delayNote": "10\u201316 weeks is typical \u2014 not the analyst's fault, the queue depth", "detail": "Your request joins everyone else's. By the time it surfaces, your science has moved." },
+          { "label": "First pull", "minutes": 480, "detail": "Initial cohort returned. Almost always missing a variable, capturing the wrong era, or counting the wrong denominator." },
+          { "label": "Harmonization", "minutes": 600, "detail": "Codes vs. text vs. units vs. era. The unacknowledged ETL inside every research project." },
+          { "label": "Re-pull", "minutes": 0, "delay": true, "delayNote": "Definition refined \u2014 back to the queue", "detail": "The first cohort wasn\u2019t the question \u2014 it was the question made operational. The refinement triggers a second wait." },
+          { "label": "Second pull", "minutes": 4320, "detail": "Smaller delta this time, but still measured in weeks." },
+          { "label": "Analysis", "minutes": 240, "detail": "The intellectual work \u2014 modest in clock time relative to everything that preceded it." },
+          { "label": "Manuscript", "minutes": 720, "detail": "Drafting, revision, submission. The tail." },
+          { "label": "Reviewer ask", "minutes": 0, "delay": true, "delayNote": "\u201CRe-stratify by\u2026\u201D \u2014 back to the queue again", "detail": "The reviewer asks one new variable. You return to the analyst queue. Three more months." },
+          { "label": "Resubmission", "minutes": 240, "detail": "Eventually." }
+        ]
+      },
+      "takeaway": {
+        "text": "Calling this \u201Cdata access friction\u201D tells you nothing. The delay lives in specific handoffs between specific steps \u2014 and the fix depends entirely on which one.",
+        "comment": "Was it the queue? The harmonization? The re-pull triggered by reviewer feedback? Each demands a different intervention. You need step-level granularity, not the phrase \u201Cdata isn\u2019t accessible.\u201D"
+      }
+    },
+
+    {
+      "id": "workarounds-research",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "bgColor": "#1a0a0a",
+      "title": "The Research Workarounds You Already Use",
+      "subtitle": "Each one is system-design evidence \u2014 not user failure",
+      "cards": [
+        { "icon": "\uD83D\uDCCA", "label": "Personal Spreadsheets", "value": "Shadow Cohorts", "description": "The investigator\u2019s private database holding what the official system can\u2019t represent", "accentColor": "#e67e22" },
+        { "icon": "\uD83D\uDC65", "label": "Manual Chart Review", "value": "Human ETL", "description": "Fellows reading PDFs to extract a variable a database should have computed", "accentColor": "#c0392b" },
+        { "icon": "\uD83D\uDCDE", "label": "\u201CAsk the Analyst\u201D", "value": "Bus Layer", "description": "A person becoming the bus between systems that were never designed to talk", "accentColor": "#8e44ad" },
+        { "icon": "\uD83D\uDCC1", "label": "Shared Drive Forks", "value": "Lost Provenance", "description": "Five copies of \u201Cfinal_v3_USE_THIS\u201D \u2014 nobody can reconstruct which was the analysis dataset", "accentColor": "#2980b9" },
+        { "icon": "\uD83D\uDCCC", "label": "Sticky Notes", "value": "The Real Engine", "description": "Monitors decorated with the workflow logic the system was supposed to encode", "accentColor": "#27ae60" }
+      ],
+      "takeaway": {
+        "text": "Workarounds are not user failure \u2014 they are requirements documents written in frustration.",
+        "comment": "Catalog them in your group. Every spreadsheet, every shared-drive fork, every \u201Cask Carla\u201D ritual is a feature request your infrastructure didn\u2019t hear. The list will be longer than you expect, and it will be the cleanest backlog you\u2019ve ever generated."
+      }
+    },
+
+     {
+      "id": "governing-principle",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "The Governing Principle",
+      "subtitle": "\u201CSoftware should be the immediate result of your thought\u201D \u2014 the title of this lecture is also its thesis",
+      "vizType": "governing-principle",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Build as you speak. The earliest clinical and research systems came from exactly this principle \u2014 pioneers automating their own work, not someone else\u2019s idea of their work.",
+        "comment": "Lincoln, Korpman, Lindberg, Greenes \u2014 the founders of medical informatics built systems for their own questions. Then the field professionalized, software got expensive, and researchers were displaced from their own pipelines. AI restored access to the original mode. The applied team is how we stay there."
+      }
+    },
+
+    {
+      "id": "poll-blockers",
+      "type": "poll",
+      "transition": "fade",
+      "title": "Poll: What Blocks Your Research Most?",
+      "prompt": "Which of these is the biggest source of friction in your current research program?",
+      "options": [
+        "Cohort discovery / accessing the right patients",
+        "Free-text data trapped in reports",
+        "Analyst queue depth / time-to-data",
+        "Schema mismatch (variable doesn\u2019t fit the form)",
+        "Joining data across systems that don\u2019t talk",
+        "Re-pulls after reviewer feedback",
+        "Synthetic / test data for pipeline development",
+        "Something else entirely"
+      ],
+      "note": "We will return to your answers when we discuss what the new operating model makes possible."
+    },
+
+    {
+      "id": "seven-options-research",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "framework",
+      "title": "When You Hit a Gap: The Seven Options",
+      "subtitle": "From <a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich &amp; Sinard (2015)</a> \u2014 the same decision framework, applied to research",
+      "vizType": "seven-options-ladder",
+      "takeaway": {
+        "text": "Most research programs default to options 1\u20133 (ignore, work around, spreadsheet) for the same reason most labs do: 5\u20137 used to be unaffordable. They aren\u2019t anymore.",
+        "comment": "Ignoring the gap or patching manually is the path of least resistance \u2014 but every workaround is a future error and a future delay. AI-assisted development just made options 5\u20137 (custom build, applied team, AI-assisted) accessible to research programs that never had the budget for them."
+      }
+    },
+
+    {
+      "id": "two-orders",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "framework",
+      "bgColor": "#0f172a",
+      "title": "Two Orders of Magnitude",
+      "subtitle": "What AI changed is not what we build or how we review it \u2014 it is the cost of satisfying quality standards",
+      "cards": [
+        { "icon": "\uD83D\uDCD0", "label": "Quality Gates", "value": "Unchanged", "description": "IRB, validation, traceability, audit trail, data stewardship \u2014 same rigor as before", "accentColor": "#3b82f6" },
+        { "icon": "\u23F1\uFE0F", "label": "Effort Reduction", "value": "~100\u00D7", "description": "Work that took a research engineering team months now takes one informaticist weeks", "accentColor": "#22c55e" },
+        { "icon": "\uD83D\uDD27", "label": "Supplementary Tools", "value": "Now Feasible", "description": "The small infrastructure pieces you used to wish for and never got \u2014 now emerge naturally", "accentColor": "#f59e0b" },
+        { "icon": "\uD83C\uDFD7\uFE0F", "label": "Foundation", "value": "Culture First", "description": "AI amplified a methodology that already worked \u2014 build the discipline before the tooling", "accentColor": "#8b5cf6" }
+      ],
+      "takeaway": {
+        "text": "Same gates. Same quality bar. Hundred times less effort. That is the transformation.",
+        "comment": "AI did not create our methodology. It amplified a methodology that already worked. Organizations that try to use AI without the underlying discipline will just produce bugs faster. The sequencing matters \u2014 build the culture first."
+      }
+    },
+
+    {
+      "id": "cognitive-load",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Cognitive Load Redistribution",
+      "subtitle": "Where research-engineering effort concentrates \u2014 the structural shift",
+      "vizType": "cognitive-load",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Freeing up cognitive load is only valuable if you have something worth thinking about.",
+        "comment": "Every time a research engineer looks up syntax for the fortieth time, that is not thinking. AI absorbs it. What remains \u2014 what should remain \u2014 is the question of whether you\u2019re building the right thing at all. For PIs, that question is the one you\u2019re uniquely qualified to answer."
+      }
+    },
+
+    {
+      "id": "feedback-loop",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Compression of the Feedback Loop",
+      "subtitle": "Speed change is not linear \u2014 it changes the character of design decisions",
+      "vizType": "feedback-loop",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Speed doesn\u2019t just change how fast you work. It changes how you think.",
+        "comment": "When a cohort definition takes two weeks to test, you commit to fewer of them. Compress the loop and the economics change. You can prototype three definitions before lunch and pick the one that actually answers the question."
+      }
+    },
+
+    {
+      "id": "architectural-judgment",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "",
+      "subtitle": "",
+      "vizType": "architectural-judgment",
+      "speakerNotes": "AI accelerates implementation. AI does not clarify intent. The decision about what to build \u2014 the right cohort definition, the right variable model, the right inclusion logic \u2014 is unchanged. Vague requirements now produce working code that does the wrong thing. In research: if you can\u2019t precisely define what \u201Cmismatch repair-deficient with adjuvant therapy and 24-month recurrence\u201D means in your data substrate, AI will build you a beautiful pipeline that gets it wrong. Precision of thought is no longer optional. The fork on this slide is real: clear intent produces the right system at scale; vague intent produces working code for the wrong question, faster than ever."
+    },
+
+    {
+      "id": "tacit-knowledge",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "tacit-knowledge",
+      "speakerNotes": "AI can use codified knowledge: rules, dictionaries, ontologies, schema specifications. It cannot inherit lived experience, tacit clinical judgment, or institutional memory. What matters in clinical research is often knowing which ambiguity is dangerous, which exception matters, and when a formally correct cohort is operationally wrong. The PI with deep clinical knowledge and AI assistance is not slightly better than one without AI \u2014 the gap is qualitative. In your research, you ARE the domain expert. The edge cases in your protocol, the clinical context that determines whether a count is meaningful, the institutional history that explains why a code was used differently before 2018 \u2014 that knowledge is yours. AI handles the implementation. You provide the judgment."
+    },
+
+    {
+      "id": "ibis-intro",
+      "type": "two-column",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "IBIS \u2014 Natural-Language Cohort Discovery",
+      "subtitle": "What it does, and why it matters for the question you almost stopped asking",
+      "left": {
+        "heading": "What It Does",
+        "bullets": [
+          "Investigator asks a <strong>natural-language question</strong> \u2014 no SQL, no analyst queue",
+          "IBIS turns it into a query over both structured and unstructured pathology data",
+          "Returns a cohort in <strong>seconds, not weeks</strong>",
+          "Iterate the definition live \u2014 refine, re-run, refine again, in the same sitting"
+        ]
+      },
+      "right": {
+        "heading": "How It Was Built",
+        "highlight": true,
+        "bullets": [
+          "Built <strong>outside Yale on entirely synthetic data</strong>",
+          "Docker-based Elasticsearch stack \u2014 never touched PHI",
+          "Pathway in: open source \u2192 adapt to internal data model \u2192 Enterprise GitHub \u2192 security review \u2192 CI/CD",
+          "<strong>AI-assisted development</strong> made this feasible for one informaticist"
+        ]
+      },
+      "takeaway": {
+        "text": "The previous-team-sized project just became a one-informaticist project. The bottleneck moved from engineering capacity to question precision.",
+        "comment": "This is the existence proof for cohort discovery. The methodology, the people, the discipline \u2014 already existed. What changed was the cost of building, which made the project feasible at the scale of one informaticist plus an applied team for safety review."
+      }
+    },
+
+    {
+      "id": "ibis-flow",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "",
+      "subtitle": "",
+      "vizType": "ibis-flow",
+      "speakerNotes": "This is the architecture diagram. The top half is what the investigator does \u2014 asks a natural-language question, IBIS turns it into a query over structured and unstructured pathology data, returns a cohort. Seconds, not weeks. The bottom half is the part the room needs to see clearly. IBIS was built outside the institution, on entirely synthetic data, in a Docker-based Elasticsearch stack. Everything you\u2019re about to see runs on a machine that has never touched PHI. The pathway in is the responsible one \u2014 bring it in as open source, adapt to the internal data model, Enterprise GitHub, security review, CI/CD. That\u2019s the route, and it works. If the live demo is available, switch to it now and run two queries: one structured (cohort by IHC profile or stage), one unstructured (a free-text concept that doesn\u2019t have a code). After each query, one short sentence: \u2018Notice \u2014 no SQL was written.\u2019 / \u2018Notice \u2014 that pulled from a free-text report, not a coded field.\u2019 If the live demo is unavailable, switch to the recorded fallback without apologizing. The talk works without it; the talk does not work without the idea of it."
+    },
+
+    {
+      "id": "ibis-for-research",
+      "type": "content",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "What This Means for Your Research",
+      "subtitle": "Cohort discovery as an investigator-led act \u2014 not an analyst queue",
+      "bullets": [
+        "<strong>The cohort definition becomes part of the science</strong> \u2014 you can refine it the way you refine a hypothesis, not the way you submit a ticket.",
+        "<strong>Free-text variables stop being trapped</strong> \u2014 the diagnostic clause in a report is now queryable evidence, not a PDF you ask a fellow to review.",
+        "<strong>Reviewer asks become a half-hour exercise</strong> \u2014 not a re-pull. \u201CCan you re-stratify by\u2026\u201D becomes a query, run live.",
+        "<strong>The clock between question and answer collapses</strong> \u2014 from weeks to a working session.",
+        "<strong>The intellectual loop closes</strong> \u2014 question, data, hypothesis, refinement, all on the same time scale your thinking actually moves at."
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "When the loop is short enough, your question shapes the data instead of the data shaping your question.",
+        "comment": "This is the most important slide in Act 4 for a research audience. The previous thirty years trained PIs to ask the answerable question. IBIS \u2014 and tools like it \u2014 expand what \u2018answerable\u2019 means."
+      }
+    },
+
+    {
+      "id": "xenonym-problem",
+      "type": "two-column",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "Xenonym \u2014 Names That Don\u2019t Exist",
+      "subtitle": "Case Study \u2014 the supplementary tool that was never worth building before · github.com/OpenPathologyFoundation/xenonym",
+      "left": {
+        "heading": "The Research Problem",
+        "bullets": [
+          "You are building a research data pipeline that handles patient data",
+          "You need realistic test data that exercises schema, validation, and integration",
+          "You cannot use real patients \u2014 HIPAA is not a suggestion, IRB is not a suggestion",
+          "Obviously fake data (John Doe) tests almost nothing \u2014 your pipeline will look correct and break in production"
+        ]
+      },
+      "right": {
+        "heading": "The Requirement",
+        "highlight": true,
+        "bullets": [
+          "Names that <strong>sound like names</strong> but belong to no one",
+          "Names that <strong>break systems</strong> \u2014 NULL, DROP, diacritics",
+          "Names from <strong>diverse linguistic origins</strong>",
+          "A tool that was <strong>never worth building</strong> before AI collapsed the cost"
+        ]
+      },
+      "takeaway": {
+        "text": "Obviously fake data tests almost nothing. Real data is irregular, surprising, and occasionally adversarial.",
+        "comment": "The boring solution is John Doe and Jane Smith. But that tests almost nothing, because real data is irregular, surprising, and adversarial. The point of Xenonym is not the tool. The point is that supplementary research infrastructure of this kind is now affordable to build."
+      }
+    },
+
+    {
+      "id": "xenonym-synthesis",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "",
+      "subtitle": "",
+      "vizType": "xenonym-synthesis",
+      "speakerNotes": "The design challenge: how do you generate names that feel linguistically plausible but are structurally foreign to any single language? The solution AI surfaced: syllabic mixing across seven languages \u2014 Finnish, Georgian, Yoruba, Japanese, Welsh, Swahili, Hungarian. The probability that the combination is a real name is vanishingly small. The probability that it sounds like a name to a human ear is high. I did not search for this solution. I described the constraint and the model surfaced an approach from computational linguistics that I would not have reached independently. This is AI functioning as a cross-domain consultant \u2014 the mode that matters most for clinical research, where our problems span medicine, computer science, statistics, and operations."
+    },
+
+    {
+      "id": "xenonym-live",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "interactive",
+      "title": "Xenonym Live \u2014 Schema-Driven Synthetic Data for Research",
+      "subtitle": "Live at <a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a>",
+      "vizType": "xenonym-browser",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Publicly accessible. Costs nothing. Built to solve a real research-pipeline problem \u2014 not to demonstrate a capability.",
+        "comment": "Xenonym generates HIPAA-safe synthetic patient data including adversarial edge cases: names containing NULL, DROP, DELETE (SQL injection test cases), diacritics (M\u00FCller, \u010Capek, \u00D1o\u00F1o). If your research pipeline can\u2019t store \u2018Nontra Null,\u2019 that\u2019s a bug \u2014 and depending on context, a compliance failure waiting to happen."
+      }
+    },
+
+    {
+      "id": "tools-that-werent-worth-building",
+      "type": "content",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "What IBIS and Xenonym Have in Common",
+      "subtitle": "The shared trait neither tool would have existed without",
+      "bullets": [
+        "<strong>Neither was economically rational before.</strong> The effort to build either one used to exceed the rational return for any single research program.",
+        "<strong>Both were built by one informaticist with AI assistance</strong>, against synthetic data, then brought inside the institution along the responsible pathway.",
+        "<strong>Both solve a real, persistent research problem</strong> \u2014 not a theoretical one, not a demo problem.",
+        "<strong>Both are open source.</strong> The methodology is reproducible at any institution willing to fund a small applied team.",
+        "<strong>Both presuppose precise specification.</strong> The tools that emerged from vague intent would have been worse than the absence of tools."
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "The supplementary infrastructure researchers used to wish for and never got \u2014 it is now within reach. The constraint is not the budget. The constraint is the team and the spec.",
+        "comment": "Tie the two artifacts together with this line and move on. Don\u2019t over-claim. The point of the two examples is that they are real and they exist; the rest of the talk is the operating model that lets the next two exist."
+      }
+    },
+
+    {
+      "id": "the-missing-layer",
+      "type": "content",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "The Missing Layer in Most Institutions",
+      "subtitle": "You have IT. You have researchers. You don\u2019t have the layer between them.",
+      "bullets": [
+        "<strong>IT</strong> keeps the lights on \u2014 networks, identity, the EHR upgrade. Necessary; not designed to build for your study.",
+        "<strong>Researchers</strong> have questions and clinical context \u2014 but rent the pipeline from people who can\u2019t hear the question precisely.",
+        "<strong>Central analyst service centers</strong> take orders. They process queues. They do not co-design.",
+        "<strong>Software vendors</strong> sell features. They cannot build the specific thing that would answer your specific question.",
+        "<strong>Between IT and the researcher, there should be an applied informatics team.</strong> Most institutions do not have one. The ones that do, build."
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "The applied informatics team is the operating model that makes build-as-you-speak safe and sustainable.",
+        "comment": "This is the framing slide for Act 5. Slow down. The next four slides explain who is on the team, what they do, and how it differs from the alternatives the room may already be paying for."
+      }
+    },
+
+    {
+      "id": "applied-team-anatomy",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "operating-model",
+      "bgColor": "#0f172a",
+      "title": "Anatomy of an Applied Informatics Team",
+      "subtitle": "Small. Embedded. Inside the security perimeter. 4\u20138 people, not 40.",
+      "cards": [
+        { "icon": "\uD83E\uDDEC", "label": "Domain-Fluent Informaticist", "value": "Translator", "description": "Reads clinical context and engineering at the same time \u2014 turns a PI\u2019s question into a precise specification", "accentColor": "#60a5fa" },
+        { "icon": "\u2699\uFE0F", "label": "Research Engineer", "value": "Builder", "description": "Implements against the spec \u2014 with AI as an amplifier, not a replacement", "accentColor": "#22c55e" },
+        { "icon": "\uD83D\uDD12", "label": "Data Steward", "value": "Custodian", "description": "Owns lineage, access policy, and the boundary between synthetic and real data", "accentColor": "#a78bfa" },
+        { "icon": "\uD83E\uDE7A", "label": "Clinical SME", "value": "Anchor", "description": "PI, fellow, or pathologist embedded in the team \u2014 the one who knows when a result is operationally wrong", "accentColor": "#fbbf24" },
+        { "icon": "\u2705", "label": "QA &amp; Validation", "value": "Safety Net", "description": "Owns the test suite, the regression policy, the audit trail \u2014 part-time at small scale, full role at larger ones", "accentColor": "#f97316" }
+      ],
+      "takeaway": {
+        "text": "The right size is roughly the size of a research lab. Larger and it becomes a service center. Smaller and it can\u2019t carry validation.",
+        "comment": "Be specific in the room. Name the roles. Give a number. The applied team is recognizable to a researcher because it looks like a research lab \u2014 a small group of people with overlapping skills, working on a focused set of problems, accountable to each other rather than to a queue."
+      }
+    },
+
+    {
+      "id": "team-vs-service-center",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "Three Operating Models, Only One of Which Co-Designs",
+      "left": {
+        "heading": "What Service Centers and Vendors Do",
+        "style": "muted",
+        "bullets": [
+          "<strong>Service center:</strong> takes orders, processes queues, returns deliverables",
+          "<strong>Vendor:</strong> sells features, defines the workflow, controls the roadmap",
+          "Both treat the question as <em>fixed input</em>",
+          "Neither asks \u201Cwhat would actually answer this?\u201D before building",
+          "Both are essential. Neither is sufficient."
+        ]
+      },
+      "right": {
+        "heading": "What an Applied Team Does",
+        "style": "highlight",
+        "bullets": [
+          "<strong>Hears the question</strong> \u2014 then sharpens it with the researcher",
+          "<strong>Co-designs the specification</strong> before any code is written",
+          "<strong>Builds inside the institution\u2019s security perimeter</strong>",
+          "<strong>Validates against the researcher\u2019s edge cases</strong>",
+          "<strong>Owns the artifact long-term</strong> \u2014 fixes, extends, retires"
+        ]
+      },
+      "takeaway": {
+        "text": "An applied team is the only operating model that asks your question back to you and helps you sharpen it before it builds anything.",
+        "comment": "Three columns in the speaker\u2019s head, two on the slide for clarity. The applied team is the one that says no \u2014 \u2018that\u2019s not quite the right question yet, let\u2019s sharpen it before we build.\u2019 A service center can\u2019t say that. A vendor won\u2019t."
+      }
+    },
+
+    {
+      "id": "realm-as-evidence",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "operating-model",
+      "title": "What an Applied Team Produces \u2014 Nineteen Years of Evidence",
+      "subtitle": "REALM: Rapidly Evolving Agile Laboratory Modules \u2014 the operational landscape one applied team has built inside one institution",
+      "vizType": "realm-diagram",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "This is what one applied team has produced inside one academic department. The point is not that we did it. The point is that the operating model works \u2014 and AI just made it dramatically more accessible.",
+        "comment": "If anyone asks whether this is reproducible: yes. The methodology is open. The team size is modest. The institutional pattern \u2014 Enterprise GitHub, security review, CI/CD \u2014 exists at most academic medical centers. What the talk is asking the room to do is not to build a copy of REALM. It\u2019s to start the team that, in nineteen years, will have its own."
+      }
+    },
+
+    {
+      "id": "safety-boundary",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "The Safety Boundary in a Research Pipeline",
+      "left": {
+        "heading": "AI Does (Development Partner)",
+        "style": "good",
+        "bullets": [
+          "Generate UI scaffold and pipeline boilerplate from specs",
+          "Write event handlers, state management, ETL stubs",
+          "Draft test skeletons from research requirements",
+          "Surface cross-domain techniques (e.g., computational linguistics for synthetic data)",
+          "Debug, refactor, and fix tooling issues"
+        ]
+      },
+      "right": {
+        "heading": "AI Must NOT (Non-Negotiable)",
+        "style": "bad",
+        "bullets": [
+          "<strong>No autonomous research conclusions</strong> \u2014 AI assists pipeline construction, humans interpret results",
+          "<strong>No PHI in prompts</strong> \u2014 patient data never enters AI context",
+          "<strong>No hidden transformations</strong> \u2014 every cohort filter, every join, every recode must be testable",
+          "<strong>No unverified production code</strong> \u2014 tested and traced before any data moves through it"
+        ]
+      },
+      "takeaway": {
+        "text": "AI is a development partner, not a research participant. The safety envelope is locked by humans plus automated tests \u2014 never by the model alone.",
+        "comment": "Read both columns aloud. The non-negotiables matter as much as the capabilities, especially for a research audience that may be hearing the AI argument for the first time. Every AI risk has a testable mitigation: hallucinated logic \u2192 unit tests; prompt drift \u2192 regression suites; data leakage \u2192 no-PHI policy enforced structurally; supply-chain risk \u2192 minimal dependencies."
+      }
+    },
+
+    {
+      "id": "governance",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "Governance: The Same Framework, Extended",
+      "subtitle": "AI governance for research is the natural extension of data stewardship \u2014 not a separate discipline",
+      "left": {
+        "heading": "The Questions",
+        "bullets": [
+          "<strong>Validation:</strong> who certifies the pipeline did what it was specified to do?",
+          "<strong>Provenance:</strong> can a reviewer reconstruct how each value was derived?",
+          "<strong>Bias:</strong> what training-data composition affects performance for your subpopulations?",
+          "<strong>Documentation:</strong> when AI contributed to the pipeline, what goes in the methods section?"
+        ]
+      },
+      "right": {
+        "heading": "The Principles",
+        "highlight": true,
+        "bullets": [
+          "<strong>Stewardship extends:</strong> AI governance is the natural extension of research data stewardship you already do",
+          "<strong>Same framework:</strong> requirements \u2192 tests \u2192 traceability applies to AI-built tools too",
+          "<strong>Ephemeral provider contracts:</strong> short, task-scoped agreements with model providers \u2014 not persistent data-sharing relationships",
+          "<strong>Vendor claims \u2260 institutional validation:</strong> verify independently"
+        ]
+      },
+      "takeaway": {
+        "text": "You already know how to do this. The discipline that governs your data is the same discipline that governs the pipeline AI helped build.",
+        "comment": "This is the line that should reassure the room. The applied team is not asking the institution to invent a new governance regime. It is asking the institution to extend the regime that already exists \u2014 the one that governs your data warehouse, your IRB documents, your CTSA infrastructure \u2014 to the AI-assisted artifacts that will increasingly be part of how research is done."
+      }
+    },
+
+    {
+      "id": "your-role",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "action",
+      "title": "",
+      "vizType": "your-role",
+      "vizConfig": {
+        "epigraph": {
+          "text": "You don\u2019t need to be a developer. You need to be the person who understands the question."
+        },
+        "steps": [
+          { "number": 1, "question": "Spot a gap",     "detail": "Identify one workaround in your research \u2014 a spreadsheet, a manual chart review, a re-pull cycle." },
+          { "number": 2, "question": "Write the spec", "detail": "One page. Five requirements with clinical rationale. Three plausible failure modes. Highest-leverage step." },
+          { "number": 3, "question": "Find the team",  "detail": "Connect with your applied informatics team \u2014 or recruit the first informaticist who can become one." },
+          { "number": 4, "question": "Validate",       "detail": "Be the clinical validator \u2014 your adversarial edge cases are gold, and only you can generate them." },
+          { "number": 5, "question": "Advocate",       "detail": "Present the gap, the spec, the artifact, and the evidence to leadership. The next study after yours benefits." }
+        ],
+        "takeaway": {
+          "text": "The new superpower: a one-page spec, an applied team, and a tool that ships in weeks instead of years.",
+          "comment": "The bottleneck is no longer coding \u2014 it\u2019s domain clarity. And that\u2019s what you already have."
+        }
+      },
+      "speakerNotes": "Five actions arranged on a commitment timeline. Today: spot a gap. This week: write the spec. This month: find the team (or be the catalyst that forms one). This quarter: validate. This year: advocate. Walk it left to right. Make it sound small \u2014 because each individual step is. The compound effect is what changes the institution.",
+      "takeaway": {
+        "text": "The new superpower: a one-page spec, an applied team, and a tool that ships in weeks instead of years.",
+        "comment": "The bottleneck is no longer coding \u2014 it\u2019s domain clarity. And that\u2019s what you already have."
+      }
+    },
+
+    {
+      "id": "the-one-page-spec",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "action",
+      "title": "What a One-Page Research Spec Looks Like",
+      "subtitle": "URS reframed for a research artifact \u2014 the document worth more than the code that follows it",
+      "left": {
+        "heading": "What Goes In It",
+        "bullets": [
+          "<strong>The question</strong> \u2014 one sentence, sharp enough to answer with a yes or a number",
+          "<strong>5\u201310 requirements</strong> \u2014 each with a clinical rationale: <em>why</em> the system must do this",
+          "<strong>3\u20135 failure modes</strong> \u2014 the adversarial cases only the PI can imagine",
+          "<strong>Boundary conditions</strong> \u2014 what the tool must NOT do (no PHI in prompts, no autonomous decisions)",
+          "<strong>Acceptance test</strong> \u2014 how you and the team will know it works"
+        ]
+      },
+      "right": {
+        "heading": "What It Replaces",
+        "highlight": true,
+        "bullets": [
+          "<strong>The 30-page protocol document</strong> nobody reads",
+          "<strong>The vendor RFP</strong> nobody answers usefully",
+          "<strong>The standing meeting</strong> with central analytics that never quite resolves",
+          "<strong>The shadow spreadsheet</strong> \u2014 made obsolete by the artifact the spec produces",
+          "<strong>The compromise question</strong> \u2014 the one you asked because the data could answer it"
+        ]
+      },
+      "takeaway": {
+        "text": "The spec is the deliverable. Once it exists, the build is tractable. Without it, no amount of AI helps.",
+        "comment": "Show what one looks like in your own practice if you have a clean example. The example matters more than the template. The point is that the spec is short, that it requires only domain expertise (which the room has), and that it is the highest-leverage thing the researcher can do this week."
+      }
+    },
+
+    {
+      "id": "question-returns",
+      "type": "content",
+      "transition": "fade",
+      "title": "The Question Returns",
+      "bullets": [
+        "<span style='font-size:1.3em; font-weight:300; color:#4A5568; line-height:1.6;'>The question was never<br><em style='text-decoration:line-through; opacity:0.5;'>\u201CWhat can AI build for my research?\u201D</em></span>",
+        "<span style='font-size:1.3em; font-weight:600; color:#1B3A5C; line-height:1.6;'>The question is<br>\u201CWhat research workflow do you understand deeply enough<br>to describe precisely \u2014 and recognize when it\u2019s solved?\u201D</span>"
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "The clarity is the work.",
+        "comment": "If the answer is yes \u2014 if you have a question you can describe \u2014 then everything in this talk is an accelerant. The tools exist. The methodology exists. The cost barrier is gone. What remains is your expertise and the team to partner with."
+      }
+    },
+
+    {
+      "id": "takeaways",
+      "type": "takeaways",
+      "transition": "convex",
+      "title": "Key Takeaways",
+      "items": [
+        "Researchers spent thirty years <strong>shaping questions to fit infrastructure</strong>. That equation just inverted \u2014 you can now shape infrastructure to fit your question.",
+        "The <strong>research functionality gap</strong> is real: the vendor stack solves the general case; your study is a specific case. Workarounds are evidence, not failure.",
+        "AI collapsed the <strong>cost of building</strong> by ~100\u00D7. Same IRB, same validation, same audit trail \u2014 radically less effort.",
+        "The new operating model is the <strong>applied informatics team</strong> \u2014 small, embedded, inside the security perimeter. The lone PI with an LLM is not the model.",
+        "The evidence is concrete: <strong>IBIS</strong> for cohort discovery, <strong>Xenonym</strong> for synthetic test data, and the principle they share \u2014 <em>build as you speak</em>."
+      ],
+      "cta": {
+        "label": "Your challenge:",
+        "text": "Identify one research workflow gap in your current program. Write a one-page spec with five requirements \u2014 each with a clinical rationale \u2014 plus three plausible failure modes. Bring it to your applied informatics team. If you don\u2019t have one, that one-page document is also the strongest case you can make for funding one."
+      }
+    },
+
+    {
+      "id": "sources",
+      "type": "content",
+      "transition": "fade",
+      "title": "Sources &amp; Further Reading",
+      "subtitle": "Key references informing this lecture",
+      "bullets": [
+        "<strong>The Governing Principle</strong>",
+        "Lincoln TL, Korpman RA. Computers, health care, and medical information science. Science. 1980;210(4467):257-263. (\u201CSoftware should be the immediate result of your thought.\u201D)",
+        "<strong>Functionality Gap &amp; Custom Development</strong>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich P, Sinard JH. Customizing Laboratory Information Systems: Closing the Functionality Gap. Adv Anat Pathol. 2015;22(5):323-330.</a>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/23372985/' target='_blank'>Sinard JH, Gershkovich P. Custom software development for use in a clinical laboratory. J Pathol Inform. 2012;3:44.</a>",
+        "<strong>Research Informatics Infrastructure</strong>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/19567788/' target='_blank'>Harris PA, et al. Research electronic data capture (REDCap). J Biomed Inform. 2009.</a>",
+        "<a href='https://genomemedicine.biomedcentral.com/articles/10.1186/s13073-025-01484-y' target='_blank'>Genome Medicine. Closing the gap in clinical adoption of computational pathology. 2025.</a>",
+        "<strong>AI-Assisted Development Research</strong>",
+        "<a href='https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/' target='_blank'>METR: Measuring AI Impact on Experienced OS Developer Productivity (RCT, July 2025)</a>",
+        "<a href='https://metr.org/blog/2026-02-24-uplift-update/' target='_blank'>METR: Uplift Update (Feb 2026) \u2014 revised findings on AI developer productivity</a>",
+        "<strong>Open-Source Existence Proofs</strong>",
+        "<a href='https://xenonym.openpathology.org' target='_blank'>Xenonym \u2014 schema-driven synthetic data for research pipelines</a>",
+        "<a href='https://github.com/OpenPathologyFoundation/xenonym' target='_blank'>github.com/OpenPathologyFoundation/xenonym</a>",
+        "<strong>Career &amp; Training</strong>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/29721362/' target='_blank'>Rudolf JW, et al. Career paths of pathology informatics fellowship alumni. J Pathol Inform. 2018.</a>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/32284963/' target='_blank'>Maness HTD, et al. Informatics training for pathology practice and research. Acad Pathol. 2020.</a>"
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions &amp; Discussion",
+      "contact": "Peter Gershkovich, MD. MHA<br>Director of Pathology Informatics &amp; Cancer Data Science<br>Yale University School of Medicine<br><br><em>A question to start:</em><br>\u201CWhat is the one research workflow you understand deeply enough to describe precisely \u2014 and would build a tool for if you had an applied team to partner with?\u201D<br><br><a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a>"
+    }
+  ]
+}

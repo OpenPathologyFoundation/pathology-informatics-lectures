@@ -1,0 +1,764 @@
+{
+  "meta": {
+    "title": "Pathology Informatics in the Age of AI",
+    "shortTitle": "Pathology Informatics & AI",
+    "presenter": "Peter Gershkovich, MD. MHA",
+    "institution": "Yale University School of Medicine",
+    "date": "2026",
+    "theme": {
+      "primary": "#1B3A5C",
+      "secondary": "#2E6DA4",
+      "accent": "#27ae60"
+    },
+    "glossary": [
+      { "term": "AI", "definition": "Artificial Intelligence — in this context, large language models (LLMs) used as development assistants for code generation, design consultation, and review automation." },
+      { "term": "API", "definition": "Application Programming Interface — a defined set of rules that allows different software systems to communicate with each other." },
+      { "term": "Beaker", "definition": "Epic's laboratory information system (LIS) module — manages specimen tracking, test ordering, and result reporting in clinical laboratories." },
+      { "term": "Boilerplate", "definition": "Standardized, repetitive code that must be written to set up frameworks, configurations, or structures before any meaningful logic can be added." },
+      { "term": "CAP", "definition": "College of American Pathologists — the organization that accredits pathology laboratories in the U.S." },
+      { "term": "Cognitive Load", "definition": "The total mental effort required to complete a task — in software development, the sum of remembering syntax, navigating frameworks, managing complexity, and making design decisions." },
+      { "term": "D3.js", "definition": "Data-Driven Documents — a JavaScript library for creating dynamic, interactive data visualizations in web browsers using SVG, HTML, and CSS." },
+      { "term": "DevSecOps", "definition": "Development + Security + Operations — a practice that integrates security into every phase of the software development lifecycle." },
+      { "term": "DHF", "definition": "Design History File — the complete collection of documents that describe the design of a medical device/software, required by FDA." },
+      { "term": "Docker", "definition": "A containerization platform that packages software with all its dependencies into portable containers, ensuring it runs identically on any machine." },
+      { "term": "EHR", "definition": "Electronic Health Record — a digital version of a patient's medical chart, maintained by healthcare providers across encounters and settings." },
+      { "term": "Elasticsearch", "definition": "A distributed, open-source search and analytics engine — widely used for log analytics, monitoring, and full-text search at enterprise scale." },
+      { "term": "FHIR", "definition": "Fast Healthcare Interoperability Resources — a modern HL7 standard for exchanging healthcare data electronically using web-based APIs." },
+      { "term": "FMEA", "definition": "Failure Mode and Effects Analysis — a systematic method for identifying what could go wrong, how severe it would be, and how to prevent it." },
+      { "term": "functionality gap", "definition": "A workflow need that is technically attainable but absent from vendor software — the central concept from Gershkovich & Sinard (2015)." },
+      { "term": "HIPAA", "definition": "Health Insurance Portability and Accountability Act — U.S. federal law governing the privacy and security of protected health information (PHI)." },
+      { "term": "HL7", "definition": "Health Level 7 — a set of international standards for transferring clinical and administrative data between hospital information systems." },
+      { "term": "IHC", "definition": "Immunohistochemistry — a staining technique that uses antibodies to detect specific proteins in tissue sections." },
+      { "term": "JSON", "definition": "JavaScript Object Notation — a lightweight, human-readable data format used to store and exchange structured data between systems and applications." },
+      { "term": "LIS", "definition": "Laboratory Information System — software that manages clinical laboratory operations including specimen tracking, test ordering, result reporting, and quality control." },
+      { "term": "LLM", "definition": "Large Language Model — an AI system trained on vast text and code corpora, capable of generating natural language, writing code, and reasoning across domains." },
+      { "term": "NGS", "definition": "Next-Generation Sequencing — high-throughput DNA/RNA sequencing used in molecular pathology for variant detection." },
+      { "term": "Ontology", "definition": "A formal, structured representation of knowledge within a domain — defines concepts, categories, and the relationships between them (e.g., SNOMED CT in medicine)." },
+      { "term": "PHI", "definition": "Protected Health Information — any patient data covered by HIPAA privacy regulations." },
+      { "term": "QMS", "definition": "Quality Management System — the organizational framework of policies, processes, and records that ensures product quality and regulatory compliance." },
+      { "term": "RTM", "definition": "Requirements Traceability Matrix — a table linking every requirement to its test, proving nothing was missed." },
+      { "term": "SQL", "definition": "Structured Query Language — the standard language for querying and managing data in relational databases." },
+      { "term": "URS", "definition": "User Requirements Specification — a document that defines what a system must do from the user's perspective, written in plain language." },
+      { "term": "WSI", "definition": "Whole Slide Image — a high-resolution digital scan of a glass slide, often several gigabytes in size." },
+      { "term": "Xenonym", "definition": "An open-source synthetic name generator that produces linguistically plausible names belonging to no real person — built for safe, HIPAA-compliant test data generation using syllabic mixing across seven languages." }
+    ]
+  },
+  "slides": [
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "zoom",
+      "title": "Pathology Informatics in the Age of AI",
+      "subtitle": "How Emerging Technologies Are Transforming the Tools We Build",
+      "presenter": "Peter Gershkovich, MD. MHA",
+      "institution": "Yale University School of Medicine",
+      "date": "2026"
+    },
+
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter's independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "hook",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "workflow",
+      "bgColor": "#0f172a",
+      "title": "The Work Is Clinical — The Optimization Is Informatics",
+      "subtitle": "Every clinical action is an information event",
+      "cards": [
+        { "icon": "🔗", "label": "Case Assembly", "value": "Identity", "description": "What belongs together — specimen, blocks, slides, stains, reports linked by accession", "accentColor": "#2dd4bf" },
+        { "icon": "🧪", "label": "Stain Ordering", "value": "Logic", "description": "Rules + exceptions — reflex panels, conditional IHC, clinical context driving selection", "accentColor": "#60a5fa" },
+        { "icon": "📡", "label": "Report Distribution", "value": "Routing", "description": "Who must know, when, by what channel — provider, registry, tumor board, patient portal", "accentColor": "#a78bfa" },
+        { "icon": "✏️", "label": "Amendments", "value": "Correction", "description": "Error detection + correction propagation — every downstream consumer must receive the update", "accentColor": "#fbbf24" }
+      ],
+      "takeaway": {
+        "text": "The clinical work is inseparable from information flow. Technology makes optimization possible; informatics makes it correct.",
+        "comment": "You don't 'do informatics' by clicking buttons. You face informatics problems whenever you have to reason about identity, meaning, and downstream consequences before you act. Informatics is how we redesign that information flow so the system carries more of the cognitive burden."
+      }
+    },
+
+    {
+      "id": "informatics-vs-it",
+      "type": "two-column",
+      "transition": "fade",
+      "title": "Informatics vs IT",
+      "left": {
+        "heading": "Informatics",
+        "bullets": [
+          "Designs information structures + workflows to improve outcomes",
+          "Optimizes the \"human + system\" loop",
+          "Clinical logic made operational"
+        ]
+      },
+      "right": {
+        "heading": "IT",
+        "bullets": [
+          "Operates infrastructure, security, devices, networks",
+          "Installs, maintains, ensures uptime",
+          "Keeps the plumbing running"
+        ]
+      },
+      "takeaway": {
+        "text": "Informatics = clinical logic made operational. IT = infrastructure. Both essential — different jobs.",
+        "comment": "When a reflex stain doesn't fire correctly, that's an informatics problem (logic). When the network is down, that's IT (infrastructure). Conflating the two leads to the wrong people solving the wrong problems."
+      }
+    },
+
+    {
+      "id": "thesis",
+      "type": "two-column",
+      "transition": "fade",
+      "title": "Thesis: The Metaphor Became Practical",
+      "subtitle": "\"Software should be an immediate result of your thought\" — once aspirational, now operational (Lincoln & Korpman, 1980)",
+      "left": {
+        "heading": "The Enduring Challenge",
+        "bullets": [
+          "Pathology informatics is built on <em>logical sciences</em> — representation, inference, decision, system behavior",
+          "The hardest problems are semantic: entities (case/part/block/slide), time, provenance, constraints",
+          "These require <strong>domain expertise</strong> — the kind pathologists already have"
+        ]
+      },
+      "right": {
+        "heading": "What AI Changed",
+        "highlight": true,
+        "bullets": [
+          "Not what needs to be built — the <strong>economics</strong> of building it",
+          "The gap between \"I know what this should do\" and \"it exists\" <strong>collapsed</strong>",
+          "~100× reduction in effort to reach the same regulated quality bar"
+        ]
+      },
+      "takeaway": {
+        "text": "The bottleneck was never the idea — it was the cost of implementation. That cost just dropped by two orders of magnitude.",
+        "comment": "This lecture is about what that collapse means for pathology: the tools you've wished for, the integrations you've worked around, the dashboards you've sketched on napkins — they are now within reach."
+      }
+    },
+
+    {
+      "id": "objectives",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "learning-objectives",
+      "vizConfig": {},
+      "speakerNotes": "Five objectives that build on each other: (1) Differentiate informatics from IT — foundational. (2) Identify the functionality gap — the problem. (3) Explain how AI changes the economics — the transformation. (4) Evaluate evidence from real tools — proof. (5) Describe a practical pathway — action. The progression is deliberate: you can't evaluate evidence without understanding what problem it solves, and you can't act without understanding the economics."
+    },
+
+    {
+      "id": "workflow-definition",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "workflow",
+      "bgColor": "#0f172a",
+      "title": "What \"Workflow\" Means in the Lab",
+      "subtitle": "The chain of tasks and events that creates clinical value — the substrate everything else depends on",
+      "cards": [
+        { "icon": "🔄", "label": "Workflow", "value": "Substrate", "description": "Why your day feels smooth or chaotic — the foundation for data, automation, and AI", "accentColor": "#3b82f6" },
+        { "icon": "✅", "label": "Good Design", "value": "Invisible", "description": "Cases flow, handoffs happen, exceptions surface — you don't notice it working", "accentColor": "#22c55e" },
+        { "icon": "❌", "label": "Bad Design", "value": "Friction", "description": "Constant interruptions, manual tracking, missing information, cognitive overload", "accentColor": "#ef4444" }
+      ],
+      "takeaway": {
+        "text": "Workflow is the substrate on which everything else (data, automation, AI) depends.",
+        "comment": "You cannot layer AI on broken workflow. If case assembly is chaotic, an AI that prioritizes your worklist will just shuffle chaos faster. Fix the substrate first."
+      }
+    },
+
+    {
+      "id": "anatomy-of-delay",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "workflow",
+      "title": "Anatomy of a Delay — Where the Model Breaks",
+      "vizType": "case-timeline",
+      "vizConfig": {
+        "steps": [
+          { "label": "Collection", "minutes": 15, "detail": "Specimen obtained in the OR or procedure suite; fixation starts the clock." },
+          { "label": "Transport", "minutes": 40, "detail": "Courier or pneumatic tube. Every handoff is an identity-check opportunity." },
+          { "label": "Accessioning", "minutes": 20, "detail": "Specimen registered in LIS, barcoded, assigned to a case." },
+          { "label": "Grossing", "minutes": 30, "detail": "Pathologist or PA describes and sections the specimen; selects blocks." },
+          { "label": "Processing", "minutes": 480, "detail": "Overnight tissue processor: dehydration, clearing, paraffin infiltration. Cannot be accelerated without compromise." },
+          { "label": "Slide prep", "minutes": 45, "detail": "Embedding, microtomy, staining (H&E ± IHC). Quality depends on block orientation." },
+          { "label": "Delivery", "minutes": 90, "delay": true, "delayNote": "Slides sat in tray — no pickup alert", "detail": "Slides complete but no system event fires. Pathologist unaware they are ready. Sticky-note workflow fails silently." },
+          { "label": "Path. receipt", "minutes": 10, "detail": "Slides arrive at pathologist's desk or scanner. Digital case assembly begins." },
+          { "label": "Review", "minutes": 25, "detail": "Pathologist examines slides. Finds diagnostic ambiguity requiring deeper section." },
+          { "label": "Reorder", "minutes": 0, "delay": true, "delayNote": "Recut triggered — restarts histology loop", "detail": "Recut request propagates back to histology. No system models this as a rework cycle — TAT metrics undercount the true cost." },
+          { "label": "Re-processing", "minutes": 300, "detail": "Block retrieved, additional sections cut, stained, re-delivered. Partial restart of the analytic phase." },
+          { "label": "Sign-out", "minutes": 15, "detail": "Diagnosis finalized and report authored. Clinical content is the shortest step in the timeline." },
+          { "label": "Distribution", "minutes": 5, "detail": "Report transmitted to EHR, registry, referring clinician. Final handoff." }
+        ]
+      },
+      "takeaway": {
+        "text": "Calling this a 'pre-analytical delay' tells you nothing. The delay lives in a specific handoff between specific steps — and the fix depends entirely on which one.",
+        "comment": "Was it a distribution failure? A reorder? A grossing bottleneck? Each demands a different intervention. You need step-level granularity, not phase-level labels."
+      }
+    },
+
+    {
+      "id": "workarounds",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "workflow",
+      "bgColor": "#1a0a0a",
+      "title": "The \"Gap\": Why Workarounds Appear",
+      "subtitle": "Requirements evolve; closed systems don't → gap → workarounds. Each one is system design evidence.",
+      "cards": [
+        { "icon": "📊", "label": "Shadow Spreadsheets", "value": "Tracking", "description": "Cases tracked outside the LIS because the LIS can't show what you need to see", "accentColor": "#e67e22" },
+        { "icon": "🚫", "label": "\"Ignore the Status\"", "value": "State Drift", "description": "LIS status labels that are administratively neat but clinically false", "accentColor": "#c0392b" },
+        { "icon": "📋", "label": "Copy-Paste", "value": "Duplication", "description": "Manual transcription between systems — each handoff is an error opportunity", "accentColor": "#8e44ad" },
+        { "icon": "🧑", "label": "Human Integration", "value": "Glue Layer", "description": "People becoming the bus between systems that don't talk to each other", "accentColor": "#2980b9" },
+        { "icon": "📌", "label": "Sticky Notes", "value": "The Real Engine", "description": "Monitors decorated with the workflow logic the system was supposed to encode", "accentColor": "#27ae60" }
+      ],
+      "takeaway": {
+        "text": "Workarounds are not \"user failure\" — they're system design evidence.",
+        "comment": "Every sticky note on a monitor, every shared spreadsheet tracking cases 'outside the system,' every 'please ignore this status' message is a requirements document written in frustration. Catalog them — they tell you exactly what the system fails to support."
+      }
+    },
+
+    {
+      "id": "functionality-gap",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "debate",
+      "bgColor": "#0f172a",
+      "title": "The Functionality Gap",
+      "subtitle": "Important + technically attainable + absent from vendor = the gap where custom software lives (<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard, 2015</a>)",
+      "cards": [
+        { "icon": "🏥", "label": "LIS Design Intent", "value": "Billing", "description": "Your LIS was designed for billing and compliance — not for your clinical workflow", "accentColor": "#3b82f6" },
+        { "icon": "⚠️", "label": "Workaround Risk", "value": "Errors", "description": "When the gap exists, workarounds fill it — and workarounds are where errors live", "accentColor": "#ef4444" },
+        { "icon": "🔌", "label": "Interoperability", "value": "50%", "description": "of labs report interoperability as biggest obstacle (<a href='https://pubmed.ncbi.nlm.nih.gov/30564059/' target='_blank'>Lukić, 2017</a>)", "accentColor": "#f59e0b" },
+        { "icon": "🤖", "label": "AI-Assisted Fix", "value": "Now", "description": "Close many gaps quickly with AI-assisted development — without giving up validation", "accentColor": "#22c55e" }
+      ],
+      "takeaway": {
+        "text": "A 'functionality gap' = important + technically attainable + absent from vendor. LIS solves the general case; your lab is a specific case.",
+        "comment": "This isn't anti-vendor. Vendors build essential infrastructure. But they can't know that your frozen section service needs a real-time OR notification, or that your molecular team needs a custom NGS reporting pipeline. That gap is where custom software lives."
+      }
+    },
+
+    {
+      "id": "poll-frustration",
+      "type": "poll",
+      "transition": "fade",
+      "title": "Poll: What Frustrates You Most?",
+      "prompt": "Which workflow gap causes the most friction in your daily practice?",
+      "options": [
+        "Case assembly / missing slides or reports",
+        "Alert fatigue or missing critical notifications",
+        "Clunky reporting (synoptic templates, addenda)",
+        "Poor integration between systems (LIS, PACS, EHR)",
+        "Manual data entry / repetitive tasks",
+        "Lack of real-time dashboards or analytics",
+        "Communication gaps (OR, clinicians, reference labs)",
+        "Something else entirely"
+      ],
+      "note": "We'll return to these pain points when we discuss what AI makes possible."
+    },
+
+    {
+      "id": "case-ihc-control",
+      "type": "micro-case",
+      "transition": "fade",
+      "title": "Case: The Positive Control You Can't See",
+      "scenario": "You're signing out an IHC case in your office — a quarter mile from the histology lab. The CK7 stain looks weak. Was it the tissue or the reagent? The positive control would tell you, but it's one physical slide shared across the entire staining batch. It's somewhere in the lab. Nobody digitized it. The LIS doesn't even know it exists. <strong>How do you verify stain validity without leaving your desk?</strong>",
+      "options": [
+        "A. Walk to the lab, find the batch, pull the control slide, walk back",
+        "B. Call the histotech and ask them to check it for you",
+        "C. Digitize the positive control and link it to the batch in software",
+        "D. Trust the stain and sign it out — the lab would have flagged a failure"
+      ],
+      "discussion": [
+        "No commercial LIS associates positive controls with staining batches — this functionality simply does not exist",
+        "One positive control validates an entire batch: if it works, every slide in that batch is confirmed",
+        "At Yale, we built custom software that creates staining batches, scans positive controls, and links them digitally",
+        "This is a real 'functionality gap' that no vendor has addressed (<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard, 2015</a>)"
+      ],
+      "discussionFrame": "This isn't hypothetical — we solved this at Yale because no vendor would. Custom software turned a daily frustration into a one-click verification."
+    },
+
+    {
+      "id": "seven-options",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "framework",
+      "title": "When You Hit a Gap: The Seven Options",
+      "subtitle": "From <a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich & Sinard (2015)</a> — a decision framework for closing functionality gaps",
+      "vizType": "seven-options-ladder",
+      "takeaway": {
+        "text": "Most labs default to options 1–3. The labs that transform choose 5–7.",
+        "comment": "Ignoring the gap or patching manually is the path of least resistance — but it compounds. Every manual workaround is a future error waiting to happen. AI-assisted development just made options 5–7 accessible to labs that never had a development team."
+      }
+    },
+
+    {
+      "id": "wf-management",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "workflow",
+      "title": "From Tracking to Orchestration",
+      "left": {
+        "heading": "Traditional LIS Tracking",
+        "style": "muted",
+        "bullets": [
+          "Log what happened (timestamps, statuses)",
+          "Passive — waits for humans to check",
+          "Metrics after the fact (TAT reports)",
+          "Errors discovered downstream",
+          "\"The system recorded it\""
+        ]
+      },
+      "right": {
+        "heading": "Workflow Orchestration",
+        "style": "highlight",
+        "bullets": [
+          "<strong>Route</strong> work to the right person at the right time",
+          "<strong>Surface exceptions</strong> as they happen — not after",
+          "<strong>Coordinate handoffs</strong> across teams and instruments",
+          "<strong>Enforce constraints</strong> that prevent known failure modes",
+          "<strong>Adapt</strong> — dynamic prioritization, load-aware assignment"
+        ]
+      },
+      "takeaway": {
+        "text": "A good system doesn't just record your workflow — it actively drives it. Orchestration means the system carries cognitive burden so you don't have to.",
+        "comment": "Most LIS deployments are still at the tracking level. The gap between these two columns is where most operational pain lives — and where AI-assisted development can help build the bridge."
+      }
+    },
+
+    {
+      "id": "governing-principle",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "The Governing Principle",
+      "vizType": "governing-principle",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Software should be an immediate result of your thought. That used to be a metaphor. Now it is practical.",
+        "comment": "The earliest clinical and laboratory systems emerged from exactly this principle. Pioneers automated their own workflows, not someone else's idea of a workflow. AI has made that mode of building accessible again — this time to anyone with domain expertise."
+      }
+    },
+
+    {
+      "id": "two-orders",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "framework",
+      "bgColor": "#0f172a",
+      "title": "Two Orders of Magnitude",
+      "subtitle": "What AI changed is not what we build or how we review it — it's the cost of satisfying quality standards",
+      "cards": [
+        { "icon": "📐", "label": "Quality Gates", "value": "Unchanged", "description": "Requirements, design controls, verification, traceability, audit trail — same rigor as before", "accentColor": "#3b82f6" },
+        { "icon": "⏱️", "label": "Effort Reduction", "value": "~100×", "description": "Work that took a team months now takes one informaticist weeks", "accentColor": "#22c55e" },
+        { "icon": "🔧", "label": "Supplementary Tools", "value": "Now Feasible", "description": "Technologies that were never worth building now emerge naturally from the work", "accentColor": "#f59e0b" },
+        { "icon": "🏗️", "label": "Foundation", "value": "Culture First", "description": "AI amplified a methodology that already worked — build the discipline before the tooling", "accentColor": "#8b5cf6" }
+      ],
+      "takeaway": {
+        "text": "AI did not create our methodology. It amplified a methodology that already worked.",
+        "comment": "This is the crucial distinction: AI amplified a practice that already existed. Organizations that try to use AI without the underlying discipline will just produce bugs faster. The sequencing matters — build the culture first."
+      }
+    },
+
+    {
+      "id": "cognitive-load",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Cognitive Load Redistribution",
+      "subtitle": "Where developer effort concentrates — a structural model informed by industry research",
+      "vizType": "cognitive-load",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Freeing up cognitive load is only valuable if you have something worth thinking about.",
+        "comment": "Think of every time you've looked up how to configure a system you've configured forty times before. That look-up is not thinking. AI absorbs it. What remains (should remain) is the decision about whether it's the right tool at all."
+      }
+    },
+
+    {
+      "id": "feedback-loop",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Compression of the Feedback Loop",
+      "subtitle": "The speed change is not linear — it changes the character of design decisions",
+      "vizType": "feedback-loop",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Speed doesn't just change how fast you work. It changes how you think.",
+        "comment": "When a design decision takes two hours to implement and test, you commit to fewer of them. Compress the loop and the economics change. You can prototype three approaches before lunch and choose the best one."
+      }
+    },
+
+    {
+      "id": "blank-page",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "The Blank Page Problem",
+      "subtitle": "Two metaphors for the same terror — and what dissolved it",
+      "vizType": "blank-page",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "You traded the blank page for a plausible wrong answer. Learn to tell the difference.",
+        "comment": "Every developer — and every pathologist who's tried to build a tool — knows the void of the empty file. AI didn't fill the void. It made the first mark free. The work shifted from generation to judgment."
+      }
+    },
+
+    {
+      "id": "domain-knowledge",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "tacit-knowledge",
+      "speakerNotes": "AI can use codified knowledge: rules, dictionaries, ontologies, interface specifications. It cannot inherit lived experience, tacit judgment, or institutional memory. What matters in pathology is often knowing which ambiguity is dangerous, which exception matters, and when a formally correct result is operationally wrong. The pathologist with deep domain knowledge and AI assistance is not slightly better than one without AI. The gap is qualitative. In pathology informatics, you ARE the domain expert. The reflex rules, the edge cases in specimen accessioning, the clinical context that makes a report actionable — that knowledge is yours. AI handles the implementation. You provide the judgment."
+    },
+
+    {
+      "id": "architectural-judgment",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "architectural-judgment",
+      "speakerNotes": "AI accelerates implementation. AI does not clarify intent. The decision about what to build — the right data model, the right decomposition, the right clinical logic — is unchanged. Vague requirements now produce working code that does the wrong thing. In pathology: if you can't precisely define what 'case ready for sign-out' means in your lab, AI will build you a beautiful system that gets it wrong. Precision of thought is no longer optional. The fork on this slide is real: clear intent produces the right system at scale. Vague intent produces working code for the wrong problem. AI will produce correct, compiling, well-formatted code for the wrong problem. Faster than ever."
+    },
+
+    {
+      "id": "realm-operations",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "What We Build — The Operational Landscape",
+      "subtitle": "REALM: Rapidly Evolving Agile Laboratory Modules — 19 years of systems across the continuum of care",
+      "vizType": "realm-diagram",
+      "vizConfig": {}
+    },
+
+    {
+      "id": "names-problem",
+      "type": "two-column",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "The Problem: Names That Don't Exist",
+      "subtitle": "Case Study — Xenonym · github.com/OpenPathologyFoundation/xenonym",
+      "left": {
+        "heading": "The Context",
+        "bullets": [
+          "You are building a system that handles patient data",
+          "You need realistic test data that exercises schema, validation, and integration",
+          "You cannot use real patients — HIPAA is not a suggestion",
+          "Obviously fake data (John Doe) tests almost nothing"
+        ]
+      },
+      "right": {
+        "heading": "The Requirement",
+        "highlight": true,
+        "bullets": [
+          "Names that <strong>sound like names</strong> but belong to no one",
+          "Names that <strong>break systems</strong> — NULL, DROP, diacritics",
+          "Names from <strong>diverse linguistic origins</strong>",
+          "A tool that was <strong>never worth building</strong> before AI collapsed the cost"
+        ]
+      },
+      "takeaway": {
+        "text": "Obviously fake data tests almost nothing. Real data is irregular, surprising, and occasionally adversarial.",
+        "comment": "The boring solution is to use obviously fake names — John Doe, Jane Smith. But that tests almost nothing, because real data is irregular, surprising, and occasionally adversarial."
+      }
+    },
+
+    {
+      "id": "syllabic-mixing",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "syllabic-mixing",
+      "speakerNotes": "The design challenge: How do you generate names that feel linguistically plausible but are structurally foreign to any single language? The solution AI surfaced: syllabic mixing across seven languages — Finnish, Georgian, Yoruba, Japanese, Welsh, Swahili, Hungarian. The probability that the combination is a real name: vanishingly small. The probability that it sounds like a name to a human ear: high. I did not search for this solution. I described the constraint and the model surfaced an approach from computational linguistics that I would not have reached independently. This is AI functioning as a cross-domain consultant — exactly the mode that matters for pathology informatics, where our problems span medicine, computer science, and operations."
+    },
+
+    {
+      "id": "xenonym-live",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "interactive",
+      "title": "Xenonym Live — Schema-Driven Synthetic Data",
+      "subtitle": "Live at <a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a>",
+      "vizType": "xenonym-browser",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The whole system is publicly accessible, costs nothing, and was built to solve a real problem — not to demonstrate a capability.",
+        "comment": "Xenonym generates HIPAA-safe synthetic patient data including adversarial edge cases: names containing NULL, DROP, DELETE (SQL injection test cases), diacritics (Müller, Čapek, Ñoño). If your system can't store 'Nontra Null,' that's a bug — and depending on context, a compliance failure."
+      }
+    },
+
+    {
+      "id": "ibis",
+      "type": "two-column",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "IBIS — Natural-Language Search Over Pathology Data",
+      "left": {
+        "heading": "What It Does",
+        "bullets": [
+          "Clinician or researcher asks a <strong>natural-language question</strong>",
+          "IBIS turns it into a query over both structured and unstructured pathology data",
+          "Returns a cohort in <strong>seconds, not weeks</strong>",
+          "No SQL, no analyst queue, no manual chart review"
+        ]
+      },
+      "right": {
+        "heading": "How It Was Built",
+        "highlight": true,
+        "bullets": [
+          "Built <strong>outside Yale on entirely synthetic data</strong>",
+          "Docker-based Elasticsearch stack — never touched PHI",
+          "Pathway in: open source → adapt to internal data model → Enterprise GitHub → SPA review → CI/CD",
+          "<strong>AI-assisted development</strong> made this feasible for one informaticist"
+        ]
+      },
+      "takeaway": {
+        "text": "IBIS illustrates the thesis: a tool that was previously a team-sized project is now buildable by one domain expert with AI assistance.",
+        "comment": "The honest version: it would have been better to build this inside the institution from the start. The constraint was institutional, not technical. The methodology, the people, the discipline — already existed."
+      }
+    },
+
+    {
+      "id": "mdc-as-proof",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "evidence",
+      "bgColor": "#0f172a",
+      "title": "WBC ΔΣ: Small App, Complete System",
+      "subtitle": "A manual differential counter — rebuilt from a broken legacy app in a single AI-assisted session. <a href='https://mdc.openpathology.org' target='_blank'>mdc.openpathology.org</a>",
+      "cards": [
+        { "icon": "⌨️", "label": "Interface", "value": "Keyboard-first", "description": "Undo, thresholds, comments, templates, clipboard, session history — zero mouse dependency", "accentColor": "#3b82f6" },
+        { "icon": "🔒", "label": "Data Handling", "value": "Browser Only", "description": "No server-side patient data — sessionStorage only, nothing transmitted", "accentColor": "#ef4444" },
+        { "icon": "📋", "label": "QMS / DHF", "value": "10 docs", "description": "URS (47 requirements), SRS (88 specs), Risk Analysis, Traceability Matrix — per 21 CFR 820", "accentColor": "#8b5cf6" },
+        { "icon": "🧪", "label": "Automated Tests", "value": "156", "description": "40 test suites, 0 npm dependencies, 100% pass rate in 78ms", "accentColor": "#22c55e" },
+        { "icon": "🔗", "label": "Traceability", "value": "100%", "description": "Every test → SRS requirement → FMEA hazard → VV protocol vector", "accentColor": "#f59e0b" },
+        { "icon": "📦", "label": "Dependencies", "value": "Zero", "description": "Vanilla JS — no frameworks, no npm install for testing, minimal attack surface", "accentColor": "#06b6d4" }
+      ],
+      "takeaway": {
+        "text": "The code works AND it's defensible. That's the new standard: AI speeds implementation, artifacts lock safety.",
+        "comment": "Live at mdc.openpathology.org — open-source at github.com/OpenPathologyFoundation/tessera. The key lesson: AI generated the scaffold. A pathologist defined what 'safe and correct' means."
+      }
+    },
+
+    {
+      "id": "what-this-is",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "meta",
+      "title": "What This Presentation Actually Is",
+      "subtitle": "What you have been looking at for the last 40 minutes:",
+      "vizType": "presentation-architecture",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "There is no PowerPoint here. This deck is a JSON document rendered through a browser application — version-controlled, diff-able, reproducible.",
+        "comment": "The medium is the argument. This presentation was built the way we build clinical tools, and it took hours, not days. Every visualization is generated from data, not drawn by hand. The entire lecture is a single JSON file."
+      }
+    },
+
+    {
+      "id": "ai-pipeline",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "AI-Assisted Pipeline (Clinical-Grade)",
+      "left": {
+        "heading": "Fast Path (AI Helps Here)",
+        "bullets": [
+          "Generate UI scaffold and layout",
+          "Wire events, handlers, state management",
+          "Generate test skeletons from requirements",
+          "Draft QMS documentation structure",
+          "Debug and fix tooling/build issues"
+        ]
+      },
+      "right": {
+        "heading": "Clinical Control (Humans Own)",
+        "highlight": true,
+        "bullets": [
+          "<strong>URS:</strong> what must be true clinically",
+          "<strong>SRS:</strong> testable system behavior",
+          "<strong>Risk analysis</strong> + mitigations (FMEA)",
+          "<strong>Verification vectors</strong> + regression tests",
+          "<strong>Design direction</strong> and domain decisions"
+        ]
+      },
+      "takeaway": {
+        "text": "AI is a development partner. The human provides clinical domain expertise and design direction. AI handles execution at scale.",
+        "comment": "This is the practical version of the governing principle: you define what 'correct' means, AI builds it, you verify it. The safety envelope is locked by humans + automated tests — never by AI alone."
+      }
+    },
+
+    {
+      "id": "ai-must-not-do",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "The Safety Boundary",
+      "left": {
+        "heading": "AI Does (Development Partner)",
+        "style": "good",
+        "bullets": [
+          "Generate UI scaffold and layout from specs",
+          "Write boilerplate, event handlers, state management",
+          "Draft test skeletons from requirements",
+          "Surface cross-domain techniques (e.g. computational linguistics)",
+          "Debug, refactor, and fix tooling issues"
+        ]
+      },
+      "right": {
+        "heading": "AI Must NOT (Non-Negotiable)",
+        "style": "bad",
+        "bullets": [
+          "<strong>No autonomous clinical decisions</strong> — AI assists, humans diagnose",
+          "<strong>No PHI in prompts</strong> — patient data never enters AI context",
+          "<strong>No hidden transformations</strong> — every state change must be testable",
+          "<strong>No unverified production code</strong> — tested + traced before deploy"
+        ]
+      },
+      "takeaway": {
+        "text": "AI is a development tool, not a clinical decision-maker. The safety envelope is locked by humans + automated tests.",
+        "comment": "Every AI risk has a testable mitigation. Hallucinated logic → unit tests. Prompt drift → regression suites. Data leakage → no-PHI policy. Supply chain risk → minimal dependencies."
+      }
+    },
+
+    {
+      "id": "ai-governance",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "ecosystem",
+      "title": "AI Governance: Who Validates, Who Is Liable?",
+      "left": {
+        "heading": "The Questions",
+        "bullets": [
+          "<strong>On-label vs off-label:</strong> using AI outside its approved indication changes the risk profile",
+          "<strong>Bias:</strong> training data composition determines performance across demographics and tissue types",
+          "<strong>Documentation:</strong> when AI contributes, what goes in the record?"
+        ]
+      },
+      "right": {
+        "heading": "The Principles",
+        "highlight": true,
+        "bullets": [
+          "<strong>Validation:</strong> vendor claims ≠ institutional validation — you must verify independently",
+          "<strong>Stewardship extends:</strong> AI governance is the natural extension of lab information stewardship",
+          "<strong>Same framework:</strong> requirements → tests → traceability applies to AI tools too"
+        ]
+      }
+    },
+
+    {
+      "id": "three-observations",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "three-observations",
+      "speakerNotes": "Three observations from years of building with AI — for pathologists. (1) Domain knowledge — the person who knows what a diagnostic clause means, what the institution's history is, what the workflow requires — is MORE valuable when AI handles the generic. You are that person. (2) Architectural clarity — vague requirements now produce working code that does the wrong thing. The cost of imprecision went UP. When you write a URS, precision matters more than ever. (3) The human in the loop — not the model, not the tool. The pathologist who knows what they're building and why. All three converge: the differentiator was always you. AI made human judgment more consequential, not less necessary."
+    },
+
+    {
+      "id": "your-role",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "vizType": "your-role",
+      "vizConfig": {
+        "epigraph": {
+          "text": "You don't need to be a developer. You need to be the person who understands the problem."
+        },
+        "steps": [
+          { "number": 1, "question": "Spot gaps",              "detail": "Every workaround is a requirements document waiting to be written." },
+          { "number": 2, "question": "Write specs",            "detail": "URS-style requirements with clinical rationales — the highest-leverage step." },
+          { "number": 3, "question": "Prototype",              "detail": "Describe the problem precisely; let AI scaffold code against your spec." },
+          { "number": 4, "question": "Test",                   "detail": "Be the clinical validator — your adversarial edge cases are gold." },
+          { "number": 5, "question": "Advocate",               "detail": "Present the gap, the solution, and the evidence to leadership." }
+        ],
+        "takeaway": {
+          "text": "The new superpower: a 1-page spec, an AI-generated scaffold, and tests that prove safety.",
+          "comment": "The bottleneck is no longer coding — it's domain clarity. And that's what you already have."
+        }
+      },
+      "speakerNotes": "Five actions arranged on a commitment timeline: today you can spot gaps. This week you can write the spec. This month you can prototype with AI. This quarter you can validate. This year you can advocate. Each step is small; together they change your role from consumer of software to architect of it.",
+      "takeaway": {
+        "text": "The new superpower: write a 1-page spec, generate a scaffold with AI, and prove safety via tests + QMS documents.",
+        "comment": "The bottleneck is no longer coding — it's domain clarity. And that's what you already have."
+      }
+    },
+
+    {
+      "id": "question-returns",
+      "type": "content",
+      "transition": "fade",
+      "title": "The Question Returns",
+      "bullets": [
+        "<span style='font-size:1.3em; font-weight:300; color:#4A5568; line-height:1.6;'>The question was never<br><em style='text-decoration:line-through; opacity:0.5;'>\"What can AI build?\"</em></span>",
+        "<span style='font-size:1.3em; font-weight:600; color:#1B3A5C; line-height:1.6;'>The question is<br>\"What workflow problem do you understand deeply enough<br>to describe precisely — and recognize when it's solved?\"</span>"
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "The clarity is the work.",
+        "comment": "If the answer is yes, everything in this talk is an accelerant. The tools exist. The methodology exists. The cost barrier is gone. What remains is your expertise and your willingness to act on it."
+      }
+    },
+
+    {
+      "id": "takeaways",
+      "type": "takeaways",
+      "transition": "convex",
+      "title": "Key Takeaways",
+      "items": [
+        "Informatics is the <strong>logic of clinical work expressed in software</strong> — the abstraction layer that matters is workflow, not hardware.",
+        "The <strong>functionality gap</strong> is real: your LIS solves the general case; your lab is a specific case. Workarounds are where errors live.",
+        "AI collapsed the <strong>cost of building</strong> by ~100×. Same quality bar, same validation rigor — radically less effort.",
+        "The evidence is concrete: <strong>Xenonym</strong> (synthetic data), <strong>IBIS</strong> (natural-language search), <strong>WBC ΔΣ</strong> (clinical-grade counting), and <strong>this presentation</strong> (JSON-driven, no PowerPoint).",
+        "<strong>You already have the hardest skill</strong> — domain expertise. AI handles the syntax. Your job is to define what 'safe and correct' means."
+      ],
+      "cta": {
+        "label": "Your challenge:",
+        "text": "Identify one workflow gap in your practice. Write a one-page spec with five requirements — each with a clinical rationale — plus three plausible failure modes. That document is more valuable than any code."
+      }
+    },
+
+    {
+      "id": "sources",
+      "type": "content",
+      "transition": "fade",
+      "title": "Sources & Further Reading",
+      "subtitle": "Key references informing this lecture",
+      "bullets": [
+        "<strong>Functionality Gap & Custom Development</strong>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich P, Sinard JH. Customizing Laboratory Information Systems: Closing the Functionality Gap. Adv Anat Pathol. 2015;22(5):323-330.</a>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/23372985/' target='_blank'>Sinard JH, Gershkovich P. Custom software development for use in a clinical laboratory. J Pathol Inform. 2012;3:44.</a>",
+        "<strong>Digital Pathology & AI Evidence</strong>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/31173528/' target='_blank'>Hanna M, et al. Implementation of digital pathology offers clinical and operational increase in efficiency and cost savings. Arch Pathol Lab Med. 2019.</a>",
+        "<a href='https://genomemedicine.biomedcentral.com/articles/10.1186/s13073-025-01484-y' target='_blank'>Genome Medicine. Closing the gap in clinical adoption of computational pathology. 2025.</a>",
+        "<strong>AI-Assisted Development Research</strong>",
+        "<a href='https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/' target='_blank'>METR: Measuring AI Impact on Experienced OS Developer Productivity (RCT, July 2025)</a>",
+        "<a href='https://metr.org/blog/2026-02-24-uplift-update/' target='_blank'>METR: Uplift Update (Feb 2026) — revised findings on AI developer productivity</a>",
+        "<strong>Career & Training</strong>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/29721362/' target='_blank'>Rudolf JW, et al. Career paths of pathology informatics fellowship alumni. J Pathol Inform. 2018.</a>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/32284963/' target='_blank'>Maness HTD, et al. Informatics training for pathology practice and research. Acad Pathol. 2020.</a>"
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions & Discussion",
+      "contact": "Peter Gershkovich, MD. MHA<br>Yale University School of Medicine<br><br><em>A question to start:</em><br>\"What is the one workflow problem you understand deeply enough to describe precisely — and would build a tool for if you could?\"<br><br><a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a> · <a href='https://mdc.openpathology.org' target='_blank'>mdc.openpathology.org</a>"
+    }
+  ]
+}
