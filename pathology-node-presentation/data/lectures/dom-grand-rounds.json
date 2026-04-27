@@ -1,0 +1,819 @@
+{
+  "meta": {
+    "title": "Build as You Speak: Modern AI and the Transformation of Research Infrastructure in Medicine",
+    "shortTitle": "Build as You Speak — DoM Grand Rounds",
+    "presenter": "Peter Gershkovich, M.D., M.H.A.",
+    "institution": "Yale University School of Medicine",
+    "date": "2026",
+    "theme": {
+      "primary": "#1B3A5C",
+      "secondary": "#2E6DA4",
+      "accent": "#D97706"
+    },
+    "glossary": [
+      {
+        "term": "Agile Manifesto",
+        "definition": "Signed at Snowbird, Utah, February 2001. Twelve principles placing working software and human collaboration above rigid process. The cultural shift that followed Baldwin and Clark’s intellectual one."
+      },
+      {
+        "term": "Ajax",
+        "definition": "Asynchronous JavaScript and XML — coined by Jesse James Garrett in 2005. The set of techniques that turned the browser from a static document viewer into a platform for real interactive software."
+      },
+      {
+        "term": "AMIA",
+        "definition": "American Medical Informatics Association — the professional society for biomedical and health informatics in the United States; convenor of the field’s annual symposium and journals."
+      },
+      {
+        "term": "ASTM",
+        "definition": "ASTM International — standards body whose protocols are widely used for laboratory instrument data interchange (e.g., between analyzers and the LIS). Carried alongside HL7 by Hermes."
+      },
+      {
+        "term": "BdHub",
+        "definition": "A biorepository data hub (bdhub.org) — a purpose-built destination for HL7-streamed specimen data, with security and audit baked in at the point of capture. Built by the applied informatics group."
+      },
+      {
+        "term": "Beaker",
+        "definition": "Epic’s laboratory information system module — the LIS replacement currently being adopted at Yale-New Haven Health."
+      },
+      {
+        "term": "Biorepository",
+        "definition": "A curated collection of biological specimens (tissue, blood, DNA) linked to clinical metadata, used to answer research questions that unfixed, in-situ clinical data cannot."
+      },
+      {
+        "term": "Caboodle",
+        "definition": "Epic’s enterprise data warehouse product, intended for reporting and analytics across the health system — built on a schema of thousands of tables with non-obvious joins."
+      },
+      {
+        "term": "CHLOE",
+        "definition": "A clinical oncology research explorer built at Yale Pathology (chloe.yalepathaws.org) — a research-facing tool for cohort definition and exploration over oncology pathology data, built by the applied informatics group. The pink-ribbon icon signals its breast- and oncology-research focus."
+      },
+      {
+        "term": "Clarity",
+        "definition": "Epic’s relational reporting database — the source of truth for operational and billing analytics, and the entry point behind Yale’s institutional data-access process."
+      },
+      {
+        "term": "Clerical vs. Clinical",
+        "definition": "The epistemic distinction at the core of this lecture. A diagnosis code in Epic is what someone clicked to close an encounter (clerical); what the patient actually has is a domain judgment (clinical). Research built on the first and reported as the second produces artifacts of the documentation process."
+      },
+      {
+        "term": "Cohort",
+        "definition": "A defined group of patients selected by inclusion and exclusion criteria; the denominator every study is built on."
+      },
+      {
+        "term": "D3",
+        "definition": "D3.js — the JavaScript library (Bostock et al., 2011) for data-driven document manipulation. The engine behind every custom diagram in this deck; chosen for the precision Tufte-style work the talk’s argument requires."
+      },
+      {
+        "term": "Data Lake",
+        "definition": "An institutional data architecture that collects heterogeneous data in its raw form, deferring schema and purpose. The apotheosis of inventory thinking — and the paradigm this talk argues has reached its limit."
+      },
+      {
+        "term": "Data Stream",
+        "definition": "A narrow, continuously-flowing feed of data captured at the point of clinical generation (HL7, FHIR event streams) — routed to purpose-built repositories with security and audit inspectable at every link."
+      },
+      {
+        "term": "DevSecOps",
+        "definition": "Development practice that builds security review and compliance into every stage of the software lifecycle — not bolted on at the end. The discipline that distinguishes Yale-built systems from “home-grown.”"
+      },
+      {
+        "term": "DIKW",
+        "definition": "Data → Information → Knowledge → Wisdom — the canonical informatics pipeline. Hersh’s 2013 caveats are organized along the first three layers: each layer compresses what came before."
+      },
+      {
+        "term": "Docker",
+        "definition": "Containerization platform (2013) that makes the thing you built on your laptop run everywhere, identically. Reproducibility as default."
+      },
+      {
+        "term": "DSA-WSI-DeID",
+        "definition": "Digital Slide Archive — Whole Slide Image De-identification — open tooling for managing pathology whole-slide images and stripping identifiable burned-in metadata before research use."
+      },
+      {
+        "term": "EHR",
+        "definition": "Electronic Health Record — Epic, for most of Yale — the system of record for patient encounters, orders, results, and billing."
+      },
+      {
+        "term": "Elasticsearch",
+        "definition": "Open-source distributed search and analytics engine. The storage and query layer behind IBIS at Yale Pathology — the Lucene query IBIS shows you on screen runs against an Elasticsearch index."
+      },
+      {
+        "term": "Ephemeral Tools",
+        "definition": "Software built for a specific research question, used, and retired when the question is answered. A consumable rather than a capital expenditure. The new paradigm’s counterpoint to “maintain forever.”"
+      },
+      {
+        "term": "Epic",
+        "definition": "Epic Systems — the dominant EHR vendor at U.S. academic medical centers, including Yale-New Haven Health. The system of record for orders, results, encounters, and billing; the source of the operational data this lecture’s epistemic argument is about."
+      },
+      {
+        "term": "FHIR",
+        "definition": "Fast Healthcare Interoperability Resources — modern HL7 standard (since 2014) for exchanging clinical data using web-friendly REST and JSON. The successor protocol to legacy HL7 v2 messages."
+      },
+      {
+        "term": "FOSSA",
+        "definition": "Software-composition-analysis platform used at Yale to scan code dependencies for license and vulnerability risk — one of the enterprise guardrails baked into Yale-built systems."
+      },
+      {
+        "term": "GitHub",
+        "definition": "Dominant code-hosting and collaboration platform (launched 2008). Referenced in this deck as both Yale’s enterprise instance — the institutional substrate inside the security perimeter — and as the public site whose project graveyard illustrates the lifecycle of research software."
+      },
+      {
+        "term": "Hermes",
+        "definition": "The Yale Pathology data-exchange engine — a Yale-built service that handles HL7, FHIR, ASTM, and custom protocol routing across the pathology continuum, feeding downstream systems and research substrates."
+      },
+      {
+        "term": "Hersh",
+        "definition": "William R. Hersh, MD — informatician at Oregon Health & Science University. His 2013 paper “Caveats for the use of operational electronic health record data” (Med Care 51:S30) catalogued the seven failure modes of EHR data when reused for comparative effectiveness research, with concrete clinical examples in Table 1."
+      },
+      {
+        "term": "HIPAA",
+        "definition": "Health Insurance Portability and Accountability Act (1996) — the U.S. federal law that defines Protected Health Information and the security and privacy obligations on entities that handle it. The legal floor under every clinical-data system."
+      },
+      {
+        "term": "HL7",
+        "definition": "Health Level 7 — the international messaging standard for clinical data interchange. The feed that powers most modern biorepository capture."
+      },
+      {
+        "term": "HRPP",
+        "definition": "Human Research Protection Program — the Yale office that administers IRB review, informed-consent procedures, and other federal compliance obligations for research involving human subjects."
+      },
+      {
+        "term": "IAIMS",
+        "definition": "Integrated Advanced Information Management Systems — NLM-funded program (1980s–1990s) that built the institutional infrastructure for biomedical information at academic medical centers. The historical pattern this lecture echoes: applied informatics as a sanctioned, resourced scientific instrument."
+      },
+      {
+        "term": "IBIS",
+        "definition": "Integrated Biospecimen and Informatics System — a natural-language search layer over pathology data built at Yale that turns a clinical question into a precise, visible Lucene query over structured and unstructured records."
+      },
+      {
+        "term": "IRB",
+        "definition": "Institutional Review Board — the body that reviews and approves research involving human subjects."
+      },
+      {
+        "term": "Jig",
+        "definition": "A woodworker’s precisely-built guide used to make the next hundred cuts exactly right. Worth having, historically rarely worth building — the archetype for the supplementary tools research has been living without."
+      },
+      {
+        "term": "Kahn",
+        "definition": "Michael G. Kahn — informatician whose 2016 eGEMs paper proposed the harmonized data-quality framework now widely used: three categories (Conformance, Completeness, Plausibility) and two assessment contexts (Verification, Validation) for secondary-use EHR data."
+      },
+      {
+        "term": "Lindberg",
+        "definition": "Donald A. B. Lindberg, MD (1933–2019) — director of the National Library of Medicine 1984–2015. Founder of the IAIMS program and a principal architect of biomedical informatics as a recognized discipline."
+      },
+      {
+        "term": "LIS",
+        "definition": "Laboratory Information System — the system of record for laboratory orders, specimens, and results. At Yale Pathology this has historically been CoPath Plus, transitioning to Epic Beaker."
+      },
+      {
+        "term": "LLM",
+        "definition": "Large Language Model — an AI system trained on vast text and code corpora; here, a development collaborator that turns specification into working code, tests, and documentation."
+      },
+      {
+        "term": "Lucene",
+        "definition": "The text search and query syntax at the core of Elasticsearch — in this talk, the intermediate representation IBIS shows on screen so the user can read what the system understood."
+      },
+      {
+        "term": "MCP",
+        "definition": "Model Context Protocol — open standard introduced by Anthropic in 2024 for connecting AI applications to external tools, data sources, and services. The plumbing that lets a language model query Elasticsearch (or any indexed store) directly."
+      },
+      {
+        "term": "METR",
+        "definition": "Model Evaluation & Threat Research — independent organization that runs randomized controlled trials and field studies of AI-assisted software development. Cited here for its 2025 and 2026 reports on experienced-developer productivity with AI tools."
+      },
+      {
+        "term": "Modularity",
+        "definition": "Baldwin and Clark (2000), Design Rules, Vol. 1: The Power of Modularity. The intellectual foundation of composable systems — the idea that pieces can have lives of their own."
+      },
+      {
+        "term": "NLM",
+        "definition": "U.S. National Library of Medicine, part of the NIH — the institutional home of biomedical informatics, host of PubMed/MEDLINE, and historical funder of the IAIMS program."
+      },
+      {
+        "term": "Pathology Portal",
+        "definition": "The unified pathology-centric patient-care view at Yale — the long-running clinical face of the department’s Yale-built systems, now extended by Starling, IBIS, and Pelican."
+      },
+      {
+        "term": "Pelican",
+        "definition": "Yale-built operational analytics layer over the pathology data plane — dashboards and reports for laboratory and operations leadership."
+      },
+      {
+        "term": "PHI",
+        "definition": "Protected Health Information — any patient data covered by HIPAA privacy regulations."
+      },
+      {
+        "term": "RAD",
+        "definition": "Rapid Application Development. Named and formalized by James Martin (1991). Iterative, prototype-driven development that keeps the builder and the user in the same room — the first mainstream break from waterfall."
+      },
+      {
+        "term": "REALM",
+        "definition": "Rapidly Evolving Agile Laboratory Modules — the family of clinical and research informatics applications built inside Yale Pathology over nearly two decades."
+      },
+      {
+        "term": "REDCap",
+        "definition": "Research Electronic Data Capture (Harris et al., 2009) — secure, browser-based platform built at Vanderbilt for designing research surveys and databases. The de facto standard for IRB-approved data collection at academic medical centers."
+      },
+      {
+        "term": "Shadow System",
+        "definition": "Parallel infrastructure built by competent people because the official process is broken. Simultaneously evidence that the official system has failed and the thing that lets it continue failing without consequence."
+      },
+      {
+        "term": "Sheckley",
+        "definition": "Robert Sheckley (1928–2005) — American science-fiction author. His 1953 story “Ask a Foolish Question” opens this lecture: an oracle that can answer anything provided it is asked the right way, and a series of seekers who never quite manage."
+      },
+      {
+        "term": "Sheffield Scientific School",
+        "definition": "Yale’s school of applied and experimental sciences, established 1847 and named 1861. Admitted grudgingly alongside the classical curriculum against institutional resistance — the historical parallel to today’s status of applied informatics."
+      },
+      {
+        "term": "Silliman",
+        "definition": "Benjamin Silliman (1779–1864) — Yale’s first professor of chemistry and natural history. A central figure in establishing applied and experimental sciences as legitimate scholarship at Yale, decades before the Sheffield Scientific School was formally chartered."
+      },
+      {
+        "term": "Spiral Model",
+        "definition": "Boehm (1986). Risk-driven, iterative software development. The first systematic alternative to waterfall."
+      },
+      {
+        "term": "Stack Overflow",
+        "definition": "Launched 2008, same year as GitHub. Shared public memory for the world’s programmers — every question anyone had became one someone else had already answered."
+      },
+      {
+        "term": "Starling",
+        "definition": "Yale-built clinician-facing dashboard layer over the Pathology Portal — surfaces patient-level pathology context to treating clinicians at the point of care."
+      },
+      {
+        "term": "Tufte",
+        "definition": "Edward Tufte (b. 1942) — statistician, political scientist, and the foremost theorist of visual display of quantitative information. His four books and the principles of high data-ink ratio, small multiples, and macro/micro readings inform every visualization in this deck."
+      },
+      {
+        "term": "Weiskopf",
+        "definition": "Nicole G. Weiskopf — informatician whose 2013 JAMIA paper (with Chunhua Weng) reviewed the methods and dimensions of EHR data quality assessment, identifying five dimensions: completeness, correctness, concordance, plausibility, currency."
+      },
+      {
+        "term": "Xenonym",
+        "definition": "An open-source synthetic name generator used here as illustration — a HIPAA-safe test-data tool that was never economically worth building until AI-assisted development collapsed the cost."
+      }
+    ]
+  },
+  "slides": [
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "fade",
+      "title": "Build as You Speak",
+      "subtitle": "Modern AI and the Transformation of Research Infrastructure in Medicine",
+      "presenter": "Peter Gershkovich, M.D., M.H.A.",
+      "institution": "Department of Medicine Grand Rounds · Yale University School of Medicine",
+      "date": "2026"
+    },
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter’s independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+    {
+      "id": "epigraph-sheckley",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Cold open",
+      "title": "",
+      "bullets": [
+        "<style>.reveal .intro-slide ul.fragment-list:has(.sheckley-no-bullets){list-style:none !important;padding:0 !important;margin:0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.sheckley-no-bullets){padding:0 !important;margin:0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.sheckley-no-bullets)::before,.reveal .intro-slide ul.fragment-list > li:has(.sheckley-no-bullets):before{content:none !important;display:none !important;}</style><div class='sheckley-no-bullets' style='display:flex; align-items:center; justify-content:center; gap:2.6em; max-width:1200px; margin:0 auto; padding-top:0.2em;'><div style='flex:0 0 auto; width:340px;'><img src='/assets/sheckley-threshold.jpg' alt='Two figures at the threshold — illustration from Ask a Foolish Question' style='width:340px; height:auto; display:block; filter:sepia(0.08) contrast(1.02); border:1px solid #8b7355; border-radius:2px; box-shadow:0 4px 18px rgba(0,0,0,0.15);' /><div style='width:340px; text-align:left; font-size:0.84em; font-style:italic; color:#6b5c48; margin-top:0.75em; line-height:1.5;'>“Answerer could answer anything,”<br><span style='display:inline-block; margin-left:1.4em; font-style:italic; opacity:0.82;'>“provided it was a legitimate question.”</span></div></div><div style='flex:1 1 auto; text-align:left; max-width:36em;'><div style='font-size:1.1em; font-weight:400; color:#1B3A5C; line-height:1.6; letter-spacing:0.1px;'>“The way you put a question often determines not only the answer you’ll get, but the <strong>type of answer possible</strong>. So&#8201;…&#8201;a mechanical answerer, geared to produce the <em>ultimate revelations</em> in reference to <em>anything</em> you want to know, might have <strong>unsuspected limitations</strong>.”</div><div style='font-size:0.92em; font-style:italic; color:#6b5c48; margin-top:1.0em;'>— Robert Sheckley, <em>Ask a Foolish Question</em>, 1953 (epigraph)</div><div style='font-size:0.88em; color:#4A5568; margin-top:0.9em; max-width:28em;'>He writes that this is <em>long established</em>. Seventy-three years later, here we are.</div></div></div>"
+      ],
+      "speakerNotes": "COLD OPEN — ~90 seconds, no slide before this one. Tell the story: Lingman the dying biologist, Lek hunting for purple, the eighteen creatures governed by the rule of eighteen, the Answerer that knows everything but cannot help anyone because their questions are malformed. Then reveal the slide. Walk the audience through the long quote. Let it land. Then save the final line of the epigraph for YOURSELF — deliver it live, as the last revelation of the opening: ‘In order to ask a question, you must already know most of the answer.’ That is your sentence. That is what the whole talk turns on. It is not on the slide. Then pivot to the takeaway line aloud: ‘We have built the Answerer. Today: what it takes to actually use it — and why most institutions, including ours, are getting it wrong in two opposite directions at once.’",
+      "fragments": false,
+      "takeaway": {
+        "text": "We have built the Answerer. Today: what it takes to actually use it — and why most institutions, including ours, are getting it wrong in two opposite directions at once.",
+        "comment": "Two opposite failures, both cousins of Sheckley’s rule. <strong>Direction 1 — excess caution.</strong> The institution locks the warehouse behind multi-month review and treats the internal expert as a risk; the legitimate question dies in the queue, or is rerouted into a shadow biorepository. The same institution will, meanwhile, hand admin credentials to an outside vendor with a SOC 2 report and a smile — the threat model is incoherent. <strong>Direction 2 — excess credulity.</strong> Individuals take malformed questions to the Answerer, accept plausible wrong answers, and publish billing-workflow artifacts as clinical findings. The LinkedIn genre of ‘look at what the machine got wrong’ — the critique aimed at the machine rather than at the question. Both failures violate the same rule: the precision of the question bounds the quality of the answer. The rest of this lecture is a map of where each failure mode lives, and what an applied informatics group does to fix both."
+      }
+    },
+    {
+      "id": "wrong-question",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "the reframe",
+      "title": "",
+      "subtitle": "",
+      "vizType": "wrong-question",
+      "speakerNotes": "Most conversations about AI in medicine ask: what can AI build? What can AI read? What can AI diagnose? Those are not the wrong questions — but they are downstream. The question that matters for research operations is the one Sheckley already asked in 1953: do you know what you want, clearly enough to recognize it when it appears? The capability is not the transformation. The transformation is what changes in the practice of building itself when domain experts can articulate intent directly to working tools."
+    },
+    {
+      "id": "context-landscape",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "Beat 0.5 · Who we are",
+      "title": "Pathology Informatics at Yale.",
+      "subtitle": "A twenty-year program of Yale-built systems — engineered, governed, documented. Not \"home-grown.\"",
+      "vizType": "realm-diagram",
+      "vizConfig": {},
+      "speakerNotes": "BEFORE the diagnostic argument, set the ground. Two minutes — fast.\n\n1. Who we are. Pathology Informatics at Yale — a twenty-year program of building clinical-grade systems for our department and the health system.\n\n2. Debunk the label. In IT vernacular, \"home-grown\" is a slur — it means poorly documented, lightly governed, brittle, idiosyncratic. None of that applies here. What we have built is YALE-BUILT — engineered software, on enterprise infrastructure, inside the security perimeter, with real lifecycle discipline.\n\n3. Name the guardrails (don’t belabor — this audience knows them):\n   • Cybersecurity risk management — every system reviewed and scored\n   • Specialized HIPAA-compliant infrastructure — purpose-built, not improvised\n   • Documented architecture, change control, audit trails\n   • Deployed within the enterprise hierarchy — not adjacent to it\n   • Operational uptime measured in years\n\n4. The frame for the rest of the talk. From here on, when I describe what we built — IBIS, CHLOE, BdHub, Xenonym — assume the home-grown label does NOT apply. These are professionally engineered systems, built by domain experts, governed at enterprise standard. The argument I am making is about what becomes possible when domain expertise can BUILD at that standard. Not about cutting corners.\n\nVisual: the realm diagram shows where pathology sits — at the center of oncology decisions, but historically outside the digital-workflow tier. That gap is the opening this group has been working in for twenty years.",
+      "takeaway": {
+        "text": "Yale-built, not home-grown. Twenty years of engineered systems, full enterprise governance, inside the security perimeter.",
+        "comment": "Twenty years of Yale-built systems sit inside the institution’s standard guardrails — cybersecurity review, HIPAA-compliant infrastructure, change control, documented architecture, multi-year operational uptime. The “home-grown” label, in IT vernacular, implies poorly documented and lightly governed; that meaning does not apply here. The rest of the presentation rests on that distinction."
+      }
+    },
+    {
+      "id": "governing-principle",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 0.5 · Who we are",
+      "title": "...",
+      "subtitle": "",
+      "vizType": "governing-principle",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The software should be a reflection of your workflow, your logic, your judgment. Not the other way around.",
+        "comment": "The principle was always right, but historically too expensive to follow. AI changes the economics: software can now adapt to real workflow and judgment instead of forcing people to adapt to software."
+      }
+    },
+    {
+      "id": "twenty-years-inside-yale",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 6 · Track Record",
+      "title": "Twenty Years of Building Inside Yale",
+      "subtitle": "Enterprise GitHub · FOSSA · CI/CD · Security Review — the institutional pattern was already there",
+      "vizType": "dev-lifecycle-loop",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "AI did not create our methodology. It amplified a methodology that already worked.",
+        "comment": "The track record matters. We have been building clinical and research software inside Yale’s security perimeter for two decades. The discipline — version control, dependency analysis, CI/CD, security review — was established long before AI. That foundation is what made it safe to bring AI into the loop. This is not 'home-grown software' in the traditional sense."
+      }
+    },
+    {
+      "id": "the-problem-they-know",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Beat 1 · Context",
+      "title": "The Problem Every Research Group Already Knows",
+      "subtitle": "One after another — the gaps you stopped trying to fix.",
+      "bullets": [
+        "<style>.reveal .intro-slide ul.fragment-list:has(.revelation-cards){list-style:none !important;padding:0 !important;margin:0.4em 0 0 0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.revelation-cards){padding:0 !important;margin:0.75em 0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.revelation-cards)::before,.reveal .intro-slide ul.fragment-list > li:has(.revelation-cards):before{content:none !important;display:none !important;}</style><div class='revelation-cards' style='display:flex; align-items:center; gap:1.4em; max-width:1100px; margin:0 auto; padding:1em 1.5em; border-left:7px solid #d97706; background:rgba(217,119,6,0.07); border-radius:4px;'><div style='font-size:2.4em; line-height:1; flex:0 0 auto; color:#d97706;'>⏱</div><div style='flex:1 1 auto; text-align:left;'><div style='font-size:0.82em; font-weight:700; letter-spacing:2.5px; color:#8a7250; margin-bottom:0.2em;'>THE COHORT</div><div style='font-size:1.4em; font-weight:600; color:#1B3A5C; margin-bottom:0.3em; line-height:1.25;'>Weeks, months, and a ticket.</div><div style='font-size:1em; color:#4A5568; line-height:1.5;'>The analyst queue you submit to, then wait out. By the time the cohort is ready, the science has moved.</div></div></div>",
+        "<div class='revelation-cards' style='display:flex; align-items:center; gap:1.4em; max-width:1100px; margin:0 auto; padding:1em 1.5em; border-left:7px solid #c2601a; background:rgba(194,96,26,0.07); border-radius:4px;'><div style='font-size:2.4em; line-height:1; flex:0 0 auto; color:#c2601a;'>📊</div><div style='flex:1 1 auto; text-align:left;'><div style='font-size:0.82em; font-weight:700; letter-spacing:2.5px; color:#8a7250; margin-bottom:0.2em;'>THE TRIAL DATA</div><div style='font-size:1.4em; font-weight:600; color:#1B3A5C; margin-bottom:0.3em; line-height:1.25;'>Lives in a spreadsheet.</div><div style='font-size:1em; color:#4A5568; line-height:1.5;'>The custom tool that was never funded. The shadow database holding what the official system can’t represent.</div></div></div>"
+      ],
+      "fragments": true,
+      "takeaway": {
+        "text": "The bottleneck was never the question — it was always the infrastructure required to give the answer.",
+        "comment": "Two patterns recognizable to any academic medical research group: the cohort question that waits weeks-to-months for a centralized analyst queue, and the trial data that ends up in a department-built spreadsheet because the sanctioned system can’t represent it. Both are stories about infrastructure cost — not about the validity of the underlying scientific question."
+      }
+    },
+    {
+      "id": "the-problem-they-know-2",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Beat 1 · Context (cont’d)",
+      "title": "... and lives with.",
+      "subtitle": "",
+      "bullets": [
+        "<div class='revelation-cards' style='display:flex; align-items:center; gap:1.4em; max-width:1100px; margin:0 auto; padding:1em 1.5em; border-left:7px solid #a03a2e; background:rgba(160,58,46,0.07); border-radius:4px;'><div style='font-size:2.4em; line-height:1; flex:0 0 auto; color:#a03a2e; font-weight:700;'>?</div><div style='flex:1 1 auto; text-align:left;'><div style='font-size:0.82em; font-weight:700; letter-spacing:2.5px; color:#8a7250; margin-bottom:0.2em;'>THE RESEARCH QUESTION</div><div style='font-size:1.4em; font-weight:600; color:#1B3A5C; margin-bottom:0.3em; line-height:1.25;'>Stayed a question.</div><div style='font-size:1em; color:#4A5568; line-height:1.5;'>Operationalizing the answer required engineering resources you didn’t have. You asked a different question instead.</div></div></div>",
+        "<div class='revelation-cards' style='display:flex; align-items:center; gap:1.4em; max-width:1100px; margin:0 auto; padding:1em 1.5em; border-left:7px solid #6b7c8f; background:rgba(107,124,143,0.10); border-radius:4px;'><div style='font-size:2.4em; line-height:1; flex:0 0 auto; color:#6b7c8f;'>☁</div><div style='flex:1 1 auto; text-align:left;'><div style='font-size:0.82em; font-weight:700; letter-spacing:2.5px; color:#8a7250; margin-bottom:0.2em;'>AND SO — THE WEATHER BECAME</div><div style='font-size:1.4em; font-weight:600; color:#1B3A5C; margin-bottom:0.3em; line-height:1.25;'>The climate.</div><div style='font-size:1em; color:#4A5568; line-height:1.5;'>Accepted as permanent — because the fix moved upstream. What a research group once solved through local collaboration now requires <strong style='color:#1B3A5C;'>institutional governance</strong>. You cannot fix what you do not control.</div></div></div>"
+      ],
+      "fragments": true,
+      "takeaway": {
+        "text": "Accepted as permanent — not because they were right, but because fixing them cost more than the problem was worth.",
+        "comment": "When a problem becomes the “weather” — the assumed background of doing research — the institution stops measuring its cost. The “climate” framing names the structural settling: this isn’t an outage, it’s the long-run temperature of the field. The next slide reframes that climate as an economic constraint that has now changed, not as an inevitability."
+      }
+    },
+    {
+      "id": "the-problem-they-know-pivot",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Beat 1 · The Pivot",
+      "title": "",
+      "subtitle": "",
+      "bullets": [
+        "<div class='revelation-cards' style='max-width:1080px; margin:3.5em auto 0 auto; padding:1.4em 1.4em; text-align:center; border-top:1.5px solid #b45309; border-bottom:1.5px solid #b45309;'><div style='font-size:1.7em; font-weight:700; color:#1B3A5C; line-height:1.35; margin-bottom:0.6em; letter-spacing:0.3px;'>That is a problem of <span style='color:#b45309;'>economics</span> and <span style='color:#b45309;'>governance</span>,<br>not capability.</div><div style='font-size:1.35em; font-style:italic; color:#b45309; letter-spacing:0.5px;'>One of them is radically changed by AI.</div></div>"
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "The economics just changed.",
+        "comment": "The diagnosis-to-thesis seam of the talk. The cost of building purpose-fit research infrastructure has fallen substantially since AI-assisted development tools matured in 2023–2025. The bottleneck shifts from engineering throughput to the precise articulation of what to build — which is what domain experts have always been trained to do."
+      }
+    },
+    {
+      "id": "governance-up-close",
+      "type": "visualization",
+      "transition": "fade",
+      "vizType": "consent-form-iframe",
+      "vizConfig": {
+        "src": "assets/yale-consent-form.html",
+        "height": "82vh",
+        "promptHover": "Find Yale's requirements for a research-participation consent form on a Yale website. Create a similar fillable form — using best UI/UX principles and a styling framework — that's quick to fill in and electronically sign online."
+      },
+      "speakerNotes": "Brief — 60 to 90 seconds. The point of this slide is not to read the form. The point is to let the audience SEE the form: the table of contents on the left, the ten sections, the per-section acknowledgement, the printed name, the signature pad, the submit button. Scroll it for them.\n\nThen say: this is what governance looks like at the protocol level. Every study, every cohort, every IRB-touching question carries this surface. Multiply this by every protocol your group runs. Multiply that by every department in the institution. AI did not collapse this cost. AI cannot collapse this cost. Governance is not a software problem.\n\nThe argument is NOT that governance is bad — it's that it's expensive in a specific, irreducible way, and that the rest of the talk is about what we DO with the half of the constraint that just radically changed. The other half — this — is still ours to do well, in the way it has to be done."
+    },
+    {
+      "id": "cognitive-load",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 6 · The Act of Building",
+      "title": "Cognitive Load Redistribution",
+      "subtitle": "Where effort concentrates when AI absorbs the mechanical parts of building",
+      "vizType": "cognitive-load",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Freeing up cognitive load is only valuable if you have something worth thinking about.",
+        "comment": "Routine programming work — repeated lookups of join syntax, regex, REDCap API patterns, idiomatic library calls — is mechanical recall, not thinking. AI assistance absorbs that load efficiently. What remains as a human responsibility is the higher-order question of whether the tool itself is the right tool for the clinical question — a decision the principal investigator and domain expert own. Sources cited on the bibliography slide include the Microsoft Time Warp study, JetBrains DevEco productivity work, and the METR randomized trials."
+      }
+    },
+    {
+      "id": "feedback-loop",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 6 · The Act of Building",
+      "title": "Compression of the Feedback Loop",
+      "subtitle": "Speed doesn’t just change how fast you work. It changes how you think.",
+      "vizType": "feedback-loop",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "When a cohort definition takes two weeks to test, you commit to fewer of them and defend the first one harder. Compress the loop and the economics of exploration invert.",
+        "comment": "The iteration loop on the tool now collapses to the same time scale as the iteration loop on the idea. When a cohort definition takes weeks to test, an investigator commits to fewer hypotheses and defends the first one harder. When the same definition takes minutes, the cost of being wrong falls — and the practice of exploration changes shape, not just speed. The visualization contrasts the slow capital-software loop (build, compile, debug, revise) with the fast consumable-software loop (describe, evaluate, adjust)."
+      }
+    },
+    {
+      "id": "two-orders",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 6 · Magnitude",
+      "title": "",
+      "subtitle": "",
+      "vizType": "two-orders-shift",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The shift isn’t less work. It’s different work — and the discipline is the part that didn’t change.",
+        "comment": "The phrase ‘100× less effort’ is easy to hear as ‘everything got easier.’ The truth is subtler. Mechanical work — boilerplate, syntax lookup, CRUD, scaffolding, test skeletons, debugging mechanics — got absorbed by AI. Intellectual work — architectural judgment, security thinking, risk analysis, validation, domain focus, clinical reasoning, user empathy — got <em>amplified</em>, because it is now the only work left for the human, and because the iteration cycle collapsed enough that the cost of a bad decision surfaces inside the same working session. The 100× figure only applies under discipline. Without it, the compression becomes a hazard: plausible wrong answers produced at AI speed, with no human pause long enough to catch them. The discipline hinge below is the real point of the slide — the 100× is contingent on the left column (absorbed) being absorbed rigorously, and on the right column (amplified) being genuinely done, not just nodded at."
+      },
+      "speakerNotes": "Beat 6 — 2 minutes. This slide is not ‘everything got easier.’ It is ‘the work shifted.’ Walk the columns briefly: LEFT, what AI absorbs — boilerplate, syntax lookup, framework config, scaffolding, CRUD endpoints, doc drafts, test skeletons, debugging mechanics. RIGHT, what is amplified for humans — architectural judgment, security thinking, risk analysis, validation and tests, domain focus, clinical reasoning, user empathy, design intent. The center 100× is the total compression. Then — and this is the beat that matters — point at the discipline hinge: without it, the speed is a hazard, AI drift scales the cost of mistakes with the new velocity. With it, same quality gates, auditable artifacts, regulated-grade software at radically less effort. Close: ‘The shift isn’t less work. It’s different work — and the discipline is the part that didn’t change.’ That sentence is the whole slide."
+    },
+    {
+      "id": "institutional-context",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 6 · Institutional Context",
+      "title": "",
+      "subtitle": "",
+      "vizType": "institutional-context",
+      "speakerNotes": "Every system you build exists inside a web of constraints the model cannot see. Epic integrations. Departmental ownership boundaries. Regulatory requirements you inherit, not choose. The colleague whose cooperation you need and whose judgment you trust. AI has no access to any of it. The model can only see the innermost layer — the code, the system. Everything outside that boundary — the institutional context — is invisible to it. Shared institutional knowledge just became a competitive advantage, not an overhead cost. You, in this room, know things a model never will."
+    },
+    {
+      "id": "blank-page",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Beat · The blank page",
+      "title": "",
+      "bullets": [
+        "<style>.reveal .intro-slide ul.fragment-list:has(.blank-page-photo){list-style:none !important;padding:0 !important;margin:0 !important;}.reveal .intro-slide ul.fragment-list > li:has(.blank-page-photo){padding:0 !important;margin:0 !important;}.reveal .intro-slide ul.fragment-list > li:has(.blank-page-photo)::before,.reveal .intro-slide ul.fragment-list > li:has(.blank-page-photo):before{content:none !important;display:none !important;}</style><div class='blank-page-photo' style='display:flex; flex-direction:column; align-items:center; justify-content:center; max-width:1200px; margin:0 auto; margin-top:-50px;'><img src='/assets/blank-page.jpg' alt='The blank page — the empty file and the blinking cursor every developer knows.' style='width:100%; max-width:1080px; height:auto; display:block; border-radius:4px; box-shadow:0 8px 34px rgba(0,0,0,0.22);' /></div>"
+      ],
+      "fragments": false,
+      "speakerNotes": "No narration for the first three to five seconds. Let the image sit. Everyone in this room has experienced the blank page — the empty file, the blinking cursor. Malevich called his Black Square the “zero point of painting”: the void before creation. Every developer knows that void.\n\nThen deliver the line: AI didn’t fill the void. It made the first mark free. The work shifted from generation to judgment.\n\nThe trap is assuming the first output is good because it exists. The new skill is reading what came back — telling a plausible wrong answer from a real one. That is the cognitive shift the rest of this talk is about."
+    },
+    {
+      "id": "names-problem",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "Beat · The synthetic patient problem",
+      "title": "",
+      "subtitle": "The data must be fake enough to be safe, and realistic enough to break the system.",
+      "vizType": "synthetic-patient-rig",
+      "vizConfig": {},
+      "speakerNotes": "Walk the rig left to right with your finger. Names, Search, Display, Validation, Integration — five things any clinical system has to do before it goes near a real patient.\n\nThen deliver the three lanes:\n  • REAL data — closed at the gate. HIPAA, IRB, audit, the data-use agreement. The lane never opens. You can’t test against it.\n  • SYNTHETIC data — passes every station because it was DESIGNED to. Adversarial: edge-case names, weird capitalizations, cohorts shaped like real ones but owned by no one.\n  • TOY data — passes the gate (it’s safe), and proves nothing. John Doe doesn’t exercise the schema. Jane Smith doesn’t crash the search.\n\nLand the takeaway: synthetic data is the test harness. It’s not decoration, it’s not “mock data,” it’s not optional. It’s the only way to engineer a clinical system you can trust before you connect it to a real patient. The next slide — Xenonym — is what that looks like in practice.",
+      "takeaway": {
+        "text": "Synthetic data is not decoration. It is the test harness for clinical AI engineering.",
+        "comment": "Real data carries patients (and HIPAA, and IRB, and audit). Toy data — John Doe, Jane Smith — passes the safety gate by being meaningless and exercises nothing. Only synthetic data can be both safe AND adversarial: structured like the real thing, owned by no one, deliberately shaped to break the system in the ways real patients eventually will. That’s the harness clinical AI engineering needs."
+      }
+    },
+    {
+      "id": "syllabic-mixing",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "syllabic-mixing",
+      "speakerNotes": "The design challenge I presented to AI: How do you generate names that feel linguistically plausible but are structurally foreign to any single language? The solution it surfaced: syllabic mixing across seven languages. Take the phonemic and syllabic building blocks from Finnish, Georgian, Yoruba, Japanese, Welsh, Swahili, and Hungarian. Combine them according to each language's internal rules — consonant clusters, vowel harmony, stress patterns. The probability that the combination is a real name: vanishingly small. The probability that it sounds like a name to a human ear: high. I did not search for this solution. I described the constraint and the model surfaced an approach from computational linguistics that I would not have reached independently. The model didn't write the code. It found the field. This is AI functioning as a cross-domain consultant."
+    },
+    {
+      "id": "xenonym-live",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "interactive",
+      "title": "Xenonym Live — Schema-Driven Synthetic Data",
+      "subtitle": "Live at <a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a>",
+      "vizType": "xenonym-browser",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The whole system is publicly accessible, costs nothing, and was built to solve a real problem — not to demonstrate a capability.",
+        "comment": "Click the Open Live link to switch directly to the running application — you are already in the browser. That transition itself is the argument."
+      }
+    },
+    {
+      "id": "xenonym-synthesis",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 7 · The Supplementary Jig",
+      "title": "",
+      "subtitle": "",
+      "vizType": "xenonym-synthesis",
+      "speakerNotes": "One small follow-up. Xenonym: names that sound real, that stress-test pipelines with adversarial edge cases (NULL, DROP, diacritics), that belong to no actual person. The mechanism: syllabic mixing across seven unrelated languages. I did not search for this approach. I described the constraint — ‘plausible but belongs to no one’ — and the model surfaced a technique from computational linguistics I would not have reached alone. This is the supplementary layer. A jig. A HIPAA-safe research test data generator as a byproduct of the work, not a project."
+    },
+    {
+      "id": "ibis-setup",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "Beat 7 · Demonstration",
+      "title": "IBIS — You Articulate the Question, It Shows You The Search Query",
+      "subtitle": "Natural language → Lucene query (visible on screen) → Elasticsearch → cohort. The intermediate step is readable.",
+      "vizType": "ibis-flow",
+      "vizConfig": {
+        "hideHeader": true
+      },
+      "speakerNotes": "Beat 7 — setup before switching environments. Physicians and investigators have always communicated in natural language. The problem was never that we couldn’t articulate what we wanted — the problem was that nothing was listening in a form that could act on it. IBIS is a search engine over pathology data: structured fields, unstructured report text, the whole corpus. You speak the clinical question. The system compiles it to a precise Lucene query, SHOWS you exactly what it understood, and returns a cohort. Seconds, not weeks. Then switch to live IBIS. Run two queries with oncology resonance: (1) 'all specimens from patients with mismatch-repair-deficient colon cancer who received adjuvant therapy and had recurrence within 24 months' — a cohort definition that lives across billing codes, pathology reports, and oncology notes; (2) a free-text concept: 'prior biopsy concordant for tumor type but discordant for grade within six months.' After each: ‘No SQL was written.’ / ‘The query you see on screen is what IBIS understood — you can read it and correct me if it heard me wrong.’ Return to the deck with: ‘That is what a jig looks like in a research pipeline. Now let me show you that it isn’t the only one we’ve built.’",
+      "takeaway": {
+        "text": "IBIS listens — and shows you what it heard. The audit-readable intermediate step is not a feature; it’s the whole point.",
+        "comment": "IBIS — the Integrated Biospecimen and Informatics System built at Yale Pathology — accepts a natural-language clinical question and returns a cohort. The on-screen Lucene query is the audit-readable intermediate step: the user can read what the system “heard” before acting on the result. That readability is the design choice that distinguishes IBIS from a conventional black-box NLP-to-cohort tool."
+      }
+    },
+    {
+      "id": "black-cat-paradox",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Beat · The paradox",
+      "title": "",
+      "bullets": [
+        "<style>.reveal .intro-slide ul.fragment-list:has(.black-cat-photo){list-style:none !important;padding:0 !important;margin:0 !important;}.reveal .intro-slide ul.fragment-list > li:has(.black-cat-photo){padding:0 !important;margin:0 !important;}.reveal .intro-slide ul.fragment-list > li:has(.black-cat-photo)::before,.reveal .intro-slide ul.fragment-list > li:has(.black-cat-photo):before{content:none !important;display:none !important;}</style><div class='black-cat-photo' style='display:flex; flex-direction:column; align-items:center; justify-content:center; max-width:1200px; margin:0 auto;'><img src='/assets/black-cat.jpg' alt='A dimly-lit room — the black cat may or may not be there.' style='width:100%; max-width:980px; height:auto; display:block; border-radius:4px; box-shadow:0 8px 34px rgba(0,0,0,0.28);' /><div style='margin-top:18px; font-size:18px; font-style:italic; color:#5a4a5c; text-align:center; max-width:920px; line-height:1.5;'>&ldquo;The hardest thing of all is to find a black cat in a dark room, especially if there is no cat.&rdquo;</div></div>"
+      ],
+      "fragments": false,
+      "speakerNotes": "Hold the image and the quote for three to five seconds. No narration.\n\nThen deliver the paradox: a data lake gives you a guard-railed environment and a team of analysts trained on Epic Caboodle and Clarity. That is not nothing — it is a real, professional capability. But the capability is bounded by what is actually IN the lake.\n\nIf what you are looking for is not there — a clinical concept the EHR doesn’t code, a temporal pattern the encounter model can’t express, a specimen-level relationship the warehouse never modeled — then no amount of analyst skill recovers it. You can search the dark room forever. There is no cat.\n\nThat is the limit of the lake. The next slide is the alternative: data as flow — bringing the question to the point where the data is generated, instead of waiting for the lake to contain it."
+    },
+    {
+      "id": "data-as-flow",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 5 · Paradigm Shift",
+      "title": "",
+      "subtitle": "",
+      "vizType": "data-as-flow",
+      "speakerNotes": "The deeper shift is not about AI. It is about how we think about data itself. Inventory thinking says: collect everything, pool it, hope someone uses it. That is what a lake is — centralized data without contextual usability. Flow thinking says: data is generated continuously by clinical work, and the question is what you can do at the point of generation. Capture the relevant slice into a purpose-built repository with security and audit baked in from the start. The HL7-to-biorepository workaround we just diagnosed — that IS the flow pattern. We are already doing the right thing, unofficially. The flow framing also resolves the security objection the way nothing else can: streams are easier to audit than lakes, because you control the tap, the pipe, and the destination, all of which are narrow and inspectable. A lake is a pile — you cannot meaningfully audit a pile."
+    },
+    {
+      "id": "vignette-vs-ehr",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Beat 2.5 · Two Kinds of Compression",
+      "title": "Why AI Wins on Vignettes and Loses on Records.",
+      "subtitle": "A clinical vignette and an EHR record both compress reality — in opposite directions.",
+      "bullets": [
+        "<style>.reveal .intro-slide ul.fragment-list:has(.two-comp){list-style:none !important;padding:0 !important;margin:0.4em 0 0 0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.two-comp){padding:0 !important;margin:0.4em 0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.two-comp)::before,.reveal .intro-slide ul.fragment-list > li:has(.two-comp):before{content:none !important;display:none !important;}</style><div class='two-comp' style='display:flex; gap:1.6em; max-width:1180px; margin:0.4em auto 0 auto; align-items:stretch;'><div style='flex:1; padding:1em 1.2em; background:rgba(74,125,58,0.08); border:1px solid rgba(74,125,58,0.32); border-left:6px solid #4a7d3a; border-radius:4px;'><div style='font-size:0.78em; font-weight:700; letter-spacing:2.5px; color:#4a7d3a; margin-bottom:0.4em;'>THE CLINICAL VIGNETTE</div><div style='font-size:1.15em; font-weight:600; color:#1B3A5C; line-height:1.3; margin-bottom:0.55em;'>A clinical artifact, with clerical details stripped away.</div><div style='font-size:0.92em; color:#4A5568; line-height:1.55; margin-bottom:0.45em;'><em>Optimized for diagnostic reasoning.</em></div><div style='font-size:0.9em; color:#4A5568; line-height:1.5;'><strong style='color:#4a7d3a;'>Preserved:</strong> presentation · history · exam · progression · the key findings</div><div style='font-size:0.9em; color:#a89c85; line-height:1.5; margin-top:0.25em;'><strong>Discarded:</strong> codes · charges · encounter overhead</div><div style='margin-top:0.7em; padding-top:0.5em; border-top:1px solid rgba(74,125,58,0.25); font-size:0.95em; color:#4a7d3a; font-weight:700;'>AI: succeeds.</div></div><div style='flex:1; padding:1em 1.2em; background:rgba(107,124,143,0.08); border:1px solid rgba(107,124,143,0.32); border-left:6px solid #6b7c8f; border-radius:4px;'><div style='font-size:0.78em; font-weight:700; letter-spacing:2.5px; color:#5a6e84; margin-bottom:0.4em;'>THE EHR RECORD</div><div style='font-size:1.15em; font-weight:600; color:#1B3A5C; line-height:1.3; margin-bottom:0.55em;'>A clerical artifact, with clinical fragments embedded inside it.</div><div style='font-size:0.92em; color:#4A5568; line-height:1.55; margin-bottom:0.45em;'><em>Optimized for billing and documentation.</em></div><div style='font-size:0.9em; color:#4A5568; line-height:1.5;'><strong style='color:#5a6e84;'>Preserved:</strong> codes · charges · encounter metadata</div><div style='font-size:0.9em; color:#a89c85; line-height:1.5; margin-top:0.25em;'><strong>Discarded:</strong> presentation · narrative · the lived encounter</div><div style='margin-top:0.7em; padding-top:0.5em; border-top:1px solid rgba(107,124,143,0.3); font-size:0.95em; color:#a03a2e; font-weight:700;'>AI: fails.</div></div></div>",
+        "<div class='two-comp' style='max-width:1180px; margin:1em auto 0 auto; padding:0.9em 1.4em; text-align:center; border-top:1px solid #b45309; border-bottom:1px solid #b45309;'><div style='font-size:1.2em; font-weight:700; color:#1B3A5C; line-height:1.4; margin-bottom:0.25em;'></div><div style='font-size:0.95em; font-style:italic; color:#b45309;'>Both compress reality. Only one is optimized for clinical reasoning.</div></div>"
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "Both compress reality. Only one is optimized for clinical reasoning. AI moves from diagnostically compressed signal to clerically compressed residue.",
+        "comment": "The vignette/EHR asymmetry is the missing piece in most discussions of AI clinical performance. A clinical vignette is a curated narrative — the irrelevant has already been pruned, the relevant has been amplified, and the structure follows diagnostic reasoning. An EHR record is the opposite: a defensible billing trail with clinical content embedded as a side effect. Both are compressions of the same reality. AI trained on textbook-like cases (vignettes, board questions, narrative summaries) inherits the reasoning shape of that compression. When you ask the same model to read an EHR, you are asking it to traverse a structure designed for revenue cycle audit, not for diagnostic inference. That is why the Hager et al. result (Nat Med 2024) is not a failure of AI — it is a finding about the substrate."
+      },
+      "speakerNotes": "Beat 2.5 — ~2 minutes. This is the conceptual hinge between ‘the record is not what was there’ (the previous slide) and ‘the literature already knew’ (the next slide). Walk the two columns side by side: VIGNETTE is a clinical artifact with clerical details stripped away; EHR is a clerical artifact with clinical fragments embedded inside it. Each is a compression — in opposite directions. Then land the bottom line: ‘AI moves from diagnostically compressed signal to clerically compressed residue.’ That single sentence explains why every paper showing AI excels on USMLE-style questions and the same model collapses on real records is reporting the same finding. It is not a quirk — it is a substrate problem. The next slide shows that the secondary-use literature has been documenting this for over a decade."
+    },
+    {
+      "id": "compression-problem",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 1.5 · The Compression Problem",
+      "title": "",
+      "subtitle": "",
+      "vizType": "compression-stack",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The knowledge is retrievable. The lived experience it compressed from is not. The “death of expertise” is actually misplaced trust in our compressions.",
+        "comment": "Medicine has been inside this problem for decades and did not name it. Every clinical encounter is a multi-level compression: the full lived presence (the body you saw suffering, the hesitation before the diagnosis, the weight of a silence) is compressed first into the physician’s judgment — pattern, tacit knowledge, ~450 weeks of career in a single sentence — and then compressed again into the medical record — ICD codes, template notes, the billing-workflow residue — and then compressed a third time into an LLM trained on those records, which learns from what the record already threw away. The first two compressions pass with the person. The last two persist indefinitely, but they persist <em>because</em> they are small and tractable, not because they are true. The empirical tell is direct and recent: LLMs perform <em>better</em> with a live patient than on the same patient’s record, because the living person is, in the moment, re-expressing the signal the record never captured. The Yale Committee on Trust in Higher Education named the crisis in April 2026 — “declining public trust in the very idea of human expertise” — but did not define the mechanism. The mechanism is this compression cascade, and the misplaced trust in its outputs. The next slide zooms in on the third layer — the medical record — with three concrete examples."
+      },
+      "speakerNotes": "Beat 1.5 — 3 minutes. This slide ties the talk’s diagnosis to a bigger argument that frames everything that follows. Walk the four levels top to bottom: THE LIVED ENCOUNTER — the body you saw, the way they held their hand to their side, the moment before you spoke the diagnosis. THE PHYSICIAN’S JUDGMENT — your compression: pattern, tacit knowledge, ~450 weeks of clinical career distilled into a sentence. THE MEDICAL RECORD — the clerical residue, ICD codes and template notes, a billing-workflow byproduct. THE LLM ON RECORDS — trained on what the record already threw away. Point to the MORTALITY LINE between judgment and record: the first two pass with the person who made them; the last two persist indefinitely, but they persist because they are small and tractable, not because they are true. Then the empirical tell: LLMs work better when they talk to a living patient than when they read that patient’s record (Hager et al., Nature Medicine 2024). That is not a quirk — it is evidence. Land the Yale Committee quote and your reframe of ‘the death of expertise’ as misplaced trust in compressions. Close with: ‘The knowledge is retrievable. The lived experience it compressed from is not.’ Then advance — the next slide zooms into the medical-record layer with three concrete examples."
+    },
+    {
+      "id": "hersh-caveats-interactive",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 2.7 · The Specific Failure Modes",
+      "title": "",
+      "subtitle": "",
+      "vizType": "hersh-caveats",
+      "vizConfig": {
+        "hideHeader": false
+      },
+      "speakerNotes": "This slide does two jobs at once: it shows the Hersh DIKW figure with all seven caveats in their original placement, and the timeline strip across the top reminds the audience that this is documented across the literature for thirteen years — Hersh 2013, Weiskopf & Weng 2013, Kahn 2016 — not a personal observation.\n\nWalk it briefly. Don't read every caveat. Suggested live hovers: #6 wrong granularity (sinusitis / pharyngitis / bronchitis collapse to one code) and #5 mixed provenance (insurance formulary determines the chart). Two examples are enough; the audience can see the seven exist.\n\nThe point is the diagram itself: the EHR sits on a Data → Information → Knowledge continuum, and there are documented failure modes at every layer. The discipline that organizes the response is what comes next — the shadow biorepository, then software as consumable, then the traceability scaffold.",
+      "takeaway": {
+        "text": "Thirteen years of independent literature, organized along Hersh’s informatics continuum: the EHR has documented failure modes at every layer — Data, Information, and Knowledge. This is not a personal observation. It is the field’s consensus.",
+        "comment": "Hover any caveat for the concrete example from Hersh’s Table 1. The Weiskopf-Weng and Kahn entries on the timeline strip carry the same message in different vocabularies — five quality dimensions and the harmonized Conformance/Completeness/Plausibility framework — both downstream from this same diagram."
+      }
+    },
+    {
+      "id": "shadow-biorepository",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "Beat 3 · The Shadow System",
+      "bgColor": "#faf7f1",
+      "title": "The Warehouse-to-Biorepository Workarounds",
+      "subtitle": "When the official path doesn’t fit, departments build their own. HL7 if generous. FHIR if lucky. A nightly file export if not.",
+      "cards": [
+        {
+          "icon": "🔌",
+          "label": "What People Actually Build",
+          "value": "HL7  ·  FHIR  ·  File Export",
+          "description": "Every competent department routes its own data path. Different protocol, same reason: the official channel doesn’t fit the actual user need.",
+          "accentColor": "#a36015"
+        },
+        {
+          "icon": "⚠️",
+          "label": "What This Signals",
+          "value": "Tolerated, Not Permitted",
+          "description": "Shadow systems on the fringe — undocumented, poorly governed, off-the-books — are evidence of misidentified user needs. Tolerated by the institution; not permitted. That tolerance is the failure mode.",
+          "accentColor": "#8a7250"
+        },
+        {
+          "icon": "🧭",
+          "label": "The Move",
+          "value": "Identify, Elevate, Govern",
+          "description": "Don’t suppress the workaround. Identify the user need it serves. Promote it to a first-class, documented, audited capability — channeled through applied informatics, integrated into the enterprise toolchain.",
+          "accentColor": "#1d6b4a"
+        }
+      ],
+      "takeaway": {
+        "text": "A shadow system is a signal that a user need was misidentified. The fix is not to suppress it — the fix is to identify the need professionally and elevate the system to a first-class, governed citizen of the institution.",
+        "comment": "Shadow infrastructure — HL7 feeds, FHIR endpoints, nightly file exports — exists in nearly every academic medical center because the official path can’t deliver what working researchers need. The pattern is best read as a SIGNAL that a user need was tolerated rather than identified. The institutional response should be to channel the workaround into a documented, audited, governed citizen of the system — which is the role applied informatics, with its IEC 62304-style traceability rooted in User Need, is built to play."
+      },
+      "speakerNotes": "Don’t read the cards. Walk it: HL7, FHIR, file export — every department has done at least one of these. Then the signal: these systems exist on the fringe because the institution tolerated a workaround instead of identifying the user need that drove it. Tolerance, not permission. That’s the failure mode. Then the move: don’t suppress these systems — identify the user needs they encode and elevate them through applied informatics. Sanctioned, governed, integrated. That’s the bridge into the next two slides — software as consumable, traceability as scaffold, applied informatics as the framework that holds it. Under 90 seconds.",
+      "theme": "light"
+    },
+    {
+      "id": "ephemeral-tools",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 10 · Consumable, not Capital",
+      "title": "Software as a Consumable, Not as Capital",
+      "subtitle": "A structural shift — not a productivity bump. The concept predates AI; AI just made it impossible to ignore.",
+      "vizType": "software-consumable",
+      "vizConfig": {},
+      "speakerNotes": "Beat 10 — three minutes. The first objection will be technical debt or supportability. Two prepared answers, then the structural one underneath:\n\n  • Debt is a problem when you are MAINTAINING. Ephemeral tools don’t     persist long enough to accumulate it.\n  • Supportability is a function of pattern reuse across tools, not of     any single tool’s longevity.\n\nThe deeper argument: research software has always been a graveyard, because the cost of maintaining or rebuilding any single tool was prohibitive. That calculus has inverted. An AI-assisted domain expert can now restore an abandoned pipeline from its source in hours, without needing the original author. The graveyard stops being tragic. It becomes a backlog.\n\nAnd — this is the part most audiences underweight — the principle is old. McQuade and the Defense Innovation Board made the same argument in 2019: software is a continuous service, not a capital asset. The Agile Manifesto pointed at it twenty years before that. AI didn’t invent the consumable model. AI made it operationally obvious.",
+      "takeaway": {
+        "text": "This is the structural change, not the productivity bump. When rebuilding costs hours instead of months, the domain expert can own the whole arc — build, discard, rebuild, extend. Software becomes a reflection of thought rather than a monument to it.",
+        "comment": "Same total engineering hours, distributed differently across the lifecycle. The capital model concentrates the spend in maintenance and debt; the consumable model concentrates it in delivery. Both are real engineering disciplines. The consumable one fits research because research questions don’t deserve permanent infrastructure — they deserve fit-for-purpose tools that retire when the question is answered."
+      }
+    },
+    {
+      "id": "regulatory-inversion",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat · Burden → Scaffold",
+      "title": "",
+      "subtitle": "",
+      "vizType": "regulatory-inversion",
+      "vizConfig": {},
+      "speakerNotes": "If we are now treating software as consumable — built fast, used, retired — we have a new problem: rapid iteration drifts. AI-assisted code drifts toward LOCAL PLAUSIBILITY rather than the user’s actual need. Tests update to match the code instead of the need. Requirements silently reinterpret across iterations. That is the failure mode that comes free with the productivity.\n\nThe defense already exists. IEC 62304 — long treated as a regulatory burden — is a five-stage traceability spine: User Need → Requirement → Design → Risk Control → Verification, with bidirectional cross-references. Every test back-references the user need. Drift becomes detectable as a broken trace, not as silent divergence.\n\nTwo costs flipped. Maintaining the spine used to be expensive — that is why the standard was treated as a tax bolted onto real development. AI made the spine cheap to maintain, AND raised the cost of NOT maintaining it. What was a regulatory burden is now the scaffold of trustworthy AI-assisted development.\n\nDon’t spend long here. The point is: AI builds the code, AI builds the proof, humans review both. The discipline IS the productivity, not the alternative to it. The Gershkovich paper in the references develops this in full.",
+      "takeaway": {
+        "text": "AI builds the code. AI builds the proof. Humans review both. The IEC 62304 traceability spine is no longer a burden — it is the scaffold that keeps consumable software faithful to user intent.",
+        "comment": "The argument turns on two costs flipping. (1) AI lowered the cost of maintaining the spine — structured, cross-referenced documentation is the natural habitat of an LLM. (2) AI raised the cost of NOT maintaining it — code drifts toward local plausibility, tests update to match code rather than need. The discipline is now default hygiene for any software that mediates consequential human decisions, not just medical-device software."
+      }
+    },
+    {
+      "id": "iceberg-photo",
+      "type": "content",
+      "transition": "fade",
+      "badge": "Beat 10 · The Graveyard",
+      "title": "",
+      "bullets": [
+        "<style>.reveal .intro-slide ul.fragment-list:has(.iceberg-photo){list-style:none !important;padding:0 !important;margin:0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.iceberg-photo){padding:0 !important;margin:0 !important;} .reveal .intro-slide ul.fragment-list > li:has(.iceberg-photo)::before,.reveal .intro-slide ul.fragment-list > li:has(.iceberg-photo):before{content:none !important;display:none !important;}</style><div class='iceberg-photo' style='display:flex; flex-direction:column; align-items:center; justify-content:center; max-width:1200px; margin:0 auto; padding-top:0.4em;'><img src='/assets/iceberg.png' alt='An iceberg: the small white peak above the waterline, the vast blue mass submerged below.' style='width:100%; max-width:1080px; height:auto; display:block; border-radius:4px; box-shadow:0 8px 34px rgba(0,0,0,0.22);' /></div>"
+      ],
+      "fragments": false,
+      "speakerNotes": "No narration. Let the photograph sit for three to five seconds. The audience knows what an iceberg is — the whole point is to give them a moment to hold the image before you apply it to research software. Then click, and the D3 slide that follows will reveal what the submerged mass actually represents in our field. If you narrate here, you steal the impact of the next slide. Breathe.",
+      "takeaway": {
+        "text": "An iceberg. You know this picture.",
+        "comment": "A quiet transition. The next slide re-labels this same shape in the language of research software — what’s above the waterline (the few maintained, published, runnable, cited tools) and what’s below it (the vast majority: abandoned, forgotten, unreproducible). The photograph is the memorable anchor; the diagram is the argument."
+      }
+    },
+    {
+      "id": "research-iceberg",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 10 · The Graveyard, Visualized",
+      "title": "",
+      "subtitle": "",
+      "vizType": "research-iceberg",
+      "vizConfig": {},
+      "speakerNotes": "This is the visual payoff of the graveyard argument. Do not narrate the image; let it land for two or three seconds. Then speak to the flip: ‘What changes when rebuilding costs hours, not months?’ Answer: every item in the submerged half becomes retrievable. ‘Postdoc’s laptop, 2019’ is a pull-request away from usable. ‘Author unreachable’ stops mattering because an AI-assisted domain expert can read the code and rebuild intent. ‘Only ran on that one server’ becomes a one-hour Docker exercise. You are not promising nothing gets lost — you are promising that loss is no longer irreversible, and that losing the author no longer means losing the tool. The domain expert owns the whole loop: build, retire, rebuild, restore. That is what makes this a structural change, not a productivity bump. Close with: ‘The graveyard has always been there. For the first time, we can resurrect from it.’",
+      "takeaway": {
+        "text": "The graveyard has always been there. What’s new is not the existence of the submerged mass — it’s that we can now recover the <em>ideas</em> buried in it, not just the code.",
+        "comment": "Research-software sustainability is a documented problem, not anecdote. Howison &amp; Bullard (2016) on software disappearance in the scientific literature; the UK Software Sustainability Institute’s ongoing surveys; Mangul et al. (2019) on bioinformatics-tool usability. Consistent finding: most research tools become unrunnable, unfindable, or both within a few years of publication — the tip of the iceberg is genuinely small. What is new is not the graveyard but the ability to restore from it. The next slide makes the synthesis the literature is still waiting for: the graveyard as latent intellectual asset, the LLM as archaeologist of recent scientific thought — ideas, not zombies."
+      }
+    },
+    {
+      "id": "ideas-not-zombies",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 10 · The Synthesis",
+      "title": "",
+      "subtitle": "",
+      "vizType": "ideas-not-zombies",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Getting ideas out of the graveyard — not building zombies. The same abandoned corpus is a liability if ignored, a latent asset if disciplined.",
+        "comment": "A zombie is old code running because nobody turned it off; an idea is the intellectual content the code was trying to express. The old paradigm could revive zombies (rerun the pipeline, get the same outputs) but could not recover ideas (the author is gone, the context is lost, the documentation never existed). The new paradigm — domain expert plus code-fluent LLM — is the first technology that makes <em>idea</em> recovery economically rational at scale. That reframes the LLM’s role in research from <em>faster typist</em> to <em>archaeologist of recent scientific thought</em> — and its secondary role from <em>code generator</em> to <em>recycler</em>. The two literature strands underneath this synthesis: research-software abandonment (<a href='https://www.software.ac.uk/' target='_blank'>Software Sustainability Institute</a>; <a href='https://doi.org/10.1145/3729369' target='_blank'>Thakur et al., FSE 2025</a>; Howison &amp; Bullard 2016; Mangul et al. 2019) and LLM-assisted legacy-code recovery (<a href='https://arxiv.org/abs/2411.14971' target='_blank'>arXiv:2411.14971</a>). The synthesis between them is the novel contribution this lecture makes. <strong>But the process is cheap for humans and expensive electronically.</strong> Undisciplined, it produces compute, heat, and grid load for no benefit. Discipline is what converts the abandoned corpus from pollution into a latent asset."
+      },
+      "speakerNotes": "Beat 10 synthesis — 3 minutes. This slide is a decomposition, pun intended. Walk the audience through it: LEFT, the graveyard — an abandoned repo with author ∅, empty README, a three-year-old last commit, code that worked on someone’s laptop once. MIDDLE, the AI as archaeologist and as recycler: READ, RECONSTRUCT, REGENERATE, RESTORE. RIGHT, what the domain expert actually extracts — not just ‘the tool runs again’ but IDEAS (the research question), ALGORITHMS (the methods that worked), OPTIMIZATIONS (the hardware-specific cleverness), FRAGMENTS (the small, reusable pieces worth keeping). That is the decomposition. Then point to the bottom strip — the sustainability tension. The process is cheap for humans: one domain expert plus AI, hours not months, ephemeral systems at near-zero friction. But it is expensive electronically: compute, heat, electricity, grid load. Undisciplined, ephemeral tooling becomes pollution and noise. The hinge word in the middle is DISCIPLINE: recycle, don’t pollute. Internal-medicine audiences respect arguments anchored in published evidence on both ends that draw an original conclusion in the middle. Two literature strands: research-software abandonment (Software Sustainability Institute; Thakur et al. FSE 2025 — scientific OSS overall is more durable than expected, BUT academic participation correlates with shorter lifespan); LLM legacy-code recovery (arXiv:2411.14971 on MUMPS and mainframe-era EHR code). The synthesis is yours: research abandonware is a vast latent asset, and code-focused LLMs are the first technology that makes recovery economically rational at scale — but only if the recycling is disciplined. If you want a concrete example: recover the cohort-definition logic your former fellow encoded in a 2021 R script nobody can run anymore. The fellow is gone. The logic is still in the repo. That is an <em>idea</em>, and it is recoverable — responsibly."
+    },
+    {
+      "id": "applied-informatics-translation",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat · The translational layer",
+      "title": "",
+      "subtitle": "",
+      "vizType": "applied-informatics",
+      "vizConfig": {},
+      "speakerNotes": "There has always been a tension in informatics between the elegant scientific formulation and the less glamorous work of building tools that actually function inside clinical systems. But historically, that separation is artificial.\n\nLindberg’s NLM did not treat informatics as abstract theory alone — it invested in databases, decision support, IAIMS, knowledge resources, and institutional information infrastructure. Shortliffe’s definition of biomedical informatics includes both the science and the pragmatics. Friedman’s fundamental theorem makes the same point in another way: informatics improves work only when a person is PARTNERED with an information resource. That resource has to be built, integrated, secured, validated, maintained, and evaluated.\n\nThat is applied informatics. It is not support work. It is the translational discipline that turns biomedical information science into clinical reality.",
+      "takeaway": {
+        "text": "Applied informatics is the engineering discipline of clinical translation — not a downstream service activity, but the layer that makes biomedical information science clinically real.",
+        "comment": "Theory without engineering stays in journals. Engineering without theory builds the wrong thing well. Practice without either stays craft. Applied informatics is what binds the three into a working clinical capability."
+      }
+    },
+    {
+      "id": "sheffield-parallel",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 11 · Historical Parallel",
+      "title": "",
+      "subtitle": "",
+      "vizType": "sheffield-parallel",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Academic abandonware is the cost of NOT having translational informatics institutionalized. Sheffield was the institution’s answer in 1847. Applied informatics is the institution’s answer now — if we let it be.",
+        "comment": "The resistance is a recognizable historical pattern. In the 1840s–60s Yale’s classical faculty dismissed empirical and applied sciences as “mere technique.” Benjamin Silliman fought for chemistry’s place decades earlier; the Sheffield Scientific School was established 1847 and named 1861, against real institutional resistance, and went on to produce some of the most consequential science the university ever published. The same double-bind now applies to applied informatics: dismissed by traditional informatics as “just engineering” and by clinical departments as “just IT.” The Lindberg/NLM debates of the 1980s–2000s wrestled with exactly this — whether informaticians should write code, and who would pay to maintain it. Applied informatics done right is the modern answer: top-quality, professionally maintained, documented, secure, ephemeral when appropriate, domain-expert-built inside institutional controls. <strong>Ephemeral ≠ homegrown. Ephemeral ≠ undocumented.</strong> The academic-abandonware pattern documented in Thakur et al. (FSE 2025) is a direct consequence of the absence of this layer — the translational-informatics layer — inside most academic institutions."
+      },
+      "speakerNotes": "Beat 11 — 3 minutes. Walk the two timelines. TOP: in the 1840s–50s Yale’s classical faculty debated whether empirical and applied sciences belonged in a serious university at all. Silliman fought the fight for chemistry. Sheffield was founded in 1847 and named in 1861, against real resistance. The eventual payoff — foundational American science — is retrospective. BOTTOM: the structurally identical fight in medical informatics. Lincoln &amp; Korpman in 1980 articulated the field as logical sciences plus computer science. Lindberg took NLM in 1984 and, through IAIMS and years of public debate, wrestled explicitly with whether informaticians should write code — and who carries the maintenance burden. AMIA formalized the discipline in 1989. The build-vs-maintain debate has continued for two decades. Now we sit at the academic-abandonware moment — and the institution’s answer is applied informatics: domain experts + AI + institutional controls, not homegrown in the dismissive sense of the word. Ephemeral does NOT mean undocumented. Ephemeral does NOT mean insecure. The bottom six-property grid is the precise claim: top-quality, maintained, documented, secure, ephemeral-when-appropriate, domain-expert-built. That is the institutional answer. And the closing point is the hardest one: the research-software graveyard Thakur et al. measured is the direct consequence of NOT institutionalizing this layer. Say that aloud: ‘academic abandonware is the price of refusing to recognize applied informatics as a scientific discipline.’ If someone in the room is curious about Lindberg’s specific arguments, point them to the NLM long-range plans (1986, 2006) and the IAIMS retrospectives — this debate is well-documented, just rarely invoked in clinical departments. The generous frame matters: you are not telling colleagues they are wrong; you are telling them they are in a recognizable historical role, and the previous resolution was ultimately correct."
+    },
+    {
+      "id": "the-ask",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Beat 13 · The Ask",
+      "title": "",
+      "subtitle": "",
+      "vizType": "ask-moves",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The request is to treat this work as Yale would treat a serious external capability: evaluate it fairly, recognize its institutional value, harden it for service-grade use, adopt it as a shared service with proper governance, and publish the method so the pattern becomes reproducible.",
+        "comment": "An academic medical center should not only buy innovation; it should be able to recognize, evaluate, harden, and disseminate innovation built inside its own walls. The five lenses on this slide name the institutional moves required to convert ad-hoc internal capability into a recognized, durable, transferable pattern: <strong>evaluate</strong> by evidence rather than origin; <strong>recognize</strong> internal software as institutional intellectual work; <strong>harden</strong> it to service-grade expectations (security, validation, monitoring, audit trails); <strong>adopt</strong> it as a sanctioned shared service with single-sign-on, governance, and a real support model; and <strong>publish</strong> the method so the pattern is transferable beyond Yale. The work is already underway; the evidence is in the repository. What is needed is the institutional mechanism that makes such work countable."
+      },
+      "speakerNotes": "Beat 13 — ~2 minutes. Open the beat cleanly: ‘I am not asking for a pilot. The work is already sanctioned. I am asking for a joint evaluation of what is already running.’ That single sentence reframes the tone of the whole ask. Then walk the five bullets, one beat each, not as a list but as a sequence. (1) Joint, fair evaluation — the three-month body of work, reviewed at the same standard as any other research or clinical service, by the same institutional process. The QMS has evolved; the artifacts are auditable; the question is recognition, not permission. (2) SOC 2 certification with institutional help — compare explicitly to the clinical laboratory as the aspirational model: a trusted, audited, service-grade institutional capability. (3) Operationalize and teach. For LLM-enabled work that touches patient records or scientific processes, structured development becomes the default — especially when it goes beyond a single-function app. Single institutional login, shared suite, Enterprise GitHub, CI/CD — plugged in, not parallel. (4) Extend beyond pathology, jointly. Bring oncology and internal-medicine colleagues into the co-design. Domain expertise is the irreducible input; we have already started, and we can scale. (5) Co-define the metrics and publish. The methods paper is the deliverable that closes the loop — it is how the institution benefits the field, not just itself. Close with: ‘The evidence is already here. The three months of applications are the evidence. What we need is joint affirmation — and the metrics that let us turn this into policy, and into a paper.’ Then stop. Next slide."
+    },
+    {
+      "id": "question-returns",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Closing · Sheckley Returns",
+      "title": "",
+      "subtitle": "",
+      "vizType": "question-returns",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "That is the difference between an Answerer that fails and an instrument of scientific inquiry that succeeds.",
+        "comment": "Two distinct concepts, often conflated. <strong>The Answerer</strong> is Sheckley’s original — an oracle that accepts one question and returns either a correct answer (if the question was ‘legitimate’) or silence. It cannot help the questioner formulate. It was, in Sheckley’s story, a disappointment by design. <strong>The Interlocutor</strong> is the modern category: MCP servers, interactive IDEs, conversational reflections of intent — tools (one of many) that meet the questioner where she is and help her converge on the question through dialogue. The Answerer says yes or nothing. The Interlocutor says ‘tell me more,’ ‘did you mean this?,’ ‘here is what I understood; correct me.’ <strong>The Questioner</strong> — you — must arrive prepared. Preparation does not guarantee revelation; it guarantees the capacity to recognize one when it appears, and the discipline to treat disappointment as information rather than as failure of the tool. Bring the question. Expect both outcomes. Keep asking."
+      },
+      "speakerNotes": "Closing — ~60 seconds. This is the Sheckley callback. The story you opened with resolves here. Walk the three columns briefly: LEFT the Answerer (Sheckley’s oracle — one-way arrow in, silence or a plausible wrong answer out), RIGHT the Interlocutor (MCP servers, chat-like interactive tools — back-and-forth: ask, reflect, refine, converge), and BOTTOM the Questioner (the person; arrives prepared; expects both revelation and disappointment). The crucial distinction is that the Interlocutor is NOT a better Answerer — it is a different category entirely: an interactive learning tool, one of many. It still produces disappointments; a tool that never disappoints is a tool that never tells the truth. What it also produces, when the questioner has prepared, is the revelation the Answerer could not. The flip is the whole talk in one sentence: ‘That is the difference between an Answerer that fails and an instrument of scientific inquiry that succeeds.’ Then a breath. Then the closing slide."
+    },
+    {
+      "id": "close",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "Closing",
+      "title": "",
+      "subtitle": "",
+      "vizType": "metaphor-to-mechanism",
+      "vizConfig": {},
+      "speakerNotes": "Close — 60 to 90 seconds. Do not read the milestones from the slide. The picture carries them. Say: ‘Twenty years ago I started telling people that software should be a reflection of your thought. It was a design principle. Sometimes a provocation. Often a frustration. For forty-five years it was a metaphor — a cloud. For the last six months it has been a mechanism — a city. You think it. You say it. The tool takes shape around it.’ Then stop. Let the silence carry into Q&A.",
+      "takeaway": {
+        "text": "For forty-five years, a metaphor. For the last six months, a mechanism.",
+        "comment": "The image does the argument. Hover any milestone for detail. The cloud inscribed with the 1980 line dissipates as the city of working software rises from the ground — the threshold collapses at Claude Code in 2025."
+      }
+    },
+    {
+      "id": "sources",
+      "type": "content",
+      "transition": "fade",
+      "title": "Sources &amp; Further Reading",
+      "subtitle": "Key references informing this lecture",
+      "bullets": [
+        "<style>\n.reveal .intro-slide ul.fragment-list:has(.sources-scroll){list-style:none !important;padding:0 !important;margin:0 !important;}\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll){padding:0 !important;margin:0 !important;font-size:13px !important;line-height:1.55 !important;}\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll)::before,\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll):before{content:none !important;display:none !important;}\n.sources-scroll{\n  max-height:540px; overflow-y:auto; overflow-x:hidden;\n  padding:18px 26px 18px 22px; background:#fdfcf8;\n  border:1px solid #e0d9c8; border-radius:6px;\n  text-align:left; font-family:'Inter',sans-serif;\n  scrollbar-width:thin; scrollbar-color:#b5a98e #f0eadd;\n}\n.sources-scroll::-webkit-scrollbar{width:9px;}\n.sources-scroll::-webkit-scrollbar-track{background:#f0eadd;}\n.sources-scroll::-webkit-scrollbar-thumb{background:#b5a98e; border-radius:4px;}\n.sources-scroll::-webkit-scrollbar-thumb:hover{background:#9a8d70;}\n.sources-scroll h4{\n  font-size:11.5px !important; font-weight:700 !important;\n  color:#1B3A5C; text-transform:uppercase; letter-spacing:1.7px;\n  margin:20px 0 8px 0 !important; padding-bottom:4px;\n  border-bottom:1px solid #d6cfbf;\n}\n.sources-scroll h4:first-child{margin-top:0 !important;}\n.sources-scroll p{\n  font-size:12.5px !important; font-weight:400 !important;\n  line-height:1.55 !important; margin:0 0 8px 0 !important;\n  padding:0 0 0 18px !important; text-indent:-18px;\n  color:#3a3024 !important;\n}\n.sources-scroll a{\n  color:#0e6e8c; text-decoration:none;\n  border-bottom:1px dotted rgba(14,110,140,0.5);\n}\n.sources-scroll a:hover{\n  background:rgba(14,110,140,0.07); border-bottom-color:#0e6e8c;\n}\n.sources-scroll em{font-style:italic;}\n.sources-scroll .scroll-hint{\n  display:block; text-align:right; font-size:10.5px;\n  color:#6b5c48; font-style:italic; margin-bottom:10px;\n  letter-spacing:0.4px; opacity:0.78;\n}\n.sources-scroll .annot{color:#6b5c48; font-style:italic; font-size:12px;}\n</style><div class=\"sources-scroll\"><span class=\"scroll-hint\">↓ scroll within this list for the full bibliography</span><h4>The Opening Parable</h4>\n  <p>Sheckley R. <em>Ask a Foolish Question</em>. <em>Science Fiction Stories</em>. 1953. Reprinted in: Sheckley R. <em>Citizen in Space</em>. New York: Ballantine; 1955.</p>\n  <h4>The Governing Principle</h4>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/6999622/\" target=\"_blank\">Lincoln TL, Korpman RA. Computers, health care, and medical information science. <em>Science</em>. 1980 Oct 17;210(4467):257-263.</a> doi:10.1126/science.6999622. PMID:6999622.</p>\n  <h4>Paradigm, Modularity, Method</h4>\n  <p><a href=\"https://doi.org/10.1109/2.59\" target=\"_blank\">Boehm BW. A spiral model of software development and enhancement. <em>IEEE Computer</em>. 1988;21(5):61-72.</a> doi:10.1109/2.59.</p>\n  <p>Martin J. <em>Rapid Application Development</em>. New York: Macmillan; 1991.</p>\n  <p><a href=\"https://mitpress.mit.edu/9780262024662/design-rules/\" target=\"_blank\">Baldwin CY, Clark KB. <em>Design Rules, Volume 1: The Power of Modularity</em>. Cambridge, MA: MIT Press; 2000.</a></p>\n  <p><a href=\"https://mitpress.mit.edu/9780262049337/design-rules-volume-2/\" target=\"_blank\">Baldwin CY. <em>Design Rules, Volume 2: How Technology Shapes Organizations</em>. Cambridge, MA: MIT Press; 2024.</a> <span class=\"annot\">— extends the modularity framework to organizational design; the case for engineered system architecture as the substrate of institutional capability.</span></p>\n  <p><a href=\"https://agilemanifesto.org/\" target=\"_blank\">Beck K, Beedle M, van Bennekum A, et al. The Agile Manifesto. Snowbird, UT; 2001.</a></p>\n  <p>Garrett JJ. Ajax: A New Approach to Web Applications. Adaptive Path; 18 February 2005.</p>\n  <p><a href=\"/assets/software-is-never-done.pdf\" target=\"_blank\">McQuade DJ, Murray RJ, Schmidt EE, et al. <em>Software Is Never Done: Refactoring the Acquisition Code for Competitive Advantage</em>. Defense Innovation Board; May 2019.</a> <span class=\"annot\">— canonical articulation of software as a continuous service rather than a capital asset; predates the AI revolution by half a decade.</span></p>\n  <h4>AI-Assisted Development Research</h4>\n  <p><a href=\"https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/\" target=\"_blank\">METR. Measuring AI Impact on Experienced Open-Source Developer Productivity (RCT). July 2025.</a></p>\n  <p><a href=\"https://metr.org/blog/2026-02-24-uplift-update/\" target=\"_blank\">METR. Uplift Update. February 2026.</a></p><p><a href=\"https://www.youtube.com/watch?v=EWvNQjAaOHw\" target=\"_blank\">Karpathy A. <em>How I Use LLMs</em> [Internet video]. YouTube; 2025.</a> <span class=\"annot\">— example-driven practical walkthrough of large language models and their growing feature set; a follow-up to the author&rsquo;s &ldquo;Deep Dive into LLMs like ChatGPT,&rdquo; covering tokens, context windows, the available-model ecosystem, and how to use these tools efficiently in daily life.</span></p>\n  <h4>Research Infrastructure</h4>\n  <p><a href=\"https://doi.org/10.1016/j.jbi.2008.08.010\" target=\"_blank\">Harris PA, Taylor R, Thielke R, Payne J, Gonzalez N, Conde JG. Research Electronic Data Capture (REDCap) — a metadata-driven methodology and workflow process for providing translational research informatics support. <em>J Biomed Inform</em>. 2009;42(2):377-381.</a> doi:10.1016/j.jbi.2008.08.010. PMID:18929686.</p>\n  <h4>Research-Software Sustainability &amp; the Graveyard</h4>\n  <p><a href=\"https://www.software.ac.uk/\" target=\"_blank\">UK Software Sustainability Institute</a> <span class=\"annot\">— ongoing surveys of research-software practice, reproducibility, and survival.</span></p>\n  <p><a href=\"https://doi.org/10.1002/asi.23538\" target=\"_blank\">Howison J, Bullard J. Software in the scientific literature: Problems with seeing, finding, and using software mentioned in the biology literature. <em>J Assoc Inf Sci Technol</em>. 2016;67(9):2137-2155.</a> doi:10.1002/asi.23538.</p>\n  <p><a href=\"https://doi.org/10.1038/s41467-019-09406-4\" target=\"_blank\">Mangul S, Martin LS, Hill BL, et al. Systematic benchmarking of bioinformatics tools. <em>Nat Commun</em>. 2019;10:1393.</a> doi:10.1038/s41467-019-09406-4. PMID:30918265.</p>\n  <p>Thakur AM, Milewicz R, Jahanshahi M, Paganini L, Vasilescu B, Mockus A. Scientific open-source software is less likely to become abandoned than other research-related code. (preprint).</p>\n  <p><a href=\"https://openresearchsoftware.metajnl.com/\" target=\"_blank\">Journal of Open Research Software</a> <span class=\"annot\">— publishes metapapers on research-software reuse, revival, and sustained development.</span></p>\n  <h4>LLMs for Legacy Code Recovery</h4>\n  <p><a href=\"https://arxiv.org/abs/2411.14971\" target=\"_blank\">Leveraging LLMs for Legacy Code Modernization. arXiv:2411.14971; November 2024.</a> <span class=\"annot\">— evaluates LLMs on MUMPS and mainframe-era code; relevant to AI-assisted recovery of abandoned research software.</span></p>\n  <h4>Institutional Context — Trust, Expertise, and Compression</h4>\n  <p>Yale Committee on Trust in Higher Education. <em>Report of the Yale Committee on Trust in Higher Education</em>. Adams J, Gage B, co-chairs. April 2026.</p>\n  <p>Collins H, Evans R. <em>Rethinking Expertise</em>. Chicago: University of Chicago Press; 2009. <span class=\"annot\">— distinguishes tacit, experience-based expertise from formal credentialed knowledge.</span></p>\n  <p>Nichols T. <em>The Death of Expertise: The Campaign Against Established Knowledge and Why It Matters</em>. New York: Oxford University Press; 2017.</p>\n  <h4>Secondary-Use EHR Data — Why a Data Lake Is Not a Research Substrate</h4>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/23774517/\" target=\"_blank\">Hersh WR, Weiner MG, Embi PJ, et al. Caveats for the Use of Operational Electronic Health Record Data in Comparative Effectiveness Research. <em>Med Care</em>. 2013;51(8 Suppl 3):S30-S37.</a> doi:10.1097/MLR.0b013e31829b1dbd. <span class=\"annot\">— abstract (verbatim): &ldquo;EHR data may be inaccurate, incomplete, transformed in ways that undermine their meaning, unrecoverable for research, of unknown provenance, of insufficient granularity, and incompatible with research protocols.&rdquo;</span></p>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/22733976/\" target=\"_blank\">Weiskopf NG, Weng C. Methods and dimensions of electronic health record data quality assessment: enabling reuse for clinical research. <em>J Am Med Inform Assoc</em>. 2013;20(1):144-151.</a> doi:10.1136/amiajnl-2011-000681. <span class=\"annot\">— five dimensions of data quality: completeness, correctness, concordance, plausibility, currency.</span></p>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/27713905/\" target=\"_blank\">Kahn MG, Callahan TJ, Barnard J, et al. A Harmonized Data Quality Assessment Terminology and Framework for the Secondary Use of Electronic Health Record Data. <em>eGEMs</em>. 2016;4(1):1244.</a> doi:10.13063/2327-9214.1244. <span class=\"annot\">— three categories (Conformance, Completeness, Plausibility), two contexts (Verification, Validation).</span></p>\n  <h4>Vignette vs. Real Record — the Empirical Anchor</h4>\n  <p><a href=\"https://doi.org/10.1038/s41591-024-03097-1\" target=\"_blank\">Hager P, Jungmann F, Holland R, et al. Evaluation and mitigation of the limitations of large language models in clinical decision-making. <em>Nat Med</em>. 2024.</a> doi:10.1038/s41591-024-03097-1.</p>\n  <p><a href=\"https://doi.org/10.1056/NEJMp2405999\" target=\"_blank\">Large Language Models and the Degradation of the Medical Record. <em>N Engl J Med</em> Perspective; 2024.</a> doi:10.1056/NEJMp2405999.</p>\n  <p>Comparative analysis of multimodal large language model performance on clinical vignette questions. <em>JAMA</em>. 2024.</p>\n  <h4>History of Applied Sciences &amp; Medical Informatics as a Discipline</h4>\n  <p>Kelley BM. <em>Yale: A History</em>. New Haven: Yale University Press; 1974. <span class=\"annot\">— on the Sheffield Scientific School and the integration of applied sciences.</span></p>\n  <p><a href=\"https://www.nlm.nih.gov/pubs/plan/lrp06/report/default.html\" target=\"_blank\">U.S. National Library of Medicine. <em>Charting a Course for the 21st Century: NLM’s Long Range Plan 2006–2016</em>.</a> <span class=\"annot\">— Lindberg-era strategic framing for biomedical informatics as a science and an institutional infrastructure.</span></p>\n  <p><a href=\"https://amia.org/\" target=\"_blank\">American Medical Informatics Association (AMIA)</a> <span class=\"annot\">— founded 1989; institutional history, ACMI fellowship, and the discipline’s formal terminology.</span></p>\n  <p><a href=\"https://pmc.ncbi.nlm.nih.gov/articles/PMC7442506/\" target=\"_blank\">Donald A.B. Lindberg, M.D., Director of NLM 1984–2015.</a> <span class=\"annot\">— founder of the IAIMS program and a principal architect of biomedical informatics as a discipline.</span></p>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/7752872/\" target=\"_blank\">Lindberg DA, Humphreys BL. Medical informatics. <em>JAMA</em>. 1995;273(21):1667-1668.</a> PMID:7752872.</p>\n  <p><a href=\"https://www.researchgate.net/publication/15301027_Medical_informatics_meets_medical_education\" target=\"_blank\">Shortliffe EH. Medical informatics meets medical education. <em>JAMA</em>. 1995;273(13):1061-1065.</a> PMID:7700842.</p>\n  <h4>Applied Informatics — Theory, Engineering, Practice</h4>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/3697038/\" target=\"_blank\">Lindberg DA. Future programs at the National Library of Medicine. <em>Bull Med Libr Assoc</em>. 1986;74(2):123-126.</a> PMID:3697038. <span class=\"annot\">— foundational vision linking NLM to AI, databases, medical informatics, and IAIMS.</span></p>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/19074294/\" target=\"_blank\">Friedman CP. A &lsquo;fundamental theorem&rsquo; of biomedical informatics. <em>J Am Med Inform Assoc</em>. 2009;16(2):169-170.</a> doi:10.1197/jamia.M3092. <span class=\"annot\">— informatics improves work only when a person is partnered with an information resource. The clearest one-sentence case for the translational layer.</span></p>\n  <p><a href=\"https://link.springer.com/book/10.1007/978-3-030-58721-5\" target=\"_blank\">Shortliffe EH, Cimino JJ, eds. <em>Biomedical Informatics: Computer Applications in Health Care and Biomedicine</em>. 5th ed. Cham: Springer; 2021.</a> <span class=\"annot\">— canonical textbook framing biomedical informatics as both a science and an applied discipline.</span></p>\n  <p><a href=\"https://amia.org/about-amia/why-informatics\" target=\"_blank\">AMIA. Definition and scope of clinical, applied, and operational informatics.</a> <span class=\"annot\">— recognized terminology for the engineering layer of biomedical informatics practice.</span></p>\n  <h4>Design</h4>\n  <p>Tufte ER. <em>The Cognitive Style of PowerPoint: Pitching Out Corrupts Within</em>. 2nd ed. Cheshire, CT: Graphics Press; 2006.</p>\n  <p>Tufte ER. <em>Visual Explanations: Images and Quantities, Evidence and Narrative</em>. Cheshire, CT: Graphics Press; 1997.</p>\n  <h4>Open-Source Existence Proofs</h4>\n  <p><a href=\"https://github.com/OpenPathologyFoundation/xenonym\" target=\"_blank\">Xenonym — schema-driven synthetic data.</a> Open Pathology Foundation.</p></div>"
+      ],
+      "fragments": false
+    },
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions &amp; Discussion",
+      "contact": "Peter Gershkovich, M.D., M.H.A.<br>Director of Pathology Informatics &amp; Cancer Data Science<br>Yale University School of Medicine<br><br><em>The challenge, one more time:</em><br>“Name one research bottleneck in your group that you’ve accepted as an unavoidable permanence — something you stopped trying to fix. I’d be willing to bet it’s now solvable. Let’s test that.”"
+    }
+  ]
+}

@@ -73,6 +73,7 @@
     <script src="js/glossary.js"></script>
     <script src="js/presenter.js"></script>
     <script src="js/dock-nav.js"></script>
+    <script src="js/help.js"></script>
 
     <script>
         // Determine which lecture to load from query parameter
@@ -122,6 +123,9 @@
 
                     // Presenter: enable P key to re-open config
                     Presenter.initKeyboard();
+
+                    // Help overlay (? key + floating button)
+                    HelpOverlay.init();
                 });
             });
         });

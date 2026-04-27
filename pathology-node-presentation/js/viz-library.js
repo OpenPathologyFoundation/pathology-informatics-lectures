@@ -506,118 +506,396 @@ const VizLibrary = (function () {
             .attr('stroke', '#e0e5eb').attr('stroke-width', 1).attr('stroke-dasharray', '4,4');
     }
 
-    // ─── CASE TIMELINE (horizontal step chain with delays) ──
+    // ─── CASE TIMELINE (duration-proportional Gantt with breakpoints + magnifier) ──
     function caseTimeline(container, config) {
         var steps = (config && config.steps) || [];
-        var n = steps.length;
-        var W = 1060, H = 340;
+        var W = 1280, H = 660;
+        var margin = { top: 110, right: 70, bottom: 140, left: 70 };
+        var plotW = W - margin.left - margin.right;
+        var plotH = 110;
+        var barY = margin.top + 80;
+
         var svg = d3.select(container).append('svg')
             .attr('viewBox', '0 0 ' + W + ' ' + H)
             .attr('preserveAspectRatio', 'xMidYMid meet')
-            .style('max-width', '100%');
+            .style('width', '100%').style('max-height', '80vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
 
-        // Two-row layout for 13 steps
-        var row1Count = Math.ceil(n / 2);
-        var row2Count = n - row1Count;
-        var boxW = 72, boxH = 34, gapX = 8, rowGap = 100;
-        var row1Y = 40, row2Y = row1Y + rowGap;
+        // Background
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0f172a');
 
-        function boxX(col, rowCount) {
-            var totalW = rowCount * boxW + (rowCount - 1) * gapX;
-            var startX = (W - totalW) / 2;
-            return startX + col * (boxW + gapX);
-        }
+        // Title
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 24)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '24px').attr('font-weight', '700').attr('fill', '#e2e8f0')
+            .text('Anatomy of a Case — Where the Model Breaks');
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 48)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('fill', '#94a3b8').attr('font-style', 'italic')
+            .text('Bar width = elapsed minutes. Red markers show the exact handoffs where the model breaks.');
+        // Magnifier hint
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 70)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('fill', '#60a5fa')
+            .text('🔍  Hover any step to examine it under the magnifying glass');
 
-        steps.forEach(function (step, i) {
-            var isRow1 = i < row1Count;
-            var col = isRow1 ? i : (i - row1Count);
-            var rowCount = isRow1 ? row1Count : row2Count;
-            var x = boxX(col, rowCount);
-            var y = isRow1 ? row1Y : row2Y;
-
-            var g = svg.append('g').style('opacity', 0);
-
-            var isDelay = !!step.delay;
-            var fillColor = isDelay ? 'rgba(231,76,60,0.12)' : 'rgba(41,128,185,0.06)';
-            var strokeColor = isDelay ? '#e74c3c' : '#bdc3c7';
-            var strokeW = isDelay ? 2 : 1.5;
-
-            g.append('rect').attr('x', x).attr('y', y)
-                .attr('width', boxW).attr('height', boxH)
-                .attr('rx', 6).attr('fill', fillColor)
-                .attr('stroke', strokeColor).attr('stroke-width', strokeW);
-
-            g.append('text').attr('x', x + boxW / 2).attr('y', y + boxH / 2 + 4)
-                .attr('text-anchor', 'middle').attr('font-size', '9px')
-                .attr('font-weight', '600')
-                .attr('fill', isDelay ? '#e74c3c' : '#0e6e8c')
-                .text(step.label);
-
-            // Time label below box
-            if (step.minutes > 0) {
-                var timeStr = step.minutes >= 60
-                    ? (step.minutes / 60).toFixed(0) + 'h'
-                    : step.minutes + 'm';
-                g.append('text').attr('x', x + boxW / 2).attr('y', y + boxH + 14)
-                    .attr('text-anchor', 'middle').attr('font-size', '8px')
-                    .attr('fill', '#999').text(timeStr);
-            }
-
-            // Delay callout
-            if (isDelay && step.delayNote) {
-                var noteY = isRow1 ? y - 14 : y + boxH + 26;
-                g.append('text').attr('x', x + boxW / 2).attr('y', noteY)
-                    .attr('text-anchor', 'middle').attr('font-size', '8px')
-                    .attr('fill', '#e74c3c').attr('font-weight', '600')
-                    .text('⚠ ' + step.delayNote);
-            }
-
-            // Arrow to next step in same row
-            var nextInRow = isRow1 ? (i + 1 < row1Count) : (i + 1 < n);
-            if (nextInRow && !(isRow1 && i + 1 === row1Count)) {
-                g.append('text')
-                    .attr('x', x + boxW + gapX / 2).attr('y', y + boxH / 2 + 4)
-                    .attr('text-anchor', 'middle').attr('font-size', '12px')
-                    .attr('fill', '#bdc3c7').text('→');
-            }
-
-            g.transition().delay(i * 80).duration(300).style('opacity', 1);
+        // Compute cumulative time — breakpoints with minutes=0 count as instantaneous events
+        var totalMinutes = d3.sum(steps, function(s) { return s.minutes || 0; });
+        var cumulative = 0;
+        var laid = steps.map(function(s) {
+            var start = cumulative;
+            cumulative += (s.minutes || 0);
+            return { step: s, start: start, end: cumulative, duration: s.minutes || 0 };
         });
 
-        // Curved arrow from end of row 1 down to start of row 2
-        if (row2Count > 0) {
-            var endX1 = boxX(row1Count - 1, row1Count) + boxW;
-            var startX2 = boxX(0, row2Count);
-            svg.append('path')
-                .attr('d', 'M' + endX1 + ',' + (row1Y + boxH / 2) +
-                    ' C' + (endX1 + 40) + ',' + (row1Y + boxH / 2) +
-                    ' ' + (endX1 + 40) + ',' + (row2Y + boxH / 2) +
-                    ' ' + (endX1) + ',' + (row2Y + boxH / 2))
-                .attr('fill', 'none').attr('stroke', '#bdc3c7')
-                .attr('stroke-width', 1.5).attr('stroke-dasharray', '4,3')
-                .attr('marker-end', 'none');
+        var xScale = d3.scaleLinear().domain([0, totalMinutes]).range([0, plotW]);
 
-            // Horizontal connector to row 2 first box if needed
-            if (startX2 < endX1) {
-                svg.append('line')
-                    .attr('x1', endX1).attr('y1', row2Y + boxH / 2)
-                    .attr('x2', boxX(row2Count - 1, row2Count) + boxW + 5).attr('y2', row2Y + boxH / 2)
-                    .attr('stroke', 'none');
+        // Phase grouping (visual bands)
+        var phases = [
+            { name: 'Pre-analytic', range: [0, 5], color: '#3b82f6' },
+            { name: 'Analytic', range: [5, 9], color: '#22c55e' },
+            { name: 'Breakpoint → Rework', range: [9, 11], color: '#ef4444' },
+            { name: 'Post-analytic', range: [11, 13], color: '#8b5cf6' }
+        ];
+
+        // Phase band backdrop above the bar
+        phases.forEach(function(ph) {
+            var startMin = laid[ph.range[0]] ? laid[ph.range[0]].start : 0;
+            var endIdx = Math.min(ph.range[1] - 1, laid.length - 1);
+            var endMin = laid[endIdx] ? laid[endIdx].end : totalMinutes;
+            var x0 = margin.left + xScale(startMin);
+            var x1 = margin.left + xScale(endMin);
+            svg.append('rect')
+                .attr('x', x0).attr('y', barY - 22)
+                .attr('width', Math.max(0, x1 - x0)).attr('height', 14)
+                .attr('fill', ph.color).attr('fill-opacity', 0.18)
+                .attr('rx', 2);
+            svg.append('text')
+                .attr('x', (x0 + x1) / 2).attr('y', barY - 11)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10px').attr('font-weight', '700')
+                .attr('fill', ph.color)
+                .attr('letter-spacing', '1px')
+                .text(ph.name.toUpperCase());
+        });
+
+        // Minimum visible width for tiny steps (breakpoints with 0 min)
+        var minVisibleW = 6;
+
+        // Precompute bar geometry for later (hover group reuses positions)
+        var barGeom = laid.map(function(d, i) {
+            var isDelay = !!d.step.delay;
+            var rawW = xScale(d.duration);
+            var w = Math.max(rawW, isDelay ? 12 : minVisibleW);
+            var x = margin.left + xScale(d.start);
+            var phColor = '#64748b';
+            phases.forEach(function(ph) {
+                if (i >= ph.range[0] && i < ph.range[1]) phColor = ph.color;
+            });
+            return { x: x, w: w, isDelay: isDelay, phColor: phColor, d: d, i: i };
+        });
+
+        // Draw each step as a bar
+        barGeom.forEach(function(b) {
+            var d = b.d, i = b.i, w = b.w, x = b.x;
+            var fill = b.isDelay ? '#ef4444' : b.phColor;
+            var fillOpacity = b.isDelay ? 0.85 : 0.6;
+
+            var g = svg.append('g').style('opacity', 0).style('cursor', 'zoom-in');
+
+            g.append('rect')
+                .attr('x', x).attr('y', barY)
+                .attr('width', w).attr('height', plotH)
+                .attr('fill', fill).attr('fill-opacity', fillOpacity)
+                .attr('stroke', b.isDelay ? '#fca5a5' : b.phColor)
+                .attr('stroke-width', b.isDelay ? 2 : 1)
+                .attr('rx', 3);
+
+            // Step label (rotated if narrow)
+            var labelX = x + w / 2;
+            var useRotation = w < 60;
+            var label = g.append('text')
+                .attr('fill', '#f1f5f9').attr('font-size', '12px').attr('font-weight', '600')
+                .attr('text-anchor', 'middle')
+                .style('pointer-events', 'none');
+            if (useRotation) {
+                label.attr('transform', 'translate(' + labelX + ',' + (barY + plotH / 2) + ') rotate(-90)')
+                    .text(d.step.label);
+            } else {
+                label.attr('x', labelX).attr('y', barY + plotH / 2 - 2)
+                    .text(d.step.label);
             }
+
+            // Duration below label (if visible)
+            if (!useRotation && d.duration > 0) {
+                var timeStr = d.duration >= 60
+                    ? Math.round(d.duration / 60 * 10) / 10 + ' h'
+                    : d.duration + ' m';
+                g.append('text')
+                    .attr('x', labelX).attr('y', barY + plotH / 2 + 16)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', '#e2e8f0').attr('font-size', '11px').attr('opacity', 0.75)
+                    .style('pointer-events', 'none')
+                    .text(timeStr);
+            }
+
+            // Hover hooks
+            g.on('mouseenter', function() { showMagnifier(b); })
+             .on('mouseleave', function() { hideMagnifier(); });
+
+            g.transition().delay(i * 80).duration(400).style('opacity', 1);
+        });
+
+        // Breakpoint callouts — first goes above, second goes below (deterministic, non-colliding)
+        var delayIdx = 0;
+        laid.forEach(function(d, i) {
+            if (!d.step.delay || !d.step.delayNote) return;
+            var b = barGeom[i];
+            var x = b.x + b.w / 2;
+            var isTop = (delayIdx === 0);
+            delayIdx++;
+            var calloutY = isTop ? (barY - 52) : (barY + plotH + 32);
+            var lineY1 = isTop ? barY : barY + plotH;
+            var lineY2 = isTop ? calloutY + 22 : calloutY - 4;
+
+            // Leader line
+            svg.append('line')
+                .attr('x1', x).attr('y1', lineY1)
+                .attr('x2', x).attr('y2', lineY2)
+                .attr('stroke', '#ef4444').attr('stroke-width', 1.5)
+                .attr('stroke-dasharray', '4,3');
+
+            // Marker dot at the bar edge
+            svg.append('circle')
+                .attr('cx', x).attr('cy', lineY1)
+                .attr('r', 6).attr('fill', '#ef4444')
+                .attr('stroke', '#0f172a').attr('stroke-width', 2);
+
+            // Warning badge background
+            var noteText = '⚠ ' + d.step.delayNote;
+            var estW = noteText.length * 6.8 + 24;
+            // Keep badge within plot area
+            var badgeX = Math.max(margin.left, Math.min(margin.left + plotW - estW, x - estW / 2));
+            svg.append('rect')
+                .attr('x', badgeX).attr('y', calloutY)
+                .attr('width', estW).attr('height', 26)
+                .attr('rx', 5)
+                .attr('fill', '#7f1d1d').attr('fill-opacity', 0.7)
+                .attr('stroke', '#ef4444').attr('stroke-width', 1.2);
+
+            svg.append('text')
+                .attr('x', badgeX + estW / 2).attr('y', calloutY + 17)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('font-weight', '700')
+                .attr('fill', '#fecaca')
+                .text(noteText);
+        });
+
+        // Time axis at the bottom
+        var axisY = barY + plotH + 64;
+        var ticksMinutes = [0, 60, 240, 480, 720, 960, totalMinutes];
+        svg.append('line')
+            .attr('x1', margin.left).attr('x2', margin.left + plotW)
+            .attr('y1', axisY).attr('y2', axisY)
+            .attr('stroke', '#475569').attr('stroke-width', 1);
+        ticksMinutes.forEach(function(t) {
+            var tx = margin.left + xScale(t);
+            svg.append('line')
+                .attr('x1', tx).attr('x2', tx)
+                .attr('y1', axisY).attr('y2', axisY + 5)
+                .attr('stroke', '#64748b').attr('stroke-width', 1);
+            var label = t === 0 ? 'start' : (t / 60).toFixed(t < 120 ? 0 : 1) + ' h';
+            svg.append('text')
+                .attr('x', tx).attr('y', axisY + 18)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10px').attr('fill', '#94a3b8')
+                .text(label);
+        });
+
+        // Total elapsed annotation
+        var totalLabel = (totalMinutes / 60).toFixed(1) + ' h total elapsed — should have been ~' +
+            (((totalMinutes - 90 - 300) / 60)).toFixed(1) + ' h';
+        svg.append('text')
+            .attr('x', margin.left + plotW).attr('y', axisY + 38)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '11px').attr('fill', '#fca5a5').attr('font-weight', '600')
+            .text(totalLabel);
+
+        // Bottom takeaway
+        svg.append('text')
+            .attr('x', W / 2).attr('y', H - 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('fill', '#e2e8f0').attr('font-style', 'italic')
+            .text('Each red marker is a specific handoff. The fix depends entirely on which one.');
+
+        // ─── MAGNIFIER LENS TOOLTIP ─────────────────────────────
+        // SVG filter for drop shadow + defs for lens
+        var defs = svg.append('defs');
+        var filter = defs.append('filter')
+            .attr('id', 'magGlow').attr('x', '-30%').attr('y', '-30%')
+            .attr('width', '160%').attr('height', '160%');
+        filter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+        var merge = filter.append('feMerge');
+        merge.append('feMergeNode').attr('in', 'blur');
+        merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+        var magLayer = svg.append('g').attr('class', 'magnifier').style('pointer-events', 'none');
+
+        function hideMagnifier() {
+            magLayer.interrupt();
+            magLayer.selectAll('*').remove();
         }
 
-        // Legend
-        svg.append('rect').attr('x', 20).attr('y', H - 40).attr('width', 14).attr('height', 14)
-            .attr('rx', 3).attr('fill', 'rgba(231,76,60,0.12)').attr('stroke', '#e74c3c').attr('stroke-width', 1.5);
-        svg.append('text').attr('x', 40).attr('y', H - 29)
-            .attr('font-size', '10px').attr('fill', '#e74c3c').attr('font-weight', '600')
-            .text('Delay / breakpoint');
+        function showMagnifier(b) {
+            hideMagnifier();
+            var d = b.d;
+            var centerX = b.x + b.w / 2;
+            // Clamp horizontally
+            var lensR = 150;
+            var cx = Math.max(lensR + 10, Math.min(W - lensR - 10, centerX));
+            // Place lens above the bar, or below if no room
+            var placeAbove = (barY - 60) > (lensR * 2 + 40);
+            var cy = placeAbove ? (barY - lensR - 18) : (barY + plotH + lensR + 28);
+            if (cy + lensR > H - 50) cy = H - 50 - lensR;
 
-        svg.append('rect').attr('x', 170).attr('y', H - 40).attr('width', 14).attr('height', 14)
-            .attr('rx', 3).attr('fill', 'rgba(41,128,185,0.06)').attr('stroke', '#bdc3c7').attr('stroke-width', 1.5);
-        svg.append('text').attr('x', 190).attr('y', H - 29)
-            .attr('font-size', '10px').attr('fill', '#888')
-            .text('Normal step');
+            // Connector from lens rim to the bar (the magnifier "handle")
+            var targetY = placeAbove ? barY : (barY + plotH);
+            var dx = centerX - cx, dy = targetY - cy;
+            var len = Math.sqrt(dx * dx + dy * dy) || 1;
+            var rimX = cx + (dx / len) * lensR;
+            var rimY = cy + (dy / len) * lensR;
+
+            // Dim backdrop over the whole viz except the lens
+            var mask = defs.append('mask').attr('id', 'lensMask-' + b.i);
+            mask.append('rect').attr('width', W).attr('height', H).attr('fill', 'white');
+            mask.append('circle').attr('cx', cx).attr('cy', cy).attr('r', lensR).attr('fill', 'black');
+
+            magLayer.append('rect')
+                .attr('width', W).attr('height', H)
+                .attr('fill', '#0f172a').attr('fill-opacity', 0)
+                .attr('mask', 'url(#lensMask-' + b.i + ')')
+                .transition().duration(200).attr('fill-opacity', 0.55);
+
+            // Handle (stick from lens to bar)
+            magLayer.append('line')
+                .attr('x1', rimX).attr('y1', rimY)
+                .attr('x2', centerX).attr('y2', targetY)
+                .attr('stroke', '#475569').attr('stroke-width', 6).attr('stroke-linecap', 'round')
+                .attr('opacity', 0)
+                .transition().duration(200).attr('opacity', 0.85);
+
+            // Outer lens ring (bezel)
+            magLayer.append('circle')
+                .attr('cx', cx).attr('cy', cy).attr('r', lensR + 6)
+                .attr('fill', 'none').attr('stroke', '#334155').attr('stroke-width', 8)
+                .attr('opacity', 0)
+                .transition().duration(200).attr('opacity', 1);
+
+            // Lens glass
+            var lensGroup = magLayer.append('g').style('opacity', 0);
+            lensGroup.append('circle')
+                .attr('cx', cx).attr('cy', cy).attr('r', lensR)
+                .attr('fill', '#f8fafc')
+                .attr('stroke', '#94a3b8').attr('stroke-width', 2);
+
+            // Subtle glass highlight
+            lensGroup.append('ellipse')
+                .attr('cx', cx - 55).attr('cy', cy - 65)
+                .attr('rx', 55).attr('ry', 22)
+                .attr('fill', '#ffffff').attr('fill-opacity', 0.6);
+
+            // Clip for lens content
+            var clipId = 'lensClip-' + b.i;
+            defs.append('clipPath').attr('id', clipId)
+                .append('circle').attr('cx', cx).attr('cy', cy).attr('r', lensR - 6);
+
+            var content = lensGroup.append('g').attr('clip-path', 'url(#' + clipId + ')');
+
+            // Color accent stripe
+            var accent = b.isDelay ? '#ef4444' : b.phColor;
+            content.append('rect')
+                .attr('x', cx - lensR).attr('y', cy - lensR)
+                .attr('width', lensR * 2).attr('height', 6)
+                .attr('fill', accent);
+
+            // Step label (large)
+            content.append('text')
+                .attr('x', cx).attr('y', cy - 70)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '26px').attr('font-weight', '800')
+                .attr('fill', '#0f172a')
+                .text(d.step.label);
+
+            // Duration badge
+            var durStr = d.duration === 0
+                ? 'instantaneous event'
+                : (d.duration >= 60
+                    ? Math.round(d.duration / 60 * 10) / 10 + ' hours (' + d.duration + ' min)'
+                    : d.duration + ' minutes');
+            content.append('text')
+                .attr('x', cx).attr('y', cy - 44)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13px').attr('font-weight', '600')
+                .attr('fill', accent)
+                .attr('letter-spacing', '1px')
+                .text(durStr.toUpperCase());
+
+            // Delay badge (if applicable)
+            if (b.isDelay && d.step.delayNote) {
+                content.append('rect')
+                    .attr('x', cx - 130).attr('y', cy - 30)
+                    .attr('width', 260).attr('height', 22)
+                    .attr('rx', 4)
+                    .attr('fill', '#fef2f2').attr('stroke', '#ef4444');
+                content.append('text')
+                    .attr('x', cx).attr('y', cy - 14)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '12px').attr('font-weight', '700')
+                    .attr('fill', '#991b1b')
+                    .text('⚠ ' + d.step.delayNote);
+            }
+
+            // Detail text — wrap to fit lens
+            var detail = d.step.detail || '';
+            var words = detail.split(/\s+/);
+            var maxWidth = 34; // characters per line approx
+            var lines = [];
+            var cur = '';
+            words.forEach(function(wd) {
+                if ((cur + ' ' + wd).trim().length > maxWidth) {
+                    if (cur) lines.push(cur.trim());
+                    cur = wd;
+                } else {
+                    cur = (cur + ' ' + wd).trim();
+                }
+            });
+            if (cur) lines.push(cur);
+            lines = lines.slice(0, 5);
+
+            var startY = cy + (b.isDelay && d.step.delayNote ? 14 : 0);
+            lines.forEach(function(ln, li) {
+                content.append('text')
+                    .attr('x', cx).attr('y', startY + li * 18)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '13px')
+                    .attr('fill', '#1e293b')
+                    .text(ln);
+            });
+
+            // Step index marker at bottom of lens
+            content.append('text')
+                .attr('x', cx).attr('y', cy + lensR - 18)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10px').attr('font-weight', '700')
+                .attr('fill', '#94a3b8')
+                .attr('letter-spacing', '2px')
+                .text('STEP ' + (b.i + 1) + ' OF ' + laid.length);
+
+            lensGroup.transition().duration(200).style('opacity', 1);
+        }
     }
 
     // ─── MEASUREMENT INTERVALS (relay race + error types) ────
@@ -1280,52 +1558,59 @@ const VizLibrary = (function () {
 
     // ─── DEV LIFECYCLE LOOP ──────────────────────────────────
     function devLifecycleLoop(container, config) {
-        var W = 1060, H = 400;
+        // Bauhaus-leaning redesign: hard geometric forms, hairline strokes,
+        // signature color blocks, hover-only popups. Form follows function.
+        // Wheel scaled +20%; security caption moved under the diagram.
+        var W = 1280, H = 720;
         var svg = d3.select(container).append('svg')
             .attr('viewBox', '0 0 ' + W + ' ' + H)
             .attr('preserveAspectRatio', 'xMidYMid meet')
-            .style('max-width', '100%');
+            .style('max-width', '100%')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
 
-        var cx = W / 2, cy = H / 2 + 10, radius = 150;
+        var cx = W / 2, cy = 360, radius = 180;
 
+        // popupR override pushes the four diagonal popups (Specify, Design,
+        // Deploy, Feedback) out past the dashed security ring so their nearest
+        // corner clears the envelope.
         var steps = [
             { label: 'Identify Gap', sub: 'Observe workflow friction', color: '#c0392b', bg: '#fdecea', icon: '🔍' },
-            { label: 'Specify', sub: 'Write functional spec', color: '#d35400', bg: '#fdf2e9', icon: '📋' },
-            { label: 'Design', sub: 'Architecture & UX', color: '#b7950b', bg: '#fef9e7', icon: '✏️' },
-            { label: 'Build', sub: 'Code & integrate', color: '#1e8449', bg: '#eafaf1', icon: '🔧' },
-            { label: 'Test', sub: 'Validate clinically', color: '#1a5276', bg: '#e8f0f8', icon: '🧪' },
-            { label: 'Deploy', sub: 'Ship to production', color: '#6c3483', bg: '#f4ecf7', icon: '🚀' },
-            { label: 'Feedback', sub: 'Measure & iterate', color: '#0e6e5c', bg: '#e8f8f5', icon: '📊' }
+            { label: 'Specify',      sub: 'Write functional spec',     color: '#d35400', bg: '#fdf2e9', icon: '📋', popupR: 365 },
+            { label: 'Design',       sub: 'Architecture & UX',         color: '#b7950b', bg: '#fef9e7', icon: '✏️', popupR: 370 },
+            { label: 'Build',        sub: 'Code & integrate',          color: '#1e8449', bg: '#eafaf1', icon: '🔧' },
+            { label: 'Test',         sub: 'Validate clinically',       color: '#1a5276', bg: '#e8f0f8', icon: '🧪' },
+            { label: 'Deploy',       sub: 'Ship to production',        color: '#6c3483', bg: '#f4ecf7', icon: '🚀', popupR: 370 },
+            { label: 'Feedback',     sub: 'Measure & iterate',         color: '#0e6e5c', bg: '#e8f8f5', icon: '📊', popupR: 365 }
         ];
-
         var n = steps.length;
+        var nodeR = 53;                // 44 * 1.2
+        var defaultPopupR = radius + 105;
+        var popupW = 210, popupH = 64; // popup geometry unchanged
 
-        // Center label
-        svg.append('text').attr('x', cx).attr('y', cy - 12)
-            .attr('text-anchor', 'middle').attr('font-size', '18px')
+        // Center label (scaled with the wheel)
+        svg.append('text').attr('x', cx).attr('y', cy - 14)
+            .attr('text-anchor', 'middle').attr('font-size', '22px')
             .attr('font-weight', '700').attr('fill', '#1a2e44')
             .text('Iterative');
-        svg.append('text').attr('x', cx).attr('y', cy + 10)
-            .attr('text-anchor', 'middle').attr('font-size', '18px')
+        svg.append('text').attr('x', cx).attr('y', cy + 12)
+            .attr('text-anchor', 'middle').attr('font-size', '22px')
             .attr('font-weight', '700').attr('fill', '#1a2e44')
             .text('Development');
-        svg.append('text').attr('x', cx).attr('y', cy + 32)
-            .attr('text-anchor', 'middle').attr('font-size', '12px')
+        svg.append('text').attr('x', cx).attr('y', cy + 38)
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
             .attr('fill', '#555').attr('font-weight', '600')
             .text('(not waterfall)');
 
-        // Draw connecting arcs — bolder arrows
+        // Direction arrows on the loop
         steps.forEach(function (step, i) {
             var angle = (i / n) * 2 * Math.PI - Math.PI / 2;
             var nextAngle = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2;
-
             var midAngle = (angle + nextAngle) / 2;
             var arrowR = radius - 2;
             var ax = cx + arrowR * Math.cos(midAngle);
             var ay = cy + arrowR * Math.sin(midAngle);
-
             svg.append('text').attr('x', ax).attr('y', ay + 4)
-                .attr('text-anchor', 'middle').attr('font-size', '18px')
+                .attr('text-anchor', 'middle').attr('font-size', '22px')
                 .attr('fill', '#888')
                 .attr('transform', 'rotate(' + (midAngle * 180 / Math.PI + 90) + ',' + ax + ',' + ay + ')')
                 .text('▸')
@@ -1333,53 +1618,135 @@ const VizLibrary = (function () {
                 .transition().delay(n * 200 + i * 100).duration(300).style('opacity', 0.7);
         });
 
-        // Draw nodes
+        // Security & compliance envelope (drawn under nodes)
+        var ringR = radius + 62;
+        svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', ringR)
+            .attr('fill', 'none').attr('stroke', '#c0392b')
+            .attr('stroke-width', 2).attr('stroke-dasharray', '8,6')
+            .attr('opacity', 0.45);
+        // Caption moved UNDER the diagram (just below the ring, on the bottom side)
+        svg.append('text').attr('x', cx).attr('y', cy + ringR + 26)
+            .attr('text-anchor', 'middle').attr('font-size', '12px')
+            .attr('fill', '#c0392b').attr('font-weight', '700')
+            .attr('letter-spacing', '2.2px')
+            .text('SECURITY & COMPLIANCE — BAKED INTO EVERY STEP');
+
+        // Popup layer (above nodes)
+        var popupLayer = svg.append('g').attr('class', 'popup-layer');
+        var nodeRefs = [];
+        var popupRefs = [];
+
+        // Nodes + paired popups
         steps.forEach(function (step, i) {
             var angle = (i / n) * 2 * Math.PI - Math.PI / 2;
             var nx = cx + radius * Math.cos(angle);
             var ny = cy + radius * Math.sin(angle);
 
+            // Node
             var nodeG = svg.append('g')
+                .attr('class', 'node-g')
                 .attr('transform', 'translate(' + nx + ',' + ny + ')')
-                .style('opacity', 0);
-
-            nodeG.append('circle').attr('r', 44)
+                .style('opacity', 0)
+                .style('cursor', 'pointer');
+            nodeG.append('circle').attr('class', 'node-circle').attr('r', nodeR)
                 .attr('fill', step.bg)
                 .attr('stroke', step.color).attr('stroke-width', 3);
-
             nodeG.append('text').attr('y', -10)
-                .attr('text-anchor', 'middle').attr('font-size', '20px')
+                .attr('text-anchor', 'middle').attr('font-size', '24px')
                 .text(step.icon);
-
-            nodeG.append('text').attr('y', 10)
-                .attr('text-anchor', 'middle').attr('font-size', '12px')
+            nodeG.append('text').attr('y', 18)
+                .attr('text-anchor', 'middle').attr('font-size', '14px')
                 .attr('font-weight', '700').attr('fill', step.color)
                 .text(step.label);
-
-            nodeG.append('text').attr('y', 24)
-                .attr('text-anchor', 'middle').attr('font-size', '9px')
-                .attr('fill', '#333').attr('font-weight', '500').text(step.sub);
-
             nodeG.transition().delay(i * 200).duration(400).style('opacity', 1);
+            nodeRefs.push(nodeG);
+
+            // Popup, positioned radially outward (per-step override allows
+            // pushing diagonal popups past the security ring)
+            var thisPopupR = step.popupR || defaultPopupR;
+            var px = cx + thisPopupR * Math.cos(angle);
+            var py = cy + thisPopupR * Math.sin(angle);
+
+            var popG = popupLayer.append('g')
+                .attr('class', 'popup-g')
+                .attr('transform', 'translate(' + px + ',' + py + ')')
+                .style('opacity', 0)
+                .style('pointer-events', 'none');
+
+            // Connector: thin line from popup edge → node circle edge
+            var dx = nx - px, dy = ny - py;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            var ux = dx / dist, uy = dy / dist;
+            var tx = (popupW / 2) / Math.max(0.0001, Math.abs(ux));
+            var ty = (popupH / 2) / Math.max(0.0001, Math.abs(uy));
+            var t = Math.min(tx, ty);
+            var cStartX = t * ux, cStartY = t * uy;
+            var cEndX = (nx - px) - nodeR * ux;
+            var cEndY = (ny - py) - nodeR * uy;
+            popG.append('line')
+                .attr('x1', cStartX).attr('y1', cStartY)
+                .attr('x2', cEndX).attr('y2', cEndY)
+                .attr('stroke', step.color).attr('stroke-width', 1.4);
+
+            // Bauhaus card: hard rectangle, hairline stroke, white fill
+            popG.append('rect')
+                .attr('x', -popupW / 2).attr('y', -popupH / 2)
+                .attr('width', popupW).attr('height', popupH)
+                .attr('fill', '#ffffff')
+                .attr('stroke', step.color).attr('stroke-width', 1.5);
+
+            // Signature color block (top-left)
+            popG.append('rect')
+                .attr('x', -popupW / 2 + 12).attr('y', -popupH / 2 + 11)
+                .attr('width', 12).attr('height', 12)
+                .attr('fill', step.color);
+
+            // Label in caps, letter-spaced
+            popG.append('text')
+                .attr('x', -popupW / 2 + 32).attr('y', -popupH / 2 + 22)
+                .attr('font-size', '10px').attr('font-weight', '700')
+                .attr('fill', step.color).attr('letter-spacing', '1.6px')
+                .text(step.label.toUpperCase());
+
+            // Hairline accent rule
+            popG.append('line')
+                .attr('x1', -popupW / 2 + 12).attr('y1', -popupH / 2 + 30)
+                .attr('x2', popupW / 2 - 12).attr('y2', -popupH / 2 + 30)
+                .attr('stroke', step.color).attr('stroke-width', 0.6).attr('stroke-opacity', 0.55);
+
+            // Sub-text (the moved label)
+            popG.append('text')
+                .attr('x', -popupW / 2 + 14).attr('y', -popupH / 2 + 50)
+                .attr('font-size', '13.5px').attr('font-weight', '500')
+                .attr('fill', '#1a2e44')
+                .text(step.sub);
+
+            popupRefs.push(popG);
+
+            // Hover behavior — only show popup on mouse over
+            nodeG.on('mouseenter', function () {
+                nodeRefs.forEach(function (other, j) {
+                    if (j !== i) other.transition().duration(160).style('opacity', 0.42);
+                });
+                d3.select(this).select('circle.node-circle')
+                    .transition().duration(150).attr('stroke-width', 4);
+                popG.transition().duration(180).style('opacity', 1);
+            }).on('mouseleave', function () {
+                nodeRefs.forEach(function (other) {
+                    other.transition().duration(180).style('opacity', 1);
+                });
+                d3.select(this).select('circle.node-circle')
+                    .transition().duration(150).attr('stroke-width', 3);
+                popG.transition().duration(140).style('opacity', 0);
+            });
         });
-
-        // "Security & Compliance" ring — bolder
-        svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', radius + 52)
-            .attr('fill', 'none').attr('stroke', '#c0392b')
-            .attr('stroke-width', 2.5).attr('stroke-dasharray', '8,6')
-            .attr('opacity', 0.5);
-
-        svg.append('text').attr('x', cx).attr('y', cy - radius - 60)
-            .attr('text-anchor', 'middle').attr('font-size', '12px')
-            .attr('fill', '#c0392b').attr('font-weight', '700')
-            .text('🛡️  SECURITY & COMPLIANCE BAKED INTO EVERY STEP');
     }
 
     // ─── REALM OPERATIONS DIAGRAM ─────────────────────────────
     // Translates the Svelte REALM diagram into a D3 interactive visualization
     // Shows the continuum of care with systems spanning workflow stages
     function realmDiagram(container, config) {
-        var W = 1100, H = 620;
+        var W = 1100, H = 700;
         var svg = d3.select(container).append('svg')
             .attr('viewBox', '0 0 ' + W + ' ' + H)
             .attr('preserveAspectRatio', 'xMidYMid meet')
@@ -1424,8 +1791,8 @@ const VizLibrary = (function () {
               desc: 'Parts, blocks, slides, IHC tracking' },
             { label: 'Downstream', startCol: 7, endCol: 10, row: 1, status: 'retiring', domain: 'diagnostics',
               desc: 'Tumor DNA sequencing workflow' },
-            { label: 'Pathology Portal', startCol: 2, endCol: 10, row: 2, status: 'active', domain: 'diagnostics',
-              desc: 'Unified pathology-centric patient care view' },
+            { label: 'Pathology Portal / Starling / IBIS / Pelican', startCol: 2, endCol: 10, row: 2, status: 'active', domain: 'diagnostics',
+              desc: 'Unified pathology-centric patient care view, clinician dashboards (Starling), Lucene-backed search & cohort discovery (IBIS), and operational analytics (Pelican)' },
             { label: 'Elasticsearch', startCol: 0, endCol: 10, row: 3, status: 'active', domain: 'analytics',
               desc: 'Advanced indexing & analytics across entire continuum' },
             { label: 'Hermes', startCol: 0, endCol: 10, row: 4, status: 'active', domain: 'orchestration',
@@ -1441,7 +1808,11 @@ const VizLibrary = (function () {
             { label: 'CoPath Plus → Beaker', startCol: 0, endCol: 10, row: 7, status: 'retiring', domain: 'asset',
               desc: 'LIS — being replaced by Epic Beaker' },
             { label: 'Dialogue — AI Engine', startCol: 0, endCol: 10, row: 8, status: 'active', domain: 'orchestration',
-              desc: 'Generative AI for sophisticated clinical tasks' }
+              desc: 'Generative AI for sophisticated clinical tasks' },
+            { label: 'BdHub', startCol: 1, endCol: 10, row: 9, status: 'active', domain: 'research',
+              desc: 'Biorepository data hub — specimen-level research data, audited, governed, and queryable across the pathology continuum' },
+            { label: 'CHLOE', startCol: 0, endCol: 10, row: 10, status: 'active', domain: 'research',
+              desc: 'Clinical query and cohort-assembly engine — domain-expert-driven research substrate spanning Person → Research' }
         ];
 
         // Layout constants
@@ -1449,7 +1820,7 @@ const VizLibrary = (function () {
         var gridLeft = marginLeft, gridTop = marginTop + stageBarH + 15;
         var gridW = W - marginLeft * 2, gridH = H - gridTop - 90;
         var colW = gridW / 10;
-        var rowH = gridH / 9;
+        var rowH = gridH / 11;
 
         // Continuum of Care bar
         var stageG = svg.append('g').attr('transform', 'translate(' + marginLeft + ',' + marginTop + ')');
@@ -1614,95 +1985,133 @@ const VizLibrary = (function () {
     // ─── FEEDBACK LOOP COMPARISON (animated) ────────────────────
     // Shows Old Loop (hours) vs New Loop (minutes) as animated cycle diagrams
     function feedbackLoop(container, config) {
+        // Color recalibration — the slide is one of the central arguments of the
+        // talk, so the palette is reworked for:
+        //   • colorblind safety (cool↔warm contrast, not red↔green)
+        //   • temperature semantics (cool = considered/slow, warm = energetic/fast)
+        //   • WCAG-AA text contrast against the warm-cream background
+        //   • visual hierarchy: the orbiting dots POP (kinetic), the loops sit
+        //     calmly, and labels remain quietly legible
         var W = 1050, H = 420;
         var svg = d3.select(container).append('svg')
             .attr('viewBox', '0 0 ' + W + ' ' + H)
             .attr('preserveAspectRatio', 'xMidYMid meet')
-            .style('max-width', '100%');
+            .style('max-width', '100%')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
 
-        // Two loop centers
+        // Warm-cream paper background (matches jig, cognitive-load,
+        // metaphor-to-mechanism, ideas-not-zombies — the deck's epistemic vizzes)
+        var BG    = '#faf7f1';
+        var INK   = '#1f1a14';
+        var MUTED = '#6b5c48';
+        var RULE  = '#a89c85';
+
+        svg.append('rect').attr('width', W).attr('height', H)
+            .attr('fill', BG).attr('rx', 4);
+
+        // Cool↔warm temperature pair (colorblind-safe across all common forms;
+        // both colors pass AA contrast against #faf7f1)
+        var SLATE     = '#3d5b73';   // old loop — considered, anchored
+        var SLATE_DK  = '#1f3447';   // for emphasized text on cream
+        var COPPER    = '#a36015';   // new loop — energetic, ignited
+        var COPPER_DK = '#7a460c';   // for emphasized text on cream
+        var COPPER_HI = '#e89438';   // brighter copper for kinetic orbit dot
+
         var loops = [
             { cx: 240, cy: 210, r: 140, label: 'Old Loop', time: 'Hours → Days',
-              color: '#c0392b', bgColor: 'rgba(192,57,43,0.06)',
+              color: SLATE, colorDark: SLATE_DK, orbitColor: SLATE,
+              bgFill: 'rgba(61,91,115,0.07)',
               steps: ['Write', 'Compile', 'Test', 'Debug', 'Revise'],
               speedLabel: 'COMMIT or ABANDON' },
             { cx: 810, cy: 210, r: 140, label: 'New Loop', time: 'Minutes',
-              color: '#27ae60', bgColor: 'rgba(39,174,96,0.06)',
+              color: COPPER, colorDark: COPPER_DK, orbitColor: COPPER_HI,
+              bgFill: 'rgba(163,96,21,0.07)',
               steps: ['Describe', 'Evaluate', 'Adjust'],
               speedLabel: 'EXPLORE freely' }
         ];
 
-        // Center divider with vs label
+        // Center divider — soft warm taupe so it reads as neutral ground
         svg.append('line').attr('x1', W/2).attr('y1', 30).attr('x2', W/2).attr('y2', H - 30)
-            .attr('stroke', '#334155').attr('stroke-width', 1).attr('stroke-dasharray', '4,4');
+            .attr('stroke', RULE).attr('stroke-width', 1).attr('stroke-dasharray', '4,4')
+            .attr('opacity', 0.55);
         svg.append('text').attr('x', W/2).attr('y', H/2)
-            .attr('text-anchor', 'middle').attr('font-size', '14px')
-            .attr('fill', '#e2e8f0').attr('font-weight', 600).text('vs');
+            .attr('text-anchor', 'middle').attr('font-size', '13px')
+            .attr('fill', MUTED).attr('font-weight', 600).text('vs');
 
         loops.forEach(function(loop, li) {
             var g = svg.append('g').style('opacity', 0);
             var n = loop.steps.length;
 
-            // Background circle
+            // Background circle — quiet temperature wash
             g.append('circle').attr('cx', loop.cx).attr('cy', loop.cy).attr('r', loop.r)
-                .attr('fill', loop.bgColor).attr('stroke', loop.color)
-                .attr('stroke-width', 1).attr('stroke-opacity', 0.3);
+                .attr('fill', loop.bgFill).attr('stroke', loop.color)
+                .attr('stroke-width', 1).attr('stroke-opacity', 0.5);
 
-            // Title above
+            // Title above — emphasized loop color
             g.append('text').attr('x', loop.cx).attr('y', 30)
-                .attr('text-anchor', 'middle').attr('font-size', '16px')
-                .attr('font-weight', 700).attr('fill', loop.color).text(loop.label);
+                .attr('text-anchor', 'middle').attr('font-size', '17px')
+                .attr('font-weight', 700).attr('fill', loop.colorDark).text(loop.label);
             g.append('text').attr('x', loop.cx).attr('y', 50)
-                .attr('text-anchor', 'middle').attr('font-size', '12px')
-                .attr('fill', '#94a3b8').text(loop.time);
+                .attr('text-anchor', 'middle').attr('font-size', '12.5px')
+                .attr('fill', MUTED).attr('font-style', 'italic').text(loop.time);
 
-            // Center text
-            g.append('text').attr('x', loop.cx).attr('y', loop.cy - 8)
-                .attr('text-anchor', 'middle').attr('font-size', '10px')
-                .attr('fill', '#cbd5e1').attr('font-weight', 500).text(loop.speedLabel);
+            // Center "speed label" — emphasized so it reads at distance
+            g.append('text').attr('x', loop.cx).attr('y', loop.cy - 6)
+                .attr('text-anchor', 'middle').attr('font-size', '11px')
+                .attr('font-weight', 700).attr('letter-spacing', '1.5px')
+                .attr('fill', loop.colorDark).text(loop.speedLabel);
 
-            // Step nodes arranged in circle
+            // Layer order matters: arrows go BEHIND nodes so they don't cut
+            // through the white-filled circles or overlap step labels.
+            var arrowsLayer = g.append('g').attr('class', 'arrows-layer');
+            var nodesLayer  = g.append('g').attr('class', 'nodes-layer');
+
+            // Pass 1 — arrows (drawn first, so they sit behind nodes)
             loop.steps.forEach(function(step, i) {
                 var angle = (i / n) * Math.PI * 2 - Math.PI / 2;
                 var x = loop.cx + Math.cos(angle) * (loop.r - 20);
                 var y = loop.cy + Math.sin(angle) * (loop.r - 20);
-
-                // Node
-                var node = g.append('g').style('opacity', 0);
-                node.append('circle').attr('cx', x).attr('cy', y).attr('r', 22)
-                    .attr('fill', '#1e293b').attr('stroke', loop.color)
-                    .attr('stroke-width', 2);
-                node.append('text').attr('x', x).attr('y', y + 1)
-                    .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-                    .attr('font-size', '10px').attr('font-weight', 600)
-                    .attr('fill', '#f0f0f0').text(step);
-
-                node.transition().delay(400 + li * 500 + i * 120).duration(400)
-                    .ease(d3.easeCubicOut).style('opacity', 1);
-
-                // Arrow to next node
                 var nextAngle = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
                 var nx = loop.cx + Math.cos(nextAngle) * (loop.r - 20);
                 var ny = loop.cy + Math.sin(nextAngle) * (loop.r - 20);
-
-                // Midpoint arc
                 var midAngle = ((i + 0.5) / n) * Math.PI * 2 - Math.PI / 2;
                 var mx = loop.cx + Math.cos(midAngle) * (loop.r - 5);
                 var my = loop.cy + Math.sin(midAngle) * (loop.r - 5);
 
                 var arcPath = 'M ' + x + ' ' + y + ' Q ' + mx + ' ' + my + ' ' + nx + ' ' + ny;
-                var arrow = g.append('path').attr('d', arcPath)
+                var arrow = arrowsLayer.append('path').attr('d', arcPath)
                     .attr('fill', 'none').attr('stroke', loop.color)
-                    .attr('stroke-width', 1.5).attr('stroke-opacity', 0.5)
+                    .attr('stroke-width', 1.6).attr('stroke-opacity', 0.6)
                     .attr('marker-end', 'url(#arrow-' + li + ')');
 
                 arrow.style('opacity', 0).transition()
                     .delay(600 + li * 500 + i * 120).duration(300).style('opacity', 1);
             });
 
-            // Animate orbiting dot
-            var orbitDot = g.append('circle').attr('r', 5).attr('fill', loop.color)
-                .attr('opacity', 0.8).attr('filter', 'url(#glow-fb)');
+            // Pass 2 — nodes (drawn second, so they sit on top of arrows)
+            // Light fill / colored stroke / dark text
+            loop.steps.forEach(function(step, i) {
+                var angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+                var x = loop.cx + Math.cos(angle) * (loop.r - 20);
+                var y = loop.cy + Math.sin(angle) * (loop.r - 20);
+
+                var node = nodesLayer.append('g').style('opacity', 0);
+                node.append('circle').attr('cx', x).attr('cy', y).attr('r', 23)
+                    .attr('fill', '#ffffff')
+                    .attr('stroke', loop.color).attr('stroke-width', 2);
+                node.append('text').attr('x', x).attr('y', y + 1)
+                    .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                    .attr('font-size', '10.5px').attr('font-weight', 600)
+                    .attr('fill', INK).text(step);
+
+                node.transition().delay(400 + li * 500 + i * 120).duration(400)
+                    .ease(d3.easeCubicOut).style('opacity', 1);
+            });
+
+            // Orbiting dot — kinetic emphasis (bright on the warm side, anchored on the cool)
+            var orbitDot = g.append('circle').attr('r', 6).attr('fill', loop.orbitColor)
+                .attr('stroke', '#ffffff').attr('stroke-width', 1.5)
+                .attr('opacity', 0.95).attr('filter', 'url(#glow-fb)');
 
             function orbitAnimate() {
                 var dur = li === 0 ? 6000 : 2000; // Old loop slower
@@ -1726,27 +2135,27 @@ const VizLibrary = (function () {
             g.transition().delay(200 + li * 400).duration(500).style('opacity', 1);
         });
 
-        // Arrow marker defs
+        // Arrow marker defs — recolored for the new palette
         var defs = svg.append('defs');
-        [0, 1].forEach(function(i) {
-            var color = i === 0 ? '#c0392b' : '#27ae60';
-            defs.append('marker').attr('id', 'arrow-' + i)
+        [{ id: 0, color: SLATE }, { id: 1, color: COPPER }].forEach(function(m) {
+            defs.append('marker').attr('id', 'arrow-' + m.id)
                 .attr('viewBox', '0 0 10 10').attr('refX', 8).attr('refY', 5)
                 .attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto')
-                .append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z').attr('fill', color).attr('opacity', 0.5);
+                .append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z')
+                .attr('fill', m.color).attr('opacity', 0.65);
         });
-        // Glow filter
+        // Soft glow for orbit dot — calmer than the original
         var filt = defs.append('filter').attr('id', 'glow-fb');
-        filt.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+        filt.append('feGaussianBlur').attr('stdDeviation', '2.5').attr('result', 'blur');
         var merge = filt.append('feMerge');
         merge.append('feMergeNode').attr('in', 'blur');
         merge.append('feMergeNode').attr('in', 'SourceGraphic');
 
-        // Bottom annotation
+        // Bottom annotation — quiet warm-brown italic
         svg.append('text').attr('x', W/2).attr('y', H - 10)
             .attr('text-anchor', 'middle').attr('font-size', '12px')
-            .attr('fill', '#cbd5e1').attr('font-style', 'italic')
-            .text('Speed doesn\'t just change how fast you work. It changes how you think.');
+            .attr('fill', MUTED).attr('font-style', 'italic')
+            .text("Speed doesn’t just change how fast you work. It changes how you think.");
     }
 
 
@@ -1758,9 +2167,11 @@ const VizLibrary = (function () {
             .attr('preserveAspectRatio', 'xMidYMid meet')
             .style('max-width', '100%');
 
-        // Light background to establish context for the test
+        // Warm-cream background — matches jig, metaphor-to-mechanism, ideas-not-zombies, etc.
+        // (The slide's external section background is dark; without this rect, the dark text
+        //  designed for a light surface disappears into the navy.)
         svg.append('rect').attr('width', W).attr('height', H)
-            .attr('fill', '#ffffff').attr('opacity', 0);
+            .attr('fill', '#faf7f1').attr('rx', 4);
 
         // Dark text colors for each segment — high contrast on light fills
         var darkText = {
@@ -1820,8 +2231,8 @@ const VizLibrary = (function () {
                 // Stronger fill so the bar reads clearly
                 segG.append('rect').attr('x', scen.x).attr('y', cumY)
                     .attr('width', barW).attr('height', segH)
-                    .attr('fill', seg.color).attr('fill-opacity', 0.18)
-                    .attr('stroke', seg.color).attr('stroke-width', 1.5).attr('stroke-opacity', 0.6)
+                    .attr('fill', seg.color).attr('fill-opacity', 0.22)
+                    .attr('stroke', seg.color).attr('stroke-width', 1.5).attr('stroke-opacity', 0.85)
                     .attr('rx', 3);
 
                 // Label inside bar — dark text for contrast
@@ -1848,14 +2259,14 @@ const VizLibrary = (function () {
             g.transition().delay(200 + si * 400).duration(400).style('opacity', 1);
         });
 
-        // Methodology sub-labels under column titles
+        // Methodology sub-labels under column titles (slightly darker for legibility)
         svg.append('text').attr('x', 80 + barW / 2).attr('y', startY - 5)
-            .attr('text-anchor', 'middle').attr('font-size', '9px')
-            .attr('fill', '#6b7280').attr('font-style', 'italic')
+            .attr('text-anchor', 'middle').attr('font-size', '9.5px')
+            .attr('fill', '#5b5345').attr('font-style', 'italic')
             .text('Microsoft Time Warp 2024 · IDC · JetBrains 2025');
         svg.append('text').attr('x', 570 + barW / 2).attr('y', startY - 5)
-            .attr('text-anchor', 'middle').attr('font-size', '9px')
-            .attr('fill', '#6b7280').attr('font-style', 'italic')
+            .attr('text-anchor', 'middle').attr('font-size', '9.5px')
+            .attr('fill', '#5b5345').attr('font-style', 'italic')
             .text('METR 2025 + Feb 2026 update · arXiv SLR 2025 · SO Survey');
 
         // Annotation: what freed up
@@ -1867,8 +2278,8 @@ const VizLibrary = (function () {
 
         // Discoverable source link
         annG.append('text').attr('x', W / 2).attr('y', H - 2)
-            .attr('text-anchor', 'middle').attr('font-size', '9px')
-            .attr('fill', '#6b7280').attr('font-style', 'italic')
+            .attr('text-anchor', 'middle').attr('font-size', '9.5px')
+            .attr('fill', '#5b5345').attr('font-style', 'italic')
             .attr('class', 'source-ref')
             .text('Sources & methodology → see Sources slide');
 
@@ -5181,23 +5592,25 @@ const VizLibrary = (function () {
         var green   = '#065f46';
         var crimson = '#991b1b';
 
-        // ─── TITLE BLOCK (centered) ─────────────────────────
-        svg.append('text')
-            .attr('x', W / 2).attr('y', 56)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '26px').attr('font-weight', '700')
-            .attr('fill', accent)
-            .text('IBIS — Natural-Language Search Over Pathology Data');
+        // ─── TITLE BLOCK (centered) — skipped when the slide carries its own title ─
+        if (!config || !config.hideHeader) {
+            svg.append('text')
+                .attr('x', W / 2).attr('y', 56)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '26px').attr('font-weight', '700')
+                .attr('fill', accent)
+                .text('IBIS — Natural-Language Search Over Pathology Data');
 
-        svg.append('text')
-            .attr('x', W / 2).attr('y', 84)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '15px').attr('fill', subInk)
-            .text('What a small team can now deliver — live demo');
+            svg.append('text')
+                .attr('x', W / 2).attr('y', 84)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '15px').attr('fill', subInk)
+                .text('What a small team can now deliver — live demo');
 
-        svg.append('line')
-            .attr('x1', 80).attr('y1', 102).attr('x2', W - 80).attr('y2', 102)
-            .attr('stroke', rule).attr('stroke-width', 1);
+            svg.append('line')
+                .attr('x1', 80).attr('y1', 102).attr('x2', W - 80).attr('y2', 102)
+                .attr('stroke', rule).attr('stroke-width', 1);
+        }
 
         // ─── REGISTER 1: WHAT THE USER DOES ─────────────────
         svg.append('text')
@@ -5209,8 +5622,9 @@ const VizLibrary = (function () {
 
         var topY = 220;
 
-        // Node 1: Clinician (left)
-        var n1x = 170, nodeR = 52;
+        // Node 1: Clinician (far left — pulled in to give the natural-language
+        // question above arrow 1 a much wider canvas)
+        var n1x = 85, nodeR = 52;
         svg.append('circle')
             .attr('cx', n1x).attr('cy', topY).attr('r', nodeR)
             .attr('fill', 'white').attr('stroke', ink).attr('stroke-width', 2);
@@ -5428,7 +5842,7 @@ const VizLibrary = (function () {
             .attr('d', 'M' + (rightBoxX + 30) + ',' + crossArrowY + ' l-9,-5 l0,10 z')
             .attr('fill', accent);
         svg.append('text')
-            .attr('x', perimX).attr('y', crossArrowY - 6)
+            .attr('x', perimX).attr('y', crossArrowY - 12)
             .attr('text-anchor', 'middle').attr('font-size', '11px')
             .attr('font-style', 'italic').attr('fill', subInk)
             .text('the responsible pathway in');
@@ -5657,7 +6071,2933 @@ const VizLibrary = (function () {
     }
 
 
+    // ─── LEARNING OBJECTIVES (Tufte progression) ─────────────
+    function learningObjectives(container, config) {
+        var W = 960, H = 540;
+        var bg = '#1a1a2e', fg = '#e0e0e0', muted = '#7a8a9a';
+        var accent = '#3b82f6', accent2 = '#22c55e', accent3 = '#f59e0b', accent4 = '#8b5cf6', accent5 = '#ef4444';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .style('width', '100%').style('max-height', '80vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        var stages = [
+            { num: '1', label: 'Differentiate', sub: 'Informatics vs IT', detail: 'Why optimization depends\non informatics logic', color: accent, y: 0 },
+            { num: '2', label: 'Identify', sub: 'The Functionality Gap', detail: 'Workflow needs that are\nattainable but absent', color: accent2, y: 1 },
+            { num: '3', label: 'Explain', sub: 'AI Economics', detail: 'How AI changes the cost\nof closing those gaps', color: accent3, y: 0 },
+            { num: '4', label: 'Evaluate', sub: 'Evidence', detail: 'IBIS · Xenonym · WBC ΔΣ\n· this presentation', color: accent4, y: 1 },
+            { num: '5', label: 'Describe', sub: 'The Pathway', detail: 'spec → generate → test\n→ validate → deploy', color: accent5, y: 0 }
+        ];
+
+        var marginX = 100, marginTop = 100;
+        var spacing = (W - 2 * marginX) / (stages.length - 1);
+        var waveAmp = 40;
+
+        // Title
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '22px').attr('font-weight', '700').attr('fill', fg)
+            .text('Learning Objectives');
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 64)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('fill', muted).attr('font-style', 'italic')
+            .text('A progression from understanding to action');
+
+        // Compute positions
+        stages.forEach(function(s, i) {
+            s.cx = marginX + i * spacing;
+            s.cy = marginTop + 160 + s.y * waveAmp;
+        });
+
+        // Draw connecting path (smooth curve through points)
+        var lineGen = d3.line()
+            .x(function(d) { return d.cx; })
+            .y(function(d) { return d.cy; })
+            .curve(d3.curveCatmullRom.alpha(0.5));
+
+        svg.append('path')
+            .attr('d', lineGen(stages))
+            .attr('fill', 'none')
+            .attr('stroke', muted).attr('stroke-width', 2)
+            .attr('stroke-dasharray', function() { return this.getTotalLength(); })
+            .attr('stroke-dashoffset', function() { return this.getTotalLength(); })
+            .transition().duration(1500).ease(d3.easeCubicInOut)
+            .attr('stroke-dashoffset', 0);
+
+        // Draw arrow heads between stages
+        stages.forEach(function(s, i) {
+            if (i === stages.length - 1) return;
+            var next = stages[i + 1];
+            var dx = next.cx - s.cx, dy = next.cy - s.cy;
+            var len = Math.sqrt(dx * dx + dy * dy);
+            var ux = dx / len, uy = dy / len;
+            var ax = next.cx - ux * 32, ay = next.cy - uy * 32;
+            var arrowSize = 6;
+            svg.append('polygon')
+                .attr('points', function() {
+                    var px = -uy, py = ux;
+                    return [
+                        (ax + ux * arrowSize) + ',' + (ay + uy * arrowSize),
+                        (ax + px * arrowSize) + ',' + (ay + py * arrowSize),
+                        (ax - px * arrowSize) + ',' + (ay - py * arrowSize)
+                    ].join(' ');
+                })
+                .attr('fill', muted)
+                .attr('opacity', 0)
+                .transition().delay(1500 + i * 100).duration(300)
+                .attr('opacity', 0.7);
+        });
+
+        // Draw stage nodes
+        var nodeGroups = stages.map(function(s, i) {
+            var g = svg.append('g')
+                .attr('transform', 'translate(' + s.cx + ',' + s.cy + ')')
+                .attr('opacity', 0);
+
+            // Outer glow circle
+            g.append('circle')
+                .attr('r', 28)
+                .attr('fill', 'none')
+                .attr('stroke', s.color).attr('stroke-width', 1.5)
+                .attr('opacity', 0.3);
+
+            // Main circle
+            g.append('circle')
+                .attr('r', 22)
+                .attr('fill', s.color).attr('fill-opacity', 0.15)
+                .attr('stroke', s.color).attr('stroke-width', 2);
+
+            // Number
+            g.append('text')
+                .attr('y', 6)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '16px').attr('font-weight', '700')
+                .attr('fill', s.color)
+                .text(s.num);
+
+            // Verb label (above)
+            g.append('text')
+                .attr('y', -42)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '15px').attr('font-weight', '700')
+                .attr('fill', fg)
+                .text(s.label);
+
+            // Subject (below circle)
+            g.append('text')
+                .attr('y', 46)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('font-weight', '600')
+                .attr('fill', s.color)
+                .text(s.sub);
+
+            // Detail annotation (further below)
+            var detailLines = s.detail.split('\n');
+            detailLines.forEach(function(line, li) {
+                g.append('text')
+                    .attr('y', 64 + li * 14)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10.5px')
+                    .attr('fill', muted)
+                    .text(line);
+            });
+
+            // Animate in with stagger
+            g.transition()
+                .delay(300 + i * 350)
+                .duration(500)
+                .ease(d3.easeCubicOut)
+                .attr('opacity', 1);
+
+            return g;
+        });
+
+        // Bottom annotation — Tufte sparkline-style progression label
+        var progressY = H - 36;
+        svg.append('line')
+            .attr('x1', marginX).attr('x2', W - marginX)
+            .attr('y1', progressY - 14).attr('y2', progressY - 14)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('opacity', 0.4);
+
+        var progLabels = ['Foundations', '', 'Analysis', '', 'Action'];
+        progLabels.forEach(function(lbl, i) {
+            if (!lbl) return;
+            svg.append('text')
+                .attr('x', stages[i].cx).attr('y', progressY)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10px').attr('fill', muted)
+                .attr('letter-spacing', '1.5px')
+                .text(lbl.toUpperCase());
+        });
+    }
+
+
     // ─── REGISTRY (map name → function) ──────────────────────
+    // ─── YOUR ROLE (Tufte-style action ladder on a commitment timeline) ──
+    function yourRole(container, config) {
+        var steps = (config && config.steps) || [];
+        var epigraph = config && config.epigraph;
+        var takeaway = config && config.takeaway;
+
+        var W = 1280, H = 700;
+        var margin = { top: 110, right: 80, bottom: 180, left: 80 };
+        var plotW = W - margin.left - margin.right;
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('width', '100%').style('max-height', '82vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+
+        // Warm paper background
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#faf7f2');
+
+        // Title
+        svg.append('text')
+            .attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '26px').attr('font-weight', '700').attr('fill', '#1a202c')
+            .text('Your Role: What You Can Do Right Now');
+
+        // Epigraph
+        if (epigraph) {
+            svg.append('text')
+                .attr('x', W / 2).attr('y', 74)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', '#64748b')
+                .text('“' + epigraph.text + '”');
+        }
+
+        // Color progression from observer → builder → advocate
+        var colors = ['#64748b', '#0e7490', '#0369a1', '#7c3aed', '#b45309'];
+
+        var n = steps.length;
+        var spacing = plotW / n;
+        var nodeR = 44;
+        var baselineY = margin.top + 160;
+
+        // ─── Flow baseline (ascending line showing rising commitment) ───
+        var lineStartX = margin.left + spacing / 2;
+        var lineEndX = margin.left + plotW - spacing / 2;
+        // Gentle ascending path
+        var linePath = 'M ' + lineStartX + ' ' + (baselineY + 8) +
+                       ' L ' + lineEndX + ' ' + (baselineY - 8);
+
+        // Underlay thicker line (momentum)
+        var linePathEl = svg.append('path')
+            .attr('d', linePath)
+            .attr('fill', 'none')
+            .attr('stroke', '#e2d9c8')
+            .attr('stroke-width', 10)
+            .attr('stroke-linecap', 'round');
+
+        // Animated drawing
+        var totalLen = linePathEl.node().getTotalLength();
+        linePathEl
+            .attr('stroke-dasharray', totalLen + ' ' + totalLen)
+            .attr('stroke-dashoffset', totalLen)
+            .transition().duration(1200).ease(d3.easeCubicInOut)
+            .attr('stroke-dashoffset', 0);
+
+        // Arrowhead at end
+        var defs = svg.append('defs');
+        defs.append('marker')
+            .attr('id', 'role-arrow')
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 5).attr('refY', 0)
+            .attr('markerWidth', 6).attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#b45309');
+
+        svg.append('path')
+            .attr('d', 'M ' + (lineEndX - 18) + ' ' + (baselineY - 6) +
+                       ' L ' + (lineEndX + 8) + ' ' + (baselineY - 10))
+            .attr('fill', 'none').attr('stroke', '#b45309').attr('stroke-width', 2)
+            .attr('marker-end', 'url(#role-arrow)')
+            .style('opacity', 0)
+            .transition().delay(1200).duration(400).style('opacity', 1);
+
+        // Time-commitment scale labels (below the nodes)
+        var scaleLabels = ['TODAY', 'THIS WEEK', 'THIS MONTH', 'THIS QUARTER', 'THIS YEAR'];
+
+        // ─── Each station: numbered disc, verb, description, timeline label ───
+        steps.forEach(function(s, i) {
+            var cx = margin.left + spacing / 2 + i * spacing;
+            // Slight ascending Y to match the line
+            var cy = baselineY + 8 - (i * 16 / (n - 1));
+            var color = colors[i % colors.length];
+
+            var g = svg.append('g').style('opacity', 0);
+
+            // Halo (light)
+            g.append('circle')
+                .attr('cx', cx).attr('cy', cy).attr('r', nodeR + 10)
+                .attr('fill', color).attr('fill-opacity', 0.08);
+
+            // Main disc
+            g.append('circle')
+                .attr('cx', cx).attr('cy', cy).attr('r', nodeR)
+                .attr('fill', '#ffffff')
+                .attr('stroke', color).attr('stroke-width', 3);
+
+            // Number
+            g.append('text')
+                .attr('x', cx).attr('y', cy + 12)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '36px').attr('font-weight', '800')
+                .attr('fill', color)
+                .text(s.number || (i + 1));
+
+            // Action verb (above disc)
+            g.append('text')
+                .attr('x', cx).attr('y', cy - nodeR - 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '17px').attr('font-weight', '700')
+                .attr('fill', '#1a202c')
+                .attr('letter-spacing', '0.5px')
+                .text(s.question || s.verb || s.label || '');
+
+            // Description (below disc) — wrap to ~3 lines
+            var detail = s.detail || s.description || '';
+            var lines = wrapText(detail, 28);
+            lines = lines.slice(0, 3);
+            lines.forEach(function(ln, li) {
+                g.append('text')
+                    .attr('x', cx).attr('y', cy + nodeR + 26 + li * 15)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '11.5px')
+                    .attr('fill', '#475569')
+                    .text(ln);
+            });
+
+            // Timeline tick + label (below description)
+            var tickY = cy + nodeR + 26 + 3 * 15 + 14;
+            g.append('line')
+                .attr('x1', cx).attr('y1', tickY - 4)
+                .attr('x2', cx).attr('y2', tickY + 4)
+                .attr('stroke', color).attr('stroke-width', 2);
+            g.append('text')
+                .attr('x', cx).attr('y', tickY + 18)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10px').attr('font-weight', '700')
+                .attr('fill', color).attr('letter-spacing', '1.5px')
+                .text(scaleLabels[i] || '');
+
+            g.transition().delay(300 + i * 200).duration(400).style('opacity', 1);
+        });
+
+        // ─── Bottom timeline axis (framing "Right Now" commitment curve) ───
+        var axisY = H - 120;
+        svg.append('line')
+            .attr('x1', margin.left).attr('x2', margin.left + plotW)
+            .attr('y1', axisY).attr('y2', axisY)
+            .attr('stroke', '#cbb995').attr('stroke-width', 1);
+
+        svg.append('text')
+            .attr('x', margin.left).attr('y', axisY - 10)
+            .attr('font-size', '10px').attr('font-weight', '700')
+            .attr('fill', '#94a3b8').attr('letter-spacing', '1.5px')
+            .text('IMMEDIATE ACTION');
+        svg.append('text')
+            .attr('x', margin.left + plotW).attr('y', axisY - 10)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10px').attr('font-weight', '700')
+            .attr('fill', '#b45309').attr('letter-spacing', '1.5px')
+            .text('SUSTAINED IMPACT');
+
+        // ─── Takeaway at bottom ───
+        if (takeaway) {
+            svg.append('text')
+                .attr('x', W / 2).attr('y', H - 58)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '15px').attr('font-weight', '600').attr('fill', '#1a202c')
+                .text(takeaway.text);
+            if (takeaway.comment) {
+                svg.append('text')
+                    .attr('x', W / 2).attr('y', H - 32)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', '#64748b')
+                    .text(takeaway.comment);
+            }
+        }
+
+        // Helper: simple word wrap by approximate character count
+        function wrapText(text, maxChars) {
+            var words = String(text).split(/\s+/);
+            var lines = [];
+            var cur = '';
+            words.forEach(function(w) {
+                if ((cur + ' ' + w).trim().length > maxChars) {
+                    if (cur) lines.push(cur.trim());
+                    cur = w;
+                } else {
+                    cur = (cur + ' ' + w).trim();
+                }
+            });
+            if (cur) lines.push(cur);
+            return lines;
+        }
+    }
+
+    // ─── THE JIG (woodworker's metaphor, Tufte discipline) ───
+    function jig(container, config) {
+        var W = 1100, H = 560;
+        var bg = '#faf7f1';                 // warm cream — wood-tone paper
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var wood = '#c9a574';
+        var woodDark = '#8b5a2b';
+        var redInk = '#a03a2e';             // "without" rail — historical
+        var greenInk = '#4a7d3a';           // "with" rail — the new normal
+        var amber = '#b45309';              // AI accent
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '82vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // ── Title & subtitle ──
+        svg.append('text').attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '23px').attr('font-weight', '700').attr('fill', ink)
+            .text('The Jig');
+        svg.append('text').attr('x', W / 2).attr('y', 66)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text("Worth having. Historically never worth building. Until the threshold moved.");
+
+        // ── Two panels ──
+        var panelW = 470, panelH = 250, gap = 40;
+        var leftX = (W - (2 * panelW + gap)) / 2;
+        var rightX = leftX + panelW + gap;
+        var panelY = 100;
+
+        function panelFrame(x, label, sub, stroke) {
+            svg.append('rect').attr('x', x).attr('y', panelY)
+                .attr('width', panelW).attr('height', panelH)
+                .attr('fill', 'none').attr('stroke', stroke).attr('stroke-width', 1)
+                .attr('rx', 6);
+            svg.append('text').attr('x', x + 18).attr('y', panelY + 28)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', stroke)
+                .attr('letter-spacing', '0.5px').text(label);
+            svg.append('text').attr('x', x + 18).attr('y', panelY + 48)
+                .attr('font-size', '11.5px').attr('fill', muted).text(sub);
+        }
+
+        panelFrame(leftX, 'WITHOUT A JIG', 'Each cut is eyeballed. The tool is hand, eye, memory.', redInk);
+        panelFrame(rightX, 'WITH A JIG', 'Build the guide once. Every subsequent cut is identical, fast, defensible.', greenInk);
+
+        // ── LEFT: four irregular cuts ──
+        var piecesY = panelY + 80;
+        var pW = 78, pH = 14;
+        var variance = [0, -5, 3, -2];           // small, realistic variation
+        var times = ['11m', '14m', '9m', '12m'];
+        [0, 1, 2, 3].forEach(function(i) {
+            var px = leftX + 32 + i * 100;
+            svg.append('rect').attr('x', px).attr('y', piecesY)
+                .attr('width', pW + variance[i]).attr('height', pH)
+                .attr('fill', wood).attr('stroke', woodDark).attr('stroke-width', 1);
+            // light grain
+            svg.append('line').attr('x1', px + 2).attr('y1', piecesY + 5)
+                .attr('x2', px + pW + variance[i] - 2).attr('y2', piecesY + 5)
+                .attr('stroke', woodDark).attr('stroke-width', 0.3).attr('opacity', 0.4);
+            svg.append('line').attr('x1', px + 2).attr('y1', piecesY + 10)
+                .attr('x2', px + pW + variance[i] - 2).attr('y2', piecesY + 10)
+                .attr('stroke', woodDark).attr('stroke-width', 0.3).attr('opacity', 0.4);
+            svg.append('text').attr('x', px + (pW + variance[i]) / 2)
+                .attr('y', piecesY + pH + 18)
+                .attr('text-anchor', 'middle').attr('font-size', '10.5px').attr('fill', muted)
+                .text(times[i]);
+        });
+        svg.append('text').attr('x', leftX + panelW / 2).attr('y', piecesY + 70)
+            .attr('text-anchor', 'middle').attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', redInk)
+            .text('4 pieces · 46 minutes · 4 different sizes.');
+        svg.append('text').attr('x', leftX + panelW / 2).attr('y', piecesY + 115)
+            .attr('text-anchor', 'middle').attr('font-size', '12.5px').attr('font-weight', '600').attr('fill', ink)
+            .text('In research: each cohort extracted by hand, every time.');
+
+        // ── RIGHT: jig + four identical cuts ──
+        var jigX = rightX + 32;
+        var jigY = piecesY - 6;
+
+        // the jig itself — a precise template
+        svg.append('rect').attr('x', jigX).attr('y', jigY)
+            .attr('width', pW).attr('height', pH + 10)
+            .attr('fill', woodDark).attr('stroke', '#3e2a11').attr('stroke-width', 1.5)
+            .attr('rx', 2);
+        svg.append('rect').attr('x', jigX + 6).attr('y', jigY + 4)
+            .attr('width', pW - 12).attr('height', pH + 2)
+            .attr('fill', bg).attr('stroke', '#3e2a11').attr('stroke-width', 0.8);
+        svg.append('text').attr('x', jigX + pW / 2).attr('y', jigY - 6)
+            .attr('text-anchor', 'middle').attr('font-size', '9.5px').attr('font-weight', '700')
+            .attr('letter-spacing', '1px').attr('fill', '#3e2a11')
+            .text('JIG');
+        svg.append('text').attr('x', jigX + pW / 2).attr('y', jigY + pH + 34)
+            .attr('text-anchor', 'middle').attr('font-size', '10.5px').attr('fill', muted)
+            .text('48m to build');
+
+        // arrow from jig to pieces
+        svg.append('path')
+            .attr('d', 'M ' + (jigX + pW + 4) + ' ' + (jigY + pH / 2) +
+                       ' L ' + (jigX + pW + 22) + ' ' + (jigY + pH / 2))
+            .attr('fill', 'none').attr('stroke', muted).attr('stroke-width', 1);
+        svg.append('path')
+            .attr('d', 'M ' + (jigX + pW + 22) + ' ' + (jigY + pH / 2) +
+                       ' l -6,-3 l 0,6 z')
+            .attr('fill', muted);
+
+        // three identical pieces
+        [0, 1, 2].forEach(function(i) {
+            var px = jigX + pW + 40 + i * 95;
+            svg.append('rect').attr('x', px).attr('y', piecesY)
+                .attr('width', pW).attr('height', pH)
+                .attr('fill', wood).attr('stroke', woodDark).attr('stroke-width', 1);
+            svg.append('line').attr('x1', px + 2).attr('y1', piecesY + 5)
+                .attr('x2', px + pW - 2).attr('y2', piecesY + 5)
+                .attr('stroke', woodDark).attr('stroke-width', 0.3).attr('opacity', 0.4);
+            svg.append('line').attr('x1', px + 2).attr('y1', piecesY + 10)
+                .attr('x2', px + pW - 2).attr('y2', piecesY + 10)
+                .attr('stroke', woodDark).attr('stroke-width', 0.3).attr('opacity', 0.4);
+            svg.append('text').attr('x', px + pW / 2).attr('y', piecesY + pH + 18)
+                .attr('text-anchor', 'middle').attr('font-size', '10.5px').attr('fill', greenInk)
+                .text('2m');
+        });
+        svg.append('text').attr('x', rightX + panelW / 2).attr('y', piecesY + 70)
+            .attr('text-anchor', 'middle').attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', greenInk)
+            .text('48m (jig) + N × 2m cuts. Break-even at N = 6.');
+        svg.append('text').attr('x', rightX + panelW / 2).attr('y', piecesY + 115)
+            .attr('text-anchor', 'middle').attr('font-size', '12.5px').attr('font-weight', '600').attr('fill', ink)
+            .text('In research: IBIS built once, every cohort after it is free.');
+
+        // ── Break-even sparkline, Tufte style ──
+        var chartY = panelY + panelH + 70;
+        var chartH = 110;
+        var chartX0 = leftX + 30;
+        var chartX1 = rightX + panelW - 30;
+        var chartMid = (chartX0 + chartX1) / 2;
+
+        // x-axis (number of uses, n)
+        var N = 20;
+        var xs = d3.scaleLinear().domain([0, N]).range([chartX0, chartX1]);
+        var ys = d3.scaleLinear().domain([0, 240]).range([chartY + chartH, chartY]);
+
+        // without-jig line: cost = n * 12
+        var withoutPath = d3.range(0, N + 1).map(function(n) { return { n: n, t: n * 12 }; });
+        // with-jig line: cost = 48 + n * 2
+        var withPath = d3.range(0, N + 1).map(function(n) { return { n: n, t: 48 + n * 2 }; });
+        var lg = d3.line().x(function(d) { return xs(d.n); }).y(function(d) { return ys(d.t); });
+
+        // axes (quiet Tufte rules)
+        svg.append('line').attr('x1', chartX0).attr('x2', chartX1)
+            .attr('y1', chartY + chartH).attr('y2', chartY + chartH)
+            .attr('stroke', muted).attr('stroke-width', 0.5);
+
+        svg.append('text').attr('x', chartX0 - 4).attr('y', chartY - 6)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('fill', muted).attr('font-style', 'italic')
+            .text('cumulative time (min)');
+        svg.append('text').attr('x', chartX1).attr('y', chartY + chartH + 16)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('fill', muted).attr('font-style', 'italic')
+            .text('number of uses, N →');
+
+        // without-jig line
+        svg.append('path').datum(withoutPath).attr('d', lg)
+            .attr('fill', 'none').attr('stroke', redInk).attr('stroke-width', 1.5);
+        // with-jig line
+        svg.append('path').datum(withPath).attr('d', lg)
+            .attr('fill', 'none').attr('stroke', greenInk).attr('stroke-width', 1.5);
+
+        // labels at the right edge
+        svg.append('text').attr('x', chartX1 + 6)
+            .attr('y', ys(withoutPath[N].t) + 3)
+            .attr('font-size', '10.5px').attr('fill', redInk)
+            .text('without a jig');
+        svg.append('text').attr('x', chartX1 + 6)
+            .attr('y', ys(withPath[N].t) + 3)
+            .attr('font-size', '10.5px').attr('fill', greenInk)
+            .text('with a jig');
+
+        // break-even marker at N=6, t=72
+        var beX = xs(6), beY = ys(72);
+        svg.append('circle').attr('cx', beX).attr('cy', beY).attr('r', 3.5)
+            .attr('fill', bg).attr('stroke', ink).attr('stroke-width', 1.3);
+        svg.append('text').attr('x', beX).attr('y', beY - 10)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('fill', ink).attr('font-style', 'italic')
+            .text('break-even, N = 6');
+
+        // threshold-of-buildability annotation
+        var thY = chartY + chartH + 40;
+        svg.append('text').attr('x', W / 2).attr('y', thY)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('letter-spacing', '1.5px')
+            .attr('fill', muted)
+            .text('THE THRESHOLD OF BUILDABILITY');
+        svg.append('text').attr('x', W / 2).attr('y', thY + 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', ink)
+            .text('For two decades most research jigs cost more than they saved. The curve sat above the threshold.');
+        svg.append('text').attr('x', W / 2).attr('y', thY + 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', amber)
+            .text('↓ AI-assisted development: the threshold fell by two orders of magnitude.');
+    }
+
+    // ─── DATA AS INVENTORY vs. DATA AS FLOW (lake vs. streams) ───
+    function dataFlowVsInventory(container, config) {
+        var W = 1200, H = 560;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var lakeFill = '#4b5e6e';
+        var lakeStroke = '#2f3d4a';
+        var streamColor = '#3a7d4a';
+        var streamAccent = '#22553a';
+        var gateColor = '#8b5a2b';
+        var crimson = '#a03a2e';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '86vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title
+        svg.append('text').attr('x', W / 2).attr('y', 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '23px').attr('font-weight', '700').attr('fill', ink)
+            .text('Data as Inventory  vs.  Data as Flow');
+        svg.append('text').attr('x', W / 2).attr('y', 64)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text("A lake is a pile; you cannot meaningfully audit a pile. A stream is narrow; the tap, the pipe, the destination are all inspectable.");
+
+        // Two panels
+        var panelW = 500, gap = 40;
+        var leftX = (W - (2 * panelW + gap)) / 2;
+        var rightX = leftX + panelW + gap;
+        var panelY = 90;
+        var panelH = 400;
+
+        // ── LEFT: THE LAKE ──
+        svg.append('text').attr('x', leftX + panelW / 2).attr('y', panelY + 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '1.5px').attr('fill', lakeStroke)
+            .text('THE LAKE \u2014 inventory thinking');
+        svg.append('text').attr('x', leftX + panelW / 2).attr('y', panelY + 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text("\u201CCollect everything. Store it. Index it. Hope someone uses it.\u201D");
+
+        // The lake — an irregular blob
+        var lakeCX = leftX + panelW / 2;
+        var lakeCY = panelY + 220;
+        var lakePath = 'M ' + (lakeCX - 180) + ' ' + (lakeCY - 40) +
+                       ' C ' + (lakeCX - 200) + ' ' + (lakeCY - 90) + ',' +
+                              (lakeCX - 110) + ' ' + (lakeCY - 110) + ',' +
+                              (lakeCX - 40) + ' ' + (lakeCY - 100) +
+                       ' C ' + (lakeCX + 60) + ' ' + (lakeCY - 115) + ',' +
+                              (lakeCX + 180) + ' ' + (lakeCY - 75) + ',' +
+                              (lakeCX + 195) + ' ' + (lakeCY - 10) +
+                       ' C ' + (lakeCX + 210) + ' ' + (lakeCY + 60) + ',' +
+                              (lakeCX + 120) + ' ' + (lakeCY + 100) + ',' +
+                              (lakeCX + 30) + ' ' + (lakeCY + 105) +
+                       ' C ' + (lakeCX - 80) + ' ' + (lakeCY + 115) + ',' +
+                              (lakeCX - 200) + ' ' + (lakeCY + 65) + ',' +
+                              (lakeCX - 180) + ' ' + (lakeCY - 40) + ' Z';
+        svg.append('path').attr('d', lakePath)
+            .attr('fill', lakeFill).attr('fill-opacity', 0.25)
+            .attr('stroke', lakeStroke).attr('stroke-width', 1.2);
+
+        // Random data dots inside the lake (schema-less, undifferentiated)
+        var dotRng = 0;
+        function seedRand() { dotRng = (dotRng * 9301 + 49297) % 233280; return dotRng / 233280; }
+        dotRng = 7;
+        for (var di = 0; di < 140; di++) {
+            var dx = lakeCX - 170 + seedRand() * 350;
+            var dy = lakeCY - 90 + seedRand() * 185;
+            // reject dots outside roughly-elliptical bounds
+            var ex = (dx - lakeCX) / 185;
+            var ey = (dy - lakeCY) / 100;
+            if (ex * ex + ey * ey > 0.9) continue;
+            svg.append('circle').attr('cx', dx).attr('cy', dy).attr('r', 1.3)
+                .attr('fill', lakeStroke).attr('fill-opacity', 0.35);
+        }
+
+        // Gates around the lake (bureaucratic perimeter)
+        var gatePositions = [
+            { gx: lakeCX - 190, gy: lakeCY - 15 },
+            { gx: lakeCX - 90,  gy: lakeCY - 108 },
+            { gx: lakeCX + 80,  gy: lakeCY - 110 },
+            { gx: lakeCX + 200, gy: lakeCY + 10 },
+            { gx: lakeCX + 100, gy: lakeCY + 108 },
+            { gx: lakeCX - 100, gy: lakeCY + 112 }
+        ];
+        gatePositions.forEach(function(g) {
+            // small padlock-ish symbol
+            svg.append('rect').attr('x', g.gx - 4).attr('y', g.gy - 4)
+                .attr('width', 8).attr('height', 8).attr('rx', 1)
+                .attr('fill', 'none').attr('stroke', gateColor).attr('stroke-width', 1.3);
+            svg.append('path').attr('d', 'M ' + (g.gx - 2.5) + ' ' + (g.gy - 4) +
+                                       ' a 2.5 2 0 0 1 5 0')
+                .attr('fill', 'none').attr('stroke', gateColor).attr('stroke-width', 1.1);
+        });
+
+        // Analyst figures (the priesthood) on the shores
+        function stickFigure(x, y, rod) {
+            var g = svg.append('g');
+            g.append('circle').attr('cx', x).attr('cy', y).attr('r', 3.5)
+                .attr('fill', 'none').attr('stroke', ink).attr('stroke-width', 1);
+            g.append('line').attr('x1', x).attr('x2', x).attr('y1', y + 3.5).attr('y2', y + 16)
+                .attr('stroke', ink).attr('stroke-width', 1);
+            g.append('line').attr('x1', x - 4).attr('x2', x + 4).attr('y1', y + 9).attr('y2', y + 9)
+                .attr('stroke', ink).attr('stroke-width', 1);
+            g.append('line').attr('x1', x).attr('x2', x - 3).attr('y1', y + 16).attr('y2', y + 23)
+                .attr('stroke', ink).attr('stroke-width', 1);
+            g.append('line').attr('x1', x).attr('x2', x + 3).attr('y1', y + 16).attr('y2', y + 23)
+                .attr('stroke', ink).attr('stroke-width', 1);
+            if (rod) {
+                g.append('line').attr('x1', x + 4).attr('x2', x + rod.tx).attr('y1', y + 8).attr('y2', y + rod.ty)
+                    .attr('stroke', muted).attr('stroke-width', 0.7);
+            }
+        }
+        stickFigure(lakeCX - 220, lakeCY - 35, { tx: 36, ty: 40 });
+        stickFigure(lakeCX + 215, lakeCY + 30, { tx: -40, ty: -10 });
+        stickFigure(lakeCX - 60, lakeCY + 130, { tx: 30, ty: -28 });
+
+        // Caption below the lake
+        svg.append('text').attr('x', leftX + panelW / 2).attr('y', panelY + panelH - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', crimson)
+            .text('Centralized data without contextual usability.');
+
+        // ── RIGHT: THE STREAMS ──
+        svg.append('text').attr('x', rightX + panelW / 2).attr('y', panelY + 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '1.5px').attr('fill', streamAccent)
+            .text('THE STREAMS \u2014 flow thinking');
+        svg.append('text').attr('x', rightX + panelW / 2).attr('y', panelY + 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text("\u201CCapture the relevant slice at the point of generation. Security and audit baked in.\u201D");
+
+        // Clinical event sources at the top
+        var srcY = panelY + 68;
+        var sources = [
+            { x: rightX + 70,  label: 'HL7 orders' },
+            { x: rightX + 170, label: 'path reports' },
+            { x: rightX + 270, label: 'EHR vitals' },
+            { x: rightX + 370, label: 'imaging' },
+            { x: rightX + 450, label: 'consents' }
+        ];
+        sources.forEach(function(s) {
+            // pulse dot
+            svg.append('circle').attr('cx', s.x).attr('cy', srcY).attr('r', 4)
+                .attr('fill', streamColor);
+            svg.append('circle').attr('cx', s.x).attr('cy', srcY).attr('r', 8)
+                .attr('fill', 'none').attr('stroke', streamColor).attr('stroke-opacity', 0.4).attr('stroke-width', 0.8);
+            svg.append('text').attr('x', s.x).attr('y', srcY - 12)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('fill', ink)
+                .text(s.label);
+        });
+
+        // Purpose-built pools at the bottom
+        var poolY = panelY + 300;
+        var pools = [
+            { cx: rightX + 100, label: 'biorepository', sources: [0, 1, 4] },
+            { cx: rightX + 230, label: 'CHLOE',         sources: [1, 2, 3] },
+            { cx: rightX + 360, label: 'BdHub',         sources: [0, 1, 4] },
+            { cx: rightX + 460, label: 'IBIS index',    sources: [1] }
+        ];
+        pools.forEach(function(p) {
+            // small rounded pool
+            svg.append('rect').attr('x', p.cx - 42).attr('y', poolY)
+                .attr('width', 84).attr('height', 32).attr('rx', 16)
+                .attr('fill', streamColor).attr('fill-opacity', 0.15)
+                .attr('stroke', streamAccent).attr('stroke-width', 1);
+            svg.append('text').attr('x', p.cx).attr('y', poolY + 20)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11.5px').attr('font-weight', '700').attr('fill', streamAccent)
+                .text(p.label);
+        });
+
+        // Draw streams from sources to pools with a tap on each stream
+        pools.forEach(function(p) {
+            p.sources.forEach(function(si) {
+                var s = sources[si];
+                var sx = s.x, sy = srcY + 6;
+                var px = p.cx, py = poolY;
+                // gentle cubic curve
+                svg.append('path')
+                    .attr('d', 'M ' + sx + ' ' + sy +
+                               ' C ' + sx + ' ' + (sy + 80) + ',' +
+                                       px + ' ' + (py - 80) + ',' +
+                                       px + ' ' + py)
+                    .attr('fill', 'none').attr('stroke', streamColor)
+                    .attr('stroke-width', 1.4).attr('stroke-opacity', 0.7);
+                // tap symbol midway
+                var tapX = (sx + px) / 2 + (si - 1) * 5;
+                var tapY = (sy + py) / 2;
+                svg.append('rect').attr('x', tapX - 4).attr('y', tapY - 2)
+                    .attr('width', 8).attr('height', 4)
+                    .attr('fill', '#faf7f1').attr('stroke', streamAccent).attr('stroke-width', 0.8);
+                svg.append('line').attr('x1', tapX).attr('x2', tapX).attr('y1', tapY - 2).attr('y2', tapY - 6)
+                    .attr('stroke', streamAccent).attr('stroke-width', 0.8);
+            });
+        });
+
+        // Caption below the streams
+        svg.append('text').attr('x', rightX + panelW / 2).attr('y', panelY + panelH - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', streamAccent)
+            .text('Each tap is narrow, audited, purpose-built. The pool fits the question.');
+
+        // Bottom line — the argument
+        svg.append('text').attr('x', W / 2).attr('y', H - 34)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('The old paradigm was right in 2005, when building was the expensive part. That era ended.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Streams are easier to audit than lakes. You control the tap, the pipe, and the destination.');
+    }
+
+    // ─── UNLOCKED ZONE — the band between two thresholds of buildability ───
+    function unlockedZone(container, config) {
+        var W = 1280, H = 760;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var faded = '#a89c85';
+        var amber = '#b45309';
+        var amberLight = '#d4893e';
+        var crimson = '#a03a2e';
+        var green = '#4a7d3a';
+        var slate = '#4b5e6e';
+        var wood = '#8b5a2b';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '90vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title + subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '25px').attr('font-weight', '700').attr('fill', ink)
+            .text('What Else Unlocks');
+        svg.append('text').attr('x', W / 2).attr('y', 68)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('The jig, the clamps, the workbench \u2014 the band of tools that were always worth having, never worth building.');
+
+        // ── Chart geometry ──
+        var chartX0 = 80;
+        var chartX1 = W - 80;
+        var oldY = 130;          // old threshold line
+        var newY = 455;          // new threshold line
+        var bandTop = oldY;
+        var bandBot = newY;
+
+        // Y-axis label
+        svg.append('text').attr('x', 40).attr('y', (oldY + newY) / 2)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', muted)
+            .attr('transform', 'rotate(-90 40 ' + (oldY + newY) / 2 + ')')
+            .text('EFFORT TO BUILD  \u2191');
+
+        // ── Shaded band = the unlocked zone ──
+        svg.append('rect').attr('x', chartX0).attr('y', bandTop)
+            .attr('width', chartX1 - chartX0).attr('height', bandBot - bandTop)
+            .attr('fill', amber).attr('fill-opacity', 0.06);
+
+        // ── Old threshold line (dashed, high) ──
+        svg.append('line').attr('x1', chartX0).attr('x2', chartX1)
+            .attr('y1', oldY).attr('y2', oldY)
+            .attr('stroke', crimson).attr('stroke-width', 1.4).attr('stroke-dasharray', '6,4');
+        svg.append('text').attr('x', chartX0).attr('y', oldY - 6)
+            .attr('font-size', '11.5px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', crimson)
+            .text('THRESHOLD OF BUILDABILITY \u00B7 2020');
+        svg.append('text').attr('x', chartX1).attr('y', oldY - 6)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('above: always built \u2014 the main infrastructure (Epic \u00B7 REDCap \u00B7 data warehouse)');
+
+        // ── New threshold line (solid, low) ──
+        svg.append('line').attr('x1', chartX0).attr('x2', chartX1)
+            .attr('y1', newY).attr('y2', newY)
+            .attr('stroke', green).attr('stroke-width', 1.6);
+        svg.append('text').attr('x', chartX0).attr('y', newY + 18)
+            .attr('font-size', '11.5px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', green)
+            .text('THRESHOLD OF BUILDABILITY \u00B7 2025');
+        svg.append('text').attr('x', chartX1).attr('y', newY + 18)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('below: always trivial \u2014 a spreadsheet, a README, a sticky note');
+
+        // ── Tools in the unlocked zone ──
+        // Each tool = a small dot + label. Y distributed across 4 "rows" for legibility.
+        var tools = [
+            { x: 200,  y: 185, label: 'audit-trail replayer' },
+            { x: 520,  y: 185, label: 'terminology reconciler' },
+            { x: 880,  y: 185, label: 'query-reflection UI' },
+
+            { x: 360,  y: 255, label: 'synthetic-name generator',     note: '(\u2192 Xenonym)' },
+            { x: 700,  y: 255, label: 'adverse-event tracker' },
+            { x: 1050, y: 255, label: 'site-specific dashboard' },
+
+            { x: 200,  y: 325, label: 'HL7 stream monitor' },
+            { x: 520,  y: 325, label: 'randomization helper' },
+            { x: 880,  y: 325, label: 'provenance visualizer' },
+
+            { x: 360,  y: 395, label: 'consent-form builder' },
+            { x: 700,  y: 395, label: 'cohort-delta notifier' },
+            { x: 1050, y: 395, label: 'inclusion-criteria explorer' }
+        ];
+        tools.forEach(function(t) {
+            svg.append('circle').attr('cx', t.x).attr('cy', t.y).attr('r', 4)
+                .attr('fill', amberLight).attr('stroke', amber).attr('stroke-width', 1.2);
+            svg.append('text').attr('x', t.x + 10).attr('y', t.y + 4)
+                .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.85)
+                .text(t.label);
+            if (t.note) {
+                svg.append('text').attr('x', t.x + 10).attr('y', t.y + 18)
+                    .attr('font-size', '10px').attr('font-style', 'italic').attr('fill', muted)
+                    .text(t.note);
+            }
+        });
+
+        // ── "THE UNLOCKED ZONE" callout in the middle-right of the band ──
+        svg.append('text').attr('x', chartX1 - 40).attr('y', bandTop + 30)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '3px').attr('fill', amber)
+            .text('\u21E9  THE UNLOCKED ZONE');
+        svg.append('text').attr('x', chartX1 - 40).attr('y', bandTop + 48)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('always worth having \u2014 never worth building \u2014 now byproducts of the main work');
+
+        // ── Callback to the jig slide ──
+        svg.append('text').attr('x', chartX0 + 12).attr('y', bandBot - 16)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', wood)
+            .text('\u2190 same threshold the jig slide drew. This is what was living below it.');
+
+        // ── Bottom: three main projects and their byproduct children ──
+        var bY = 510;
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', bY).attr('y2', bY)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
+        svg.append('text').attr('x', W / 2).attr('y', bY + 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', ink)
+            .text('HOW BYPRODUCTS APPEAR');
+        svg.append('text').attr('x', W / 2).attr('y', bY + 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('the main project produces the jig; the jig gets reused across the team');
+
+        var projects = [
+            { x: 215, name: 'IBIS',  color: '#2e6da4',
+              byp: ['query-reflection UI', 'synthetic-name generator', 'audit-trail replayer'] },
+            { x: 640, name: 'CHLOE', color: '#ec4899',
+              byp: ['inclusion-criteria explorer', 'cohort-delta notifier', 'site-specific dashboard'] },
+            { x: 1065, name: 'BdHub', color: '#22c55e',
+              byp: ['HL7 stream monitor', 'consent-form builder', 'provenance visualizer'] }
+        ];
+        projects.forEach(function(p) {
+            // Main project node
+            svg.append('rect').attr('x', p.x - 80).attr('y', bY + 60)
+                .attr('width', 160).attr('height', 34).attr('rx', 4)
+                .attr('fill', p.color).attr('fill-opacity', 0.14)
+                .attr('stroke', p.color).attr('stroke-width', 1.5);
+            svg.append('text').attr('x', p.x).attr('y', bY + 82)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '1.5px')
+                .attr('fill', p.color)
+                .text(p.name);
+            // Byproducts below, connected by a short line
+            svg.append('line').attr('x1', p.x).attr('x2', p.x)
+                .attr('y1', bY + 96).attr('y2', bY + 110)
+                .attr('stroke', p.color).attr('stroke-width', 1).attr('stroke-opacity', 0.5);
+            p.byp.forEach(function(b, i) {
+                var byY = bY + 118 + i * 20;
+                svg.append('text').attr('x', p.x).attr('y', byY)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '11px').attr('fill', ink).attr('fill-opacity', 0.75)
+                    .text('\u00B7 ' + b);
+            });
+        });
+
+        // ── Bottom takeaway ──
+        svg.append('line').attr('x1', 80).attr('x2', W - 80)
+            .attr('y1', H - 56).attr('y2', H - 56)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', H - 34)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('AI qualitatively transformed the cost of supplementary technologies.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', amber)
+            .text('You get the jig and the clamps and the workbench \u2014 not just the cut.');
+    }
+
+    // ─── COMPRESSION STACK — what cannot be retrieved ───
+    function compressionStack(container, config) {
+        var W = 1280, H = 760;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var amber = '#b45309';
+        var crimson = '#a03a2e';
+        var green = '#4a7d3a';
+        var livedColor = '#b45309';       // warm amber — the lived encounter
+        var memoryColor = '#8b5a2b';      // wood brown — the physician
+        var recordColor = '#6b7c8f';      // clerical blue-gray — the record
+        var llmColor = '#4b5e6e';         // slate — the LLM
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '92vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title + subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '25px').attr('font-weight', '700').attr('fill', ink)
+            .text('What Cannot Be Retrieved');
+        svg.append('text').attr('x', W / 2).attr('y', 68)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Medicine has lived inside this problem for decades \u2014 through the medical record. We just didn\u2019t name it as compression.');
+
+        // ── FOUR LEVELS OF COMPRESSION ──
+        var levels = [
+            { label: 'THE LIVED ENCOUNTER',
+              sub: 'full fidelity \u00B7 present tense \u00B7 irreducible',
+              detail: 'touch \u00B7 tone \u00B7 hesitation \u00B7 the body you saw suffering \u00B7 the silence before diagnosis',
+              width: 980, color: livedColor },
+            { label: "THE PHYSICIAN\u2019S JUDGMENT",
+              sub: 'the compressed memory \u2014 still mortal',
+              detail: 'pattern \u00B7 intuition \u00B7 tacit judgment \u00B7 ~450 weeks of compressed experience',
+              width: 720, color: memoryColor },
+            { label: 'THE MEDICAL RECORD',
+              sub: 'the clerical residue \u2014 permanent, impoverished',
+              detail: 'ICD \u00B7 RxNorm \u00B7 encounter notes \u00B7 the billing-workflow byproduct',
+              width: 460, color: recordColor },
+            { label: 'THE LLM ON RECORDS',
+              sub: 'a compression of a compression',
+              detail: 'learned from what the record already threw away',
+              width: 250, color: llmColor }
+        ];
+
+        var levelH = 64;
+        var gapBetween = 44;
+        var stackStartY = 100;
+
+        levels.forEach(function(L, i) {
+            var y = stackStartY + i * (levelH + gapBetween);
+            var x = (W - L.width) / 2;
+
+            // Block
+            svg.append('rect').attr('x', x).attr('y', y)
+                .attr('width', L.width).attr('height', levelH)
+                .attr('fill', L.color).attr('fill-opacity', 0.10)
+                .attr('stroke', L.color).attr('stroke-width', 1.5)
+                .attr('rx', 4);
+
+            // Label
+            svg.append('text').attr('x', W / 2).attr('y', y + 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '2px')
+                .attr('fill', L.color)
+                .text(L.label);
+            svg.append('text').attr('x', W / 2).attr('y', y + 40)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+                .text(L.sub);
+            svg.append('text').attr('x', W / 2).attr('y', y + 56)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('fill', ink).attr('fill-opacity', 0.75)
+                .text(L.detail);
+
+            // Arrow to next level (if not last)
+            if (i < levels.length - 1) {
+                var arrowY0 = y + levelH + 2;
+                var arrowY1 = y + levelH + gapBetween - 6;
+                svg.append('line').attr('x1', W / 2).attr('x2', W / 2)
+                    .attr('y1', arrowY0).attr('y2', arrowY1)
+                    .attr('stroke', muted).attr('stroke-width', 1.2);
+                svg.append('path')
+                    .attr('d', 'M ' + (W / 2) + ' ' + arrowY1 + ' l -5 -7 l 10 0 z')
+                    .attr('fill', muted);
+                svg.append('text').attr('x', W / 2 + 60).attr('y', (arrowY0 + arrowY1) / 2 + 4)
+                    .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+                    .text('lossy compression');
+            }
+        });
+
+        // ── Mortality line (between physician judgment and medical record) ──
+        var mortalLineY = stackStartY + 2 * (levelH + gapBetween) - gapBetween / 2;
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', mortalLineY).attr('y2', mortalLineY)
+            .attr('stroke', crimson).attr('stroke-width', 0.9)
+            .attr('stroke-dasharray', '6,4').attr('stroke-opacity', 0.65);
+        svg.append('text').attr('x', W - 80).attr('y', mortalLineY - 6)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', crimson)
+            .text('MORTALITY LINE');
+        svg.append('text').attr('x', 80).attr('y', mortalLineY - 6)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', amber)
+            .text('\u2191 passes with the person');
+        svg.append('text').attr('x', 80).attr('y', mortalLineY + 18)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', recordColor)
+            .text('\u2193 persists indefinitely \u2014 but impoverished');
+
+        // Right-margin fidelity anchors
+        svg.append('text').attr('x', W - 50).attr('y', stackStartY + levelH / 2 + 2)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('letter-spacing', '1.5px').attr('fill', livedColor)
+            .text('fidelity : FULL');
+        svg.append('text').attr('x', W - 50).attr('y', stackStartY + 3 * (levelH + gapBetween) + levelH / 2 + 2)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('letter-spacing', '1.5px').attr('fill', llmColor)
+            .text('fidelity : LOW');
+
+        // ── Empirical-evidence + Yale quote panel ──
+        var eY = stackStartY + levels.length * (levelH + gapBetween) + 20;
+        svg.append('line').attr('x1', 80).attr('x2', W - 80)
+            .attr('y1', eY - 14).attr('y2', eY - 14)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
+        svg.append('text').attr('x', W / 2).attr('y', eY + 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', green)
+            .text('Empirical evidence:');
+        svg.append('text').attr('x', W / 2).attr('y', eY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('fill', ink)
+            .text('LLMs excel on full clinical vignettes. On real medical records, performance collapses.');
+        svg.append('text').attr('x', W / 2).attr('y', eY + 44)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Because the vignette keeps the nuance; the record has already thrown it away.');
+        svg.append('text').attr('x', W / 2).attr('y', eY + 60)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('fill', muted)
+            .text('Hager et al., Nature Medicine, 2024 \u00B7 2,400 real MIMIC cases \u00B7 LLMs significantly worse than physicians');
+
+        // Yale Committee quote
+        svg.append('text').attr('x', W / 2).attr('y', eY + 90)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', crimson)
+            .text('\u201CDeclining public trust in the very idea of human expertise.\u201D');
+        svg.append('text').attr('x', W / 2).attr('y', eY + 106)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('fill', muted)
+            .text('\u2014 Yale Committee on Trust in Higher Education, April 10, 2026');
+
+        // ── Bottom takeaway ──
+        svg.append('line').attr('x1', 80).attr('x2', W - 80)
+            .attr('y1', H - 56).attr('y2', H - 56)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', H - 34)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('The knowledge is retrievable. The lived experience it compressed from is not.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', amber)
+            .text('The \u201Cdeath of expertise\u201D is actually misplaced trust in our compressions.');
+    }
+
+    // ─── TWO ORDERS OF MAGNITUDE — the redistribution, with discipline as hinge ───
+    function twoOrdersShift(container, config) {
+        var W = 1280, H = 700;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var faded = '#a89c85';
+        var amber = '#b45309';
+        var crimson = '#a03a2e';
+        var green = '#4a7d3a';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '90vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title + subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '25px').attr('font-weight', '700').attr('fill', ink)
+            .text('What AI Changed \u2014 Two Orders of Magnitude');
+        svg.append('text').attr('x', W / 2).attr('y', 70)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Not a uniform reduction. A redistribution of effort \u2014 with discipline as the hinge.');
+
+        // ── Two columns: absorbed / amplified ──
+        var absorbedX = 300;
+        var amplifiedX = W - 300;
+        var headerY = 125;
+
+        svg.append('text').attr('x', absorbedX).attr('y', headerY)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', faded)
+            .text('ABSORBED BY AI');
+        svg.append('text').attr('x', absorbedX).attr('y', headerY + 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('mechanical \u00B7 repeatable \u00B7 well-solved');
+
+        svg.append('text').attr('x', amplifiedX).attr('y', headerY)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', green)
+            .text('AMPLIFIED FOR HUMANS');
+        svg.append('text').attr('x', amplifiedX).attr('y', headerY + 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('intellectual \u00B7 judgment \u00B7 domain-specific');
+
+        var absorbedItems = [
+            'boilerplate',
+            'syntax lookup',
+            'framework config',
+            'scaffolding',
+            'CRUD endpoints',
+            'documentation drafts',
+            'test skeletons',
+            'debugging mechanics'
+        ];
+        var amplifiedItems = [
+            'architectural judgment',
+            'security thinking',
+            'risk analysis',
+            'validation &amp; tests',
+            'domain focus',
+            'clinical reasoning',
+            'user empathy',
+            'design intent'
+        ];
+
+        var itemStartY = headerY + 62;
+        var itemGap = 30;
+
+        absorbedItems.forEach(function(item, i) {
+            var yy = itemStartY + i * itemGap;
+            svg.append('text').attr('x', absorbedX - 110).attr('y', yy + 4)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13px').attr('fill', faded)
+                .text('\u2193');
+            svg.append('text').attr('x', absorbedX).attr('y', yy + 4)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13px').attr('fill', faded).attr('font-style', 'italic')
+                .attr('text-decoration', 'line-through')
+                .text(item);
+        });
+
+        amplifiedItems.forEach(function(item, i) {
+            var yy = itemStartY + i * itemGap;
+            svg.append('text').attr('x', amplifiedX - 120).attr('y', yy + 4)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', green)
+                .text('\u2191');
+            svg.append('text').attr('x', amplifiedX).attr('y', yy + 4)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-weight', '600').attr('fill', ink)
+                .html(item);
+        });
+
+        // ── Center pivot: 100× label ──
+        var divY0 = itemStartY - 44;
+        var divY1 = itemStartY + absorbedItems.length * itemGap - 10;
+        // Soft vertical guide
+        svg.append('line').attr('x1', W / 2).attr('x2', W / 2)
+            .attr('y1', divY0 + 30).attr('y2', divY1)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.35);
+
+        // REDISTRIBUTION banner on top
+        svg.append('text').attr('x', W / 2).attr('y', divY0 + 14)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', amber)
+            .text('\u2190  REDISTRIBUTION  \u2192');
+
+        // 100× figure at the center
+        var centerY = (divY0 + divY1) / 2;
+        svg.append('text').attr('x', W / 2).attr('y', centerY - 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '44px').attr('font-weight', '300').attr('fill', amber)
+            .text('100\u00D7');
+        svg.append('text').attr('x', W / 2).attr('y', centerY + 22)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('less effort');
+        svg.append('text').attr('x', W / 2).attr('y', centerY + 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('fill', ink).attr('fill-opacity', 0.75)
+            .text('same gates');
+        svg.append('text').attr('x', W / 2).attr('y', centerY + 78)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('fill', ink).attr('fill-opacity', 0.75)
+            .text('same quality bar');
+
+        // ── Bottom: the discipline hinge ──
+        var forkY = itemStartY + absorbedItems.length * itemGap + 30;
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', forkY - 16).attr('y2', forkY - 16)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
+        svg.append('text').attr('x', W / 2).attr('y', forkY + 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', ink)
+            .text('THE DISCIPLINE HINGE');
+
+        var panelW = (W - 180) / 2;
+        var panelY = forkY + 24;
+        var panelH = 96;
+
+        // Without discipline (crimson)
+        svg.append('rect').attr('x', 60).attr('y', panelY)
+            .attr('width', panelW).attr('height', panelH)
+            .attr('fill', crimson).attr('fill-opacity', 0.08)
+            .attr('stroke', crimson).attr('stroke-width', 1.2).attr('rx', 4);
+        svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', crimson)
+            .text('WITHOUT DISCIPLINE');
+        svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 48)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('fill', ink)
+            .text('AI drift \u00B7 plausible wrong answers \u00B7');
+        svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 66)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('fill', ink)
+            .text('mistakes compound at the new speed');
+        svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 86)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', crimson)
+            .text('the 100\u00D7 does not apply');
+
+        // With discipline (green)
+        svg.append('rect').attr('x', W - 60 - panelW).attr('y', panelY)
+            .attr('width', panelW).attr('height', panelH)
+            .attr('fill', green).attr('fill-opacity', 0.08)
+            .attr('stroke', green).attr('stroke-width', 1.2).attr('rx', 4);
+        svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', green)
+            .text('WITH DISCIPLINE');
+        svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 48)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('fill', ink)
+            .text('same quality gates \u00B7 auditable artifacts \u00B7');
+        svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 66)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('fill', ink)
+            .text('regulated-grade software');
+        svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 86)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', green)
+            .text('100\u00D7 less effort at the same standard');
+
+        // ── Bottom takeaway ──
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', H - 46).attr('y2', H - 46)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', H - 22)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', ink)
+            .text('The shift isn\u2019t less work. It\u2019s different work \u2014 and the discipline is the part that didn\u2019t change.');
+    }
+
+    // ─── THE QUESTION RETURNS — Answerer vs. Interlocutor ───
+    function questionReturns(container, config) {
+        var W = 1280, H = 700;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var amber = '#b45309';
+        var crimson = '#a03a2e';
+        var green = '#4a7d3a';
+        var answererC = '#5a4a6a';           // somber purple-gray — the silent oracle
+        var interlocutorC = '#2e6da4';       // conversational blue
+        var questionerC = '#8b5a2b';          // warm brown — human
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '90vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Small helper: draw a stick figure whose head is at (x, y-16)
+        function stickFigure(parent, x, y, color) {
+            parent.append('circle').attr('cx', x).attr('cy', y - 16).attr('r', 6)
+                .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1.5);
+            parent.append('line').attr('x1', x).attr('x2', x).attr('y1', y - 10).attr('y2', y + 12)
+                .attr('stroke', color).attr('stroke-width', 1.5);
+            parent.append('line').attr('x1', x - 10).attr('x2', x + 10).attr('y1', y).attr('y2', y)
+                .attr('stroke', color).attr('stroke-width', 1.5);
+            parent.append('line').attr('x1', x).attr('x2', x - 7).attr('y1', y + 12).attr('y2', y + 22)
+                .attr('stroke', color).attr('stroke-width', 1.5);
+            parent.append('line').attr('x1', x).attr('x2', x + 7).attr('y1', y + 12).attr('y2', y + 22)
+                .attr('stroke', color).attr('stroke-width', 1.5);
+        }
+
+        // Title + subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 44)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '26px').attr('font-weight', '700').attr('fill', ink)
+            .text('The Question Returns');
+        svg.append('text').attr('x', W / 2).attr('y', 72)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Sheckley\u2019s Answerer was condemned to silence. What we build now is different \u2014 if the questioner arrives prepared.');
+
+        // Layout
+        var panelY = 110;
+        var panelH = 340;
+
+        // ═════ LEFT PANEL: THE ANSWERER ═════
+        var lx0 = 70, lx1 = 610;
+        svg.append('text').attr('x', (lx0 + lx1) / 2).attr('y', panelY - 14)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('letter-spacing', '2.5px')
+            .attr('fill', answererC)
+            .text('THE ANSWERER');
+        svg.append('text').attr('x', (lx0 + lx1) / 2).attr('y', panelY + 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Sheckley\u2019s original \u2014 the oracle');
+
+        svg.append('rect').attr('x', lx0).attr('y', panelY + 22)
+            .attr('width', lx1 - lx0).attr('height', panelH - 22)
+            .attr('fill', 'none').attr('stroke', answererC).attr('stroke-width', 1)
+            .attr('stroke-dasharray', '6,4').attr('rx', 4);
+
+        // Questioner on the left
+        var lqx = lx0 + 70, lqy = panelY + 170;
+        stickFigure(svg, lqx, lqy, questionerC);
+        svg.append('text').attr('x', lqx).attr('y', lqy + 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('fill', muted).text('questioner');
+
+        // Answerer box
+        var aBoxX = lx0 + 260, aBoxY = panelY + 115, aBoxW = 220, aBoxH = 110;
+        svg.append('rect').attr('x', aBoxX).attr('y', aBoxY)
+            .attr('width', aBoxW).attr('height', aBoxH)
+            .attr('fill', answererC).attr('fill-opacity', 0.14)
+            .attr('stroke', answererC).attr('stroke-width', 1.8)
+            .attr('rx', 4);
+        // a single closed "slit" — suggesting an inlet but no dialogue surface
+        svg.append('line').attr('x1', aBoxX + 40).attr('x2', aBoxX + aBoxW - 40)
+            .attr('y1', aBoxY + aBoxH - 18).attr('y2', aBoxY + aBoxH - 18)
+            .attr('stroke', answererC).attr('stroke-width', 2);
+        svg.append('text').attr('x', aBoxX + aBoxW / 2).attr('y', aBoxY + aBoxH / 2 + 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '46px').attr('font-weight', '300').attr('fill', answererC)
+            .text('?');
+
+        // One-way arrow: ask
+        svg.append('line').attr('x1', lqx + 14).attr('y1', lqy - 4)
+            .attr('x2', aBoxX - 10).attr('y2', aBoxY + aBoxH / 2 - 10)
+            .attr('stroke', answererC).attr('stroke-width', 1.5);
+        svg.append('path').attr('d',
+                'M ' + (aBoxX - 10) + ' ' + (aBoxY + aBoxH / 2 - 10) +
+                ' l -8 -3 l 2 7 z')
+            .attr('fill', answererC);
+        svg.append('text').attr('x', (lqx + aBoxX) / 2 + 20).attr('y', lqy - 30)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', answererC)
+            .text('ask  (once)');
+
+        // Return arrow — dashed, broken, crimson = silence or wrong answer
+        svg.append('path').attr('d',
+                'M ' + (aBoxX - 10) + ' ' + (aBoxY + aBoxH / 2 + 20) +
+                ' L ' + (lqx + 20) + ' ' + (lqy + 18))
+            .attr('fill', 'none').attr('stroke', crimson).attr('stroke-width', 1.2)
+            .attr('stroke-dasharray', '3,3').attr('stroke-opacity', 0.75);
+        svg.append('path').attr('d',
+                'M ' + (lqx + 20) + ' ' + (lqy + 18) + ' l 8 -2 l -2 6 z')
+            .attr('fill', crimson).attr('fill-opacity', 0.75);
+        svg.append('text').attr('x', (lqx + aBoxX) / 2 + 20).attr('y', lqy + 63)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', crimson)
+            .text('silence \u2014 or a plausible wrong answer');
+
+        // Bottom caption
+        svg.append('text').attr('x', (lx0 + lx1) / 2).attr('y', panelY + panelH - 34)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', ink)
+            .text('\u201CIn order to ask a question');
+        svg.append('text').attr('x', (lx0 + lx1) / 2).attr('y', panelY + panelH - 16)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', ink)
+            .text('you must already know most of the answer.\u201D');
+
+        // ═════ RIGHT PANEL: THE INTERLOCUTOR ═════
+        var rx0 = 670, rx1 = 1210;
+        svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', panelY - 14)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('letter-spacing', '2.5px')
+            .attr('fill', interlocutorC)
+            .text('THE INTERLOCUTOR');
+        svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', panelY + 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('MCP servers \u00B7 interactive IDEs \u2014 learning tools; one of many');
+
+        svg.append('rect').attr('x', rx0).attr('y', panelY + 22)
+            .attr('width', rx1 - rx0).attr('height', panelH - 22)
+            .attr('fill', 'none').attr('stroke', interlocutorC).attr('stroke-width', 1)
+            .attr('rx', 4);
+
+        // Questioner
+        var rqx = rx0 + 70, rqy = panelY + 170;
+        stickFigure(svg, rqx, rqy, questionerC);
+        svg.append('text').attr('x', rqx).attr('y', rqy + 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('fill', muted).text('questioner');
+
+        // Chat-style Interlocutor — a box containing alternating bubbles
+        var iBoxX = rx0 + 240, iBoxY = panelY + 85, iBoxW = 240, iBoxH = 165;
+        svg.append('rect').attr('x', iBoxX).attr('y', iBoxY)
+            .attr('width', iBoxW).attr('height', iBoxH)
+            .attr('fill', interlocutorC).attr('fill-opacity', 0.08)
+            .attr('stroke', interlocutorC).attr('stroke-width', 1.8)
+            .attr('rx', 6);
+        // Five chat bubbles alternating left/right, converging toward a green success at bottom
+        var bubbles = [
+            { x: iBoxX + 14, y: iBoxY + 14, w: 150, h: 14, color: interlocutorC, op: 0.32, label: '' },
+            { x: iBoxX + iBoxW - 164, y: iBoxY + 36, w: 150, h: 14, color: interlocutorC, op: 0.18, label: '' },
+            { x: iBoxX + 14, y: iBoxY + 58, w: 120, h: 14, color: interlocutorC, op: 0.32, label: '' },
+            { x: iBoxX + iBoxW - 134, y: iBoxY + 80, w: 120, h: 14, color: interlocutorC, op: 0.18, label: '' },
+            { x: iBoxX + 14, y: iBoxY + 102, w: 90,  h: 14, color: interlocutorC, op: 0.32, label: '' },
+            { x: iBoxX + 14, y: iBoxY + 128, w: 80,  h: 18, color: green, op: 0.45, label: '' }
+        ];
+        bubbles.forEach(function(b) {
+            svg.append('rect').attr('x', b.x).attr('y', b.y)
+                .attr('width', b.w).attr('height', b.h).attr('rx', b.h / 2)
+                .attr('fill', b.color).attr('fill-opacity', b.op);
+        });
+        // converge marker (small "✓" near the final green bubble)
+        svg.append('path').attr('d',
+                'M ' + (iBoxX + 102) + ' ' + (iBoxY + 140) +
+                ' l 5 5 l 11 -11')
+            .attr('fill', 'none').attr('stroke', green).attr('stroke-width', 2)
+            .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+
+        // Two-way arrows between questioner and interlocutor (curved, labeled)
+        // ask
+        svg.append('path').attr('d',
+                'M ' + (rqx + 14) + ' ' + (rqy - 12) +
+                ' Q ' + ((rqx + iBoxX) / 2 + 5) + ' ' + (rqy - 40) + ' ' +
+                       (iBoxX - 5) + ' ' + (iBoxY + 25))
+            .attr('fill', 'none').attr('stroke', interlocutorC).attr('stroke-width', 1.4);
+        svg.append('path').attr('d',
+                'M ' + (iBoxX - 5) + ' ' + (iBoxY + 25) + ' l -8 -2 l 3 6 z')
+            .attr('fill', interlocutorC);
+        svg.append('text').attr('x', (rqx + iBoxX) / 2 + 5).attr('y', rqy - 52)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', interlocutorC)
+            .text('ask');
+        // reflect
+        svg.append('path').attr('d',
+                'M ' + (iBoxX - 5) + ' ' + (iBoxY + 55) +
+                ' Q ' + ((rqx + iBoxX) / 2 - 5) + ' ' + (rqy - 6) + ' ' +
+                       (rqx + 14) + ' ' + (rqy + 4))
+            .attr('fill', 'none').attr('stroke', interlocutorC).attr('stroke-width', 1.4);
+        svg.append('path').attr('d',
+                'M ' + (rqx + 14) + ' ' + (rqy + 4) + ' l 6 -3 l 0 7 z')
+            .attr('fill', interlocutorC);
+        svg.append('text').attr('x', (rqx + iBoxX) / 2 - 5).attr('y', rqy + 14)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', interlocutorC)
+            .text('reflect');
+        // refine (second loop, lower)
+        svg.append('path').attr('d',
+                'M ' + (rqx + 14) + ' ' + (rqy + 20) +
+                ' Q ' + ((rqx + iBoxX) / 2 + 5) + ' ' + (rqy + 56) + ' ' +
+                       (iBoxX - 5) + ' ' + (iBoxY + iBoxH - 30))
+            .attr('fill', 'none').attr('stroke', interlocutorC).attr('stroke-width', 1.4);
+        svg.append('path').attr('d',
+                'M ' + (iBoxX - 5) + ' ' + (iBoxY + iBoxH - 30) + ' l -8 -2 l 3 6 z')
+            .attr('fill', interlocutorC);
+        svg.append('text').attr('x', (rqx + iBoxX) / 2 + 10).attr('y', rqy + 64)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', interlocutorC)
+            .text('refine \u2192 converge');
+
+        // Bottom caption
+        svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', panelY + panelH - 34)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', ink)
+            .text('The tool meets her where she is');
+        svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', panelY + panelH - 16)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', ink)
+            .text('\u2014 and helps her converge on the question.');
+
+        // ═════ THE QUESTIONER strip ═════
+        var bY = 500;
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', bY - 14).attr('y2', bY - 14)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
+        svg.append('text').attr('x', W / 2).attr('y', bY + 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', questionerC)
+            .text('THE QUESTIONER');
+        svg.append('text').attr('x', W / 2).attr('y', bY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', ink)
+            .text('arrives prepared \u00B7 brings the question \u00B7 expects both revelation AND disappointment');
+
+        // Two outcome labels flanking
+        svg.append('text').attr('x', 290).attr('y', bY + 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', green)
+            .text('\u2734  revelation');
+        svg.append('text').attr('x', 290).attr('y', bY + 82)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('when the question is ripe, and heard');
+
+        svg.append('text').attr('x', W - 290).attr('y', bY + 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', crimson)
+            .text('\u2718  disappointment');
+        svg.append('text').attr('x', W - 290).attr('y', bY + 82)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('when it is not \u2014 that is still information');
+
+        // Bottom takeaway
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', H - 72).attr('y2', H - 72)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', H - 46)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', ink)
+            .text('That is the difference between an Answerer that fails and an instrument of scientific inquiry that succeeds.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', amber)
+            .text('Bring the question. Expect the revelation. Accept the disappointment. Keep asking.');
+    }
+
+    // ─── THE ASK — five careful moves, each under a loupe ───
+    function theAskFiveLoupes(container, config) {
+        var W = 1280, H = 640;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var amber = '#b45309';
+        var crimson = '#a03a2e';
+        var green = '#4a7d3a';
+        var brass = '#b8865b';
+        var wood = '#8b5a2b';
+        var woodDark = '#3e2a11';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '90vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title + subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 24)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '26px').attr('font-weight', '700').attr('fill', ink)
+            .text('The Opening');
+        svg.append('text').attr('x', W / 2).attr('y', 54)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('The work is already underway. The request is not permission \u2014 it is fair evaluation, institutional recognition, and a path to make the capability durable.');
+
+        // Five stations
+        var stations = [
+            { verb: 'EVALUATE',  phrase: 'judge by evidence, not origin',         color: '#2e6da4', sym: 'doc-check' },
+            { verb: 'RECOGNIZE', phrase: 'as institutional intellectual work',    color: '#8b4a9a', sym: 'stamp' },
+            { verb: 'HARDEN',    phrase: 'security \u00B7 validation \u00B7 audit', color: '#a03a2e', sym: 'shield' },
+            { verb: 'ADOPT',     phrase: 'shared service \u00B7 SSO \u00B7 governance', color: '#4a7d3a', sym: 'gears' },
+            { verb: 'PUBLISH',   phrase: 'methods paper \u00B7 reusable pattern',  color: '#b45309', sym: 'globe' }
+        ];
+
+        var cy = 210;
+        var lensR = 50;
+        var spacing = 250;
+        var startX = 130;
+
+        function drawLensSymbol(g, cx, cy, sym, color) {
+            if (sym === 'doc-check') {
+                g.append('rect').attr('x', cx - 16).attr('y', cy - 19).attr('width', 28).attr('height', 34)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2).attr('rx', 2);
+                // header line
+                g.append('line').attr('x1', cx - 11).attr('y1', cy - 13).attr('x2', cx + 5).attr('y2', cy - 13)
+                    .attr('stroke', color).attr('stroke-width', 1.2);
+                // check
+                g.append('path').attr('d', 'M ' + (cx - 9) + ' ' + (cy + 3) + ' L ' + (cx - 2) + ' ' + (cy + 10) + ' L ' + (cx + 10) + ' ' + (cy - 5))
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2.5)
+                    .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+            } else if (sym === 'stamp') {
+                // Round certified stamp: two concentric rings, tick marks between, checkmark at center
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 20)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2.5);
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 13)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1.3);
+                for (var i = 0; i < 8; i++) {
+                    var tAng = (i / 8) * 2 * Math.PI + Math.PI / 16;
+                    g.append('line')
+                        .attr('x1', cx + Math.cos(tAng) * 14).attr('y1', cy + Math.sin(tAng) * 14)
+                        .attr('x2', cx + Math.cos(tAng) * 19).attr('y2', cy + Math.sin(tAng) * 19)
+                        .attr('stroke', color).attr('stroke-width', 0.9);
+                }
+                g.append('path').attr('d',
+                        'M ' + (cx - 6) + ' ' + cy +
+                        ' L ' + (cx - 1) + ' ' + (cy + 5) +
+                        ' L ' + (cx + 7) + ' ' + (cy - 5))
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2.2)
+                    .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+            } else if (sym === 'gears') {
+                // Two meshed gears: smaller upper-left, larger lower-right
+                function drawGear(gx, gy, gr, teeth) {
+                    g.append('circle').attr('cx', gx).attr('cy', gy).attr('r', gr)
+                        .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1.8);
+                    for (var ti = 0; ti < teeth; ti++) {
+                        var gAng = (ti / teeth) * 2 * Math.PI;
+                        g.append('line')
+                            .attr('x1', gx + Math.cos(gAng) * gr)
+                            .attr('y1', gy + Math.sin(gAng) * gr)
+                            .attr('x2', gx + Math.cos(gAng) * (gr + 3))
+                            .attr('y2', gy + Math.sin(gAng) * (gr + 3))
+                            .attr('stroke', color).attr('stroke-width', 2.2)
+                            .attr('stroke-linecap', 'round');
+                    }
+                    g.append('circle').attr('cx', gx).attr('cy', gy).attr('r', gr * 0.32)
+                        .attr('fill', color).attr('fill-opacity', 0.22)
+                        .attr('stroke', color).attr('stroke-width', 1);
+                }
+                drawGear(cx - 8, cy - 4, 7, 8);
+                drawGear(cx + 9, cy + 5, 9, 10);
+            } else if (sym === 'ripples') {
+                // Water ripples spreading outward from a central drop
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 6)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2);
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 12)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-opacity', 0.7);
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 18)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1).attr('stroke-opacity', 0.4);
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 24)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 0.8).attr('stroke-opacity', 0.22);
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 2.5).attr('fill', color);
+            } else if (sym === 'shield') {
+                // Heater shield outline with central divider + checkmark inside
+                g.append('path').attr('d',
+                        'M ' + (cx - 17) + ' ' + (cy - 17) +
+                        ' L ' + (cx + 17) + ' ' + (cy - 17) +
+                        ' L ' + (cx + 17) + ' ' + (cy - 4) +
+                        ' Q ' + (cx + 17) + ' ' + (cy + 9) + ' ' + cx + ' ' + (cy + 19) +
+                        ' Q ' + (cx - 17) + ' ' + (cy + 9) + ' ' + (cx - 17) + ' ' + (cy - 4) +
+                        ' Z')
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2);
+                // Subtle vertical divider
+                g.append('line').attr('x1', cx).attr('y1', cy - 17).attr('x2', cx).attr('y2', cy + 14)
+                    .attr('stroke', color).attr('stroke-width', 1).attr('stroke-opacity', 0.45);
+                // Checkmark — validation lives inside hardening
+                g.append('path').attr('d',
+                        'M ' + (cx - 7) + ' ' + cy +
+                        ' L ' + (cx - 2) + ' ' + (cy + 5) +
+                        ' L ' + (cx + 8) + ' ' + (cy - 5))
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2.2)
+                    .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+            } else if (sym === 'globe') {
+                // Globe: sphere outline, equator, meridians, latitudes
+                g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 18)
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2);
+                g.append('line').attr('x1', cx - 18).attr('y1', cy).attr('x2', cx + 18).attr('y2', cy)
+                    .attr('stroke', color).attr('stroke-width', 1.3);
+                g.append('path').attr('d', 'M ' + cx + ' ' + (cy - 18) + ' Q ' + (cx + 10) + ' ' + cy + ' ' + cx + ' ' + (cy + 18))
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1);
+                g.append('path').attr('d', 'M ' + cx + ' ' + (cy - 18) + ' Q ' + (cx - 10) + ' ' + cy + ' ' + cx + ' ' + (cy + 18))
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1);
+                g.append('path').attr('d', 'M ' + (cx - 15) + ' ' + (cy - 9) + ' Q ' + cx + ' ' + (cy - 6) + ' ' + (cx + 15) + ' ' + (cy - 9))
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1).attr('stroke-opacity', 0.7);
+                g.append('path').attr('d', 'M ' + (cx - 15) + ' ' + (cy + 9) + ' Q ' + cx + ' ' + (cy + 6) + ' ' + (cx + 15) + ' ' + (cy + 9))
+                    .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1).attr('stroke-opacity', 0.7);
+            }
+        }
+
+        stations.forEach(function(s, i) {
+            var cx = startX + i * spacing;
+            var g = svg.append('g')
+                .attr('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.14))');
+
+            // Station number (above)
+            g.append('text').attr('x', cx).attr('y', cy - lensR - 14)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2.5px')
+                .attr('fill', muted)
+                .text(String(i + 1));
+
+            // Handle (wood) — drawn first so ring overlaps base
+            g.append('line').attr('x1', cx + 37).attr('y1', cy + 37).attr('x2', cx + 80).attr('y2', cy + 80)
+                .attr('stroke', woodDark).attr('stroke-width', 10).attr('stroke-linecap', 'round');
+            g.append('line').attr('x1', cx + 37).attr('y1', cy + 37).attr('x2', cx + 80).attr('y2', cy + 80)
+                .attr('stroke', wood).attr('stroke-width', 6).attr('stroke-linecap', 'round');
+            // wood-grain highlight
+            g.append('line').attr('x1', cx + 42).attr('y1', cy + 40).attr('x2', cx + 75).attr('y2', cy + 73)
+                .attr('stroke', '#c48a52').attr('stroke-width', 0.9).attr('stroke-opacity', 0.6);
+
+            // Outer iron ring
+            g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', lensR + 3)
+                .attr('fill', 'none').attr('stroke', '#2b1a08').attr('stroke-width', 3.5);
+            // Brass ring
+            g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', lensR)
+                .attr('fill', bg).attr('stroke', brass).attr('stroke-width', 1.8);
+            // Glass sheen (upper-left)
+            g.append('ellipse').attr('cx', cx - 18).attr('cy', cy - 18).attr('rx', 17).attr('ry', 9)
+                .attr('fill', 'rgba(255,255,255,0.32)').attr('stroke', 'none')
+                .attr('transform', 'rotate(-30 ' + (cx - 18) + ' ' + (cy - 18) + ')');
+
+            // Symbol inside lens
+            drawLensSymbol(g, cx, cy, s.sym, s.color);
+
+            // Verb below lens
+            g.append('text').attr('x', cx).attr('y', cy + lensR + 32)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px')
+                .attr('fill', s.color)
+                .text(s.verb);
+
+            // Phrase below verb
+            g.append('text').attr('x', cx).attr('y', cy + lensR + 52)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+                .text(s.phrase);
+        });
+
+        // ── Progression strip: from existing evidence to reproducible pattern ──
+        var pY = 400;
+        svg.append('line').attr('x1', 80).attr('x2', W - 80)
+            .attr('y1', pY).attr('y2', pY)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
+        // Left anchor
+        svg.append('text').attr('x', 90).attr('y', pY - 14)
+            .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', green)
+            .text('\u25C6  ALREADY SANCTIONED');
+        svg.append('text').attr('x', 90).attr('y', pY + 20)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('three months of delivery \u00B7 existing controls \u00B7 evolving QMS');
+        // Right anchor
+        svg.append('text').attr('x', W - 90).attr('y', pY - 14)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', crimson)
+            .text('REPRODUCIBLE PATTERN  \u25C6');
+        svg.append('text').attr('x', W - 90).attr('y', pY + 20)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('policy \u00B7 practice \u00B7 methods paper');
+        // Center arrow across the strip
+        svg.append('path')
+            .attr('d', 'M ' + 360 + ' ' + pY + ' L ' + (W - 360) + ' ' + pY)
+            .attr('stroke', amber).attr('stroke-width', 1).attr('stroke-opacity', 0.6);
+        svg.append('path')
+            .attr('d', 'M ' + (W - 360) + ' ' + pY + ' l -9 -5 l 0 10 z')
+            .attr('fill', amber).attr('fill-opacity', 0.7);
+
+        // ── Bottom takeaway ──
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', H - 96).attr('y2', H - 96)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.4);
+        svg.append('text').attr('x', W / 2).attr('y', H - 68)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '22px').attr('font-weight', '700').attr('fill', ink)
+            .attr('letter-spacing', '1px')
+            .text('Not permission.   Recognition.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('font-style', 'italic').attr('fill', amber)
+            .text('Not a side project.   A reproducible institutional pattern.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', muted)
+            .text('Yale should be able to recognize, evaluate, harden, and disseminate innovation built inside its own walls \u2014 not only buy it.');
+    }
+
+    // ─── SHEFFIELD PARALLEL — two timelines, one pattern (simplified) ───
+    function sheffieldParallel(container, config) {
+        var W = 1280, H = 640;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var then = '#8b5a2b';
+        var now = '#2e6da4';
+        var amber = '#b45309';
+        var crimson = '#a03a2e';
+        // Blend-pill colors
+        var pLogic = '#7a4a8f';
+        var pMed   = '#a03a2e';
+        var pHum   = '#b45309';
+        var pCS    = '#2e6da4';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '90vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // ── Title (reframed: pattern, not fight) ──
+        svg.append('text').attr('x', W / 2).attr('y', 28)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '24px').attr('font-weight', '700').attr('fill', ink)
+            .text('Yale Has Walked This Path Before');
+        svg.append('text').attr('x', W / 2).attr('y', 50)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Applied sciences were once dismissed as mere technique. The pattern repeats. Institutions that adapt, lead.');
+
+        var margin = 90;
+        var tx0 = margin, tx1 = W - margin;
+
+        // ── THEN timeline (3 milestones) ──
+        var thenY = 130;
+        svg.append('text').attr('x', tx0).attr('y', thenY - 36)
+            .attr('font-size', '11.5px').attr('font-weight', '700')
+            .attr('letter-spacing', '2.5px').attr('fill', then)
+            .text('THEN \u2014 APPLIED SCIENCES AT YALE');
+        svg.append('line').attr('x1', tx0).attr('x2', tx1)
+            .attr('y1', thenY).attr('y2', thenY)
+            .attr('stroke', then).attr('stroke-width', 1);
+
+        var thenScale = d3.scaleLinear().domain([1795, 1880]).range([tx0, tx1]);
+        var thenMs = [
+            { year: 1804, label: 'Silliman\u2019s first lectures on chemistry', depth: 1 },
+            { year: 1847, label: 'Sheffield Scientific School founded', emphasize: true, depth: 1 },
+            { year: 1861, label: 'named; applied sciences gain footing', depth: 2 }
+        ];
+        thenMs.forEach(function(m) {
+            var mx = thenScale(m.year);
+            var color = m.emphasize ? crimson : then;
+            var labelY = thenY + (m.depth === 2 ? 66 : 44);
+            svg.append('line').attr('x1', mx).attr('x2', mx)
+                .attr('y1', thenY - 5).attr('y2', thenY + 5)
+                .attr('stroke', color).attr('stroke-width', m.emphasize ? 1.8 : 1.2);
+            svg.append('text').attr('x', mx).attr('y', thenY - 14)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', color)
+                .text(m.year);
+            // Always draw a thin connector from tick to label so the relationship is unambiguous
+            svg.append('line').attr('x1', mx).attr('x2', mx)
+                .attr('y1', thenY + 6).attr('y2', labelY - 13)
+                .attr('stroke', color).attr('stroke-width', 0.6).attr('stroke-opacity', 0.55);
+            svg.append('text').attr('x', mx).attr('y', labelY).attr('class', 'tl-label')
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-weight', '600').attr('fill', ink)
+                .text(m.label);
+        });
+
+        // ── Soft pattern-repeats connector ──
+        var cY = 210;
+        svg.append('text').attr('x', W / 2).attr('y', cY)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-weight', '700')
+            .attr('letter-spacing', '2.5px').attr('fill', amber)
+            .text('THE PATTERN REPEATS');
+        // subtle connector arcs — left arc floats above the text, right arc drops below
+        svg.append('path')
+            .attr('d', 'M ' + (W / 2 - 150) + ' ' + (cY - 8) +
+                      ' Q ' + (W / 2 - 85) + ' ' + (cY - 28) + ' ' +
+                             (W / 2 - 20) + ' ' + (cY - 14))
+            .attr('fill', 'none').attr('stroke', amber).attr('stroke-width', 0.8).attr('stroke-opacity', 0.6);
+        svg.append('path')
+            .attr('d', 'M ' + (W / 2 + 20) + ' ' + (cY + 4) +
+                      ' Q ' + (W / 2 + 85) + ' ' + (cY + 22) + ' ' +
+                             (W / 2 + 150) + ' ' + (cY + 8))
+            .attr('fill', 'none').attr('stroke', amber).attr('stroke-width', 0.8).attr('stroke-opacity', 0.6);
+
+        // ── NOW timeline (4 milestones) ──
+        var nowY = 285;
+        svg.append('text').attr('x', tx0).attr('y', nowY - 36)
+            .attr('font-size', '11.5px').attr('font-weight', '700')
+            .attr('letter-spacing', '2.5px').attr('fill', now)
+            .text('NOW \u2014 CLINICAL AND APPLIED INFORMATICS');
+        svg.append('line').attr('x1', tx0).attr('x2', tx1)
+            .attr('y1', nowY).attr('y2', nowY)
+            .attr('stroke', now).attr('stroke-width', 1);
+
+        var nowScale = d3.scaleLinear().domain([1975, 2030]).range([tx0, tx1]);
+        var nowMs = [
+            { year: 1980, label: 'Lincoln & Korpman', depth: 1 },
+            { year: 1984, label: 'Lindberg \u2192 NLM (IAIMS)', depth: 2 },
+            { year: 1989, label: 'AMIA founded', depth: 1 },
+            { year: 2026, label: 'applied informatics', subLabel: 'the institutional answer', emphasize: true, depth: 1 }
+        ];
+        nowMs.forEach(function(m) {
+            var mx = nowScale(m.year);
+            var color = m.emphasize ? crimson : now;
+            var labelY = nowY + (m.depth === 2 ? 66 : 44);
+            svg.append('line').attr('x1', mx).attr('x2', mx)
+                .attr('y1', nowY - 5).attr('y2', nowY + 5)
+                .attr('stroke', color).attr('stroke-width', m.emphasize ? 1.8 : 1.2);
+            svg.append('text').attr('x', mx).attr('y', nowY - 14)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', color)
+                .text(m.year);
+            // Always draw a thin connector from tick to label so the relationship is unambiguous
+            svg.append('line').attr('x1', mx).attr('x2', mx)
+                .attr('y1', nowY + 6).attr('y2', labelY - 13)
+                .attr('stroke', color).attr('stroke-width', 0.6).attr('stroke-opacity', 0.55);
+            svg.append('text').attr('x', mx).attr('y', labelY).attr('class', 'tl-label')
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-weight', '600').attr('fill', ink)
+                .text(m.label);
+            if (m.subLabel) {
+                svg.append('text').attr('x', mx).attr('y', labelY + 15)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+                    .text(m.subLabel);
+            }
+        });
+
+        // ── INFORMATICS IS A BLEND strip ──
+        var blendY = 390;
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', blendY - 16).attr('y2', blendY - 16)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
+        svg.append('text').attr('x', W / 2).attr('y', blendY)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', ink)
+            .text('INFORMATICS IS A BLEND');
+        svg.append('text').attr('x', W / 2).attr('y', blendY + 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('not IT \u00B7 not pure computer science \u00B7 not \u201Cjust engineering\u201D');
+
+        // Four pills
+        var pills = [
+            { label: 'logical sciences',  color: pLogic },
+            { label: 'medicine',          color: pMed },
+            { label: 'humanities',          color: pHum },
+            { label: 'computer science',  color: pCS }
+        ];
+        var pillY = blendY + 40;
+        var pillH = 40;
+        var pillGap = 18;
+        var pillW = (W - 2 * 180 - 3 * pillGap) / 4;
+        pills.forEach(function(p, i) {
+            var px = 180 + i * (pillW + pillGap);
+            svg.append('rect').attr('x', px).attr('y', pillY)
+                .attr('width', pillW).attr('height', pillH)
+                .attr('rx', pillH / 2)
+                .attr('fill', p.color).attr('fill-opacity', 0.12)
+                .attr('stroke', p.color).attr('stroke-width', 1.2);
+            svg.append('text').attr('x', px + pillW / 2).attr('y', pillY + pillH / 2 + 5)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', p.color)
+                .text(p.label);
+            // + between pills
+            if (i < pills.length - 1) {
+                svg.append('text').attr('x', px + pillW + pillGap / 2).attr('y', pillY + pillH / 2 + 5)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '15px').attr('font-weight', '700').attr('fill', muted)
+                    .text('+');
+            }
+        });
+
+        svg.append('text').attr('x', W / 2).attr('y', pillY + pillH + 28)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('fill', ink)
+            .text('Applied informatics = the conscious, careful application of all of the above.');
+        svg.append('text').attr('x', W / 2).attr('y', pillY + pillH + 46)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Xenonym is the live example: it takes an informatician to articulate why \u201Cpick a name, any name\u201D is wrong in a clinical system.');
+
+        // ── Bottom takeaway (reframed) ──
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', H - 64).attr('y2', H - 64)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', H - 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('Reluctance to adapt is a recurring cost. Institutions that recognize the moment, lead.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', amber)
+            .text('Sheffield was the institutional answer in 1847. Applied informatics is the institutional answer now \u2014 wherever it is recognized.');
+    }
+
+    // ─── IDEAS, NOT ZOMBIES — decomposition of the graveyard ───
+    function ideasNotZombies(container, config) {
+        var W = 1280, H = 680;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var faded = '#aa9e87';
+        var amber = '#b45309';
+        var crimson = '#a03a2e';
+        var green = '#4a7d3a';
+        var ideasColor = '#8b4a9a';
+        var algoColor = '#2e6da4';
+        var optColor = '#b45309';
+        var fragColor = '#4a7d3a';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title & subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '24px').attr('font-weight', '700').attr('fill', ink)
+            .text('Ideas, Not Zombies \u2014 Decomposing the Graveyard');
+        svg.append('text').attr('x', W / 2).attr('y', 64)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Abandoned code is a source. AI is archaeologist AND recycler. Discipline is the difference between a latent asset and environmental noise.');
+
+        // Main content block
+        var topY = 102;
+        var botY = 380;
+
+        // ── LEFT PANEL: the Graveyard ──
+        var gx0 = 55, gx1 = 400;
+        svg.append('rect').attr('x', gx0).attr('y', topY)
+            .attr('width', gx1 - gx0).attr('height', botY - topY)
+            .attr('fill', faded).attr('fill-opacity', 0.10)
+            .attr('stroke', faded).attr('stroke-width', 1.2)
+            .attr('stroke-dasharray', '6,4')
+            .attr('rx', 4);
+        svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY - 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-weight', '700')
+            .attr('letter-spacing', '1.5px').attr('fill', muted)
+            .text('THE GRAVEYARD');
+
+        var files = [
+            { name: '.py',    year: '2019', rot: -2.2 },
+            { name: '.R',     year: '2020', rot: 1.6 },
+            { name: '.ipynb', year: '2021', rot: -1.1 },
+            { name: '.sh',    year: '2022', rot: 0.9 }
+        ];
+        files.forEach(function(f, i) {
+            var fx = gx0 + 44 + i * 76;
+            var fy = topY + 46;
+            var g = svg.append('g')
+                .attr('transform', 'translate(' + fx + ',' + fy + ') rotate(' + f.rot + ')');
+            g.append('rect').attr('x', 0).attr('y', 0).attr('width', 54).attr('height', 66)
+                .attr('fill', bg).attr('stroke', faded).attr('stroke-width', 1.2)
+                .attr('rx', 2);
+            g.append('path').attr('d', 'M 42 0 L 54 12 L 42 12 Z')
+                .attr('fill', faded).attr('fill-opacity', 0.35);
+            g.append('line').attr('x1', 42).attr('y1', 0).attr('x2', 42).attr('y2', 12)
+                .attr('stroke', faded).attr('stroke-width', 0.9);
+            g.append('line').attr('x1', 42).attr('y1', 12).attr('x2', 54).attr('y2', 12)
+                .attr('stroke', faded).attr('stroke-width', 0.9);
+            g.append('text').attr('x', 27).attr('y', 36)
+                .attr('text-anchor', 'middle').attr('font-size', '11px').attr('fill', faded)
+                .text(f.name);
+            g.append('text').attr('x', 27).attr('y', 52)
+                .attr('text-anchor', 'middle').attr('font-size', '9.5px').attr('fill', faded)
+                .text(f.year);
+        });
+
+        svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 170)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', faded)
+            .text('author: \u2205');
+        svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 192)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', faded)
+            .text('README.md: empty');
+        svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 212)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', faded)
+            .text('last commit: three years ago');
+        svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 240)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('\u201Cit worked on their laptop. once.\u201D');
+
+        svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', botY + 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', muted)
+            .text('the submerged mass');
+
+        // ── MIDDLE: AI AS ARCHAEOLOGIST / RECYCLER ──
+        var mx0 = 425, mx1 = 720;
+        var mxMid = (mx0 + mx1) / 2;
+        svg.append('text').attr('x', mxMid).attr('y', topY - 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-weight', '700')
+            .attr('letter-spacing', '1.5px').attr('fill', amber)
+            .text('AI AS ARCHAEOLOGIST  \u00B7  AS RECYCLER');
+
+        // Horizontal flow arrow, left to right
+        var midArrowY = topY + 40;
+        svg.append('line').attr('x1', mx0 - 10).attr('x2', mx1 + 10)
+            .attr('y1', midArrowY).attr('y2', midArrowY)
+            .attr('stroke', amber).attr('stroke-width', 1.4);
+        svg.append('path')
+            .attr('d', 'M ' + (mx1 + 10) + ' ' + midArrowY + ' l -10 -5 l 0 10 z')
+            .attr('fill', amber);
+
+        // Four stacked operation labels
+        var fSteps = [
+            { step: 'READ',        detail: 'the source files, dependencies, comments' },
+            { step: 'RECONSTRUCT', detail: 'intent \u2014 what was the author trying to ask?' },
+            { step: 'REGENERATE',  detail: 'missing docs, tests, runnable environment' },
+            { step: 'RESTORE',     detail: 'a working pipeline \u2014 in hours, not months' }
+        ];
+        fSteps.forEach(function(s, i) {
+            var sy = midArrowY + 40 + i * 60;
+            svg.append('text').attr('x', mxMid).attr('y', sy)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-weight', '700')
+                .attr('letter-spacing', '2px').attr('fill', ink)
+                .text(s.step);
+            svg.append('text').attr('x', mxMid).attr('y', sy + 17)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic')
+                .attr('fill', muted)
+                .text(s.detail);
+        });
+
+        // Small recycle glyph under the middle
+        var recycX = mxMid, recycY = botY + 22;
+        svg.append('path')
+            .attr('d', 'M ' + (recycX - 10) + ' ' + (recycY - 4) +
+                       ' a 10 10 0 1 1 14 -6')
+            .attr('fill', 'none').attr('stroke', green).attr('stroke-width', 1.2);
+        svg.append('path')
+            .attr('d', 'M ' + (recycX + 4) + ' ' + (recycY - 12) +
+                       ' l -4 -2 l 4 -2 l 0 4 z')
+            .attr('fill', green);
+        svg.append('text').attr('x', recycX + 16).attr('y', recycY)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', green)
+            .text('recycled, not resurrected');
+
+        // ── RIGHT PANEL: WHAT COMES OUT ──
+        var rx0 = 760, rx1 = 1225;
+        svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', topY - 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-weight', '700')
+            .attr('letter-spacing', '1.5px').attr('fill', ink)
+            .text('WHAT THE DOMAIN EXPERT RECOVERS');
+
+        var outputs = [
+            { label: 'IDEAS',         glyph: '\u2734',  caption: 'the research question the author was trying to ask', color: ideasColor },
+            { label: 'ALGORITHMS',    glyph: '\u25C8',  caption: 'the solvers, classifiers, joins that worked',        color: algoColor },
+            { label: 'OPTIMIZATIONS', glyph: '\u2726',  caption: 'the tricks that made it run on that hardware',       color: optColor },
+            { label: 'FRAGMENTS',     glyph: '\u25FC',  caption: 'clever pieces worth keeping, even if the whole isn\u2019t', color: fragColor }
+        ];
+        outputs.forEach(function(o, i) {
+            var oy = topY + 10 + i * 63;
+            svg.append('rect').attr('x', rx0).attr('y', oy)
+                .attr('width', rx1 - rx0).attr('height', 52)
+                .attr('fill', o.color).attr('fill-opacity', 0.08)
+                .attr('stroke', o.color).attr('stroke-width', 1)
+                .attr('rx', 4);
+            svg.append('text').attr('x', rx0 + 20).attr('y', oy + 33)
+                .attr('font-size', '20px').attr('fill', o.color)
+                .text(o.glyph);
+            svg.append('text').attr('x', rx0 + 56).attr('y', oy + 22)
+                .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '1.5px')
+                .attr('fill', o.color).text(o.label);
+            svg.append('text').attr('x', rx0 + 56).attr('y', oy + 41)
+                .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.78)
+                .text(o.caption);
+        });
+        svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', botY + 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', muted)
+            .text('not zombies \u2014 the latent intellectual asset');
+
+        // ── BOTTOM STRIP: SUSTAINABILITY TENSION ──
+        var bsY = 460;
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', bsY - 14).attr('y2', bsY - 14)
+            .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.6);
+        // (eyebrow "THE METHOD TO THE MADNESS" removed at user request)
+
+        // Left side — cheap for humans
+        svg.append('text').attr('x', 220).attr('y', bsY + 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', green)
+            .text('cheap for humans');
+        svg.append('text').attr('x', 220).attr('y', bsY + 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .text('hours, not months \u00B7 one domain expert + AI');
+        svg.append('text').attr('x', 220).attr('y', bsY + 80)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .text('ephemeral systems at near-zero friction');
+
+        // Right side — expensive electronically
+        svg.append('text').attr('x', W - 220).attr('y', bsY + 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', crimson)
+            .text('expensive electronically');
+        svg.append('text').attr('x', W - 220).attr('y', bsY + 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .text('compute \u00B7 heat \u00B7 electricity \u00B7 grid load');
+        svg.append('text').attr('x', W - 220).attr('y', bsY + 80)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .text('undisciplined, it becomes pollution and noise');
+
+        // Middle hinge — DISCIPLINE
+        svg.append('circle').attr('cx', W / 2).attr('cy', bsY + 58).attr('r', 53)
+            .attr('fill', amber).attr('fill-opacity', 0.10)
+            .attr('stroke', amber).attr('stroke-width', 1.4);  // r bumped 48 → 53 (+10px diameter)
+        svg.append('text').attr('x', W / 2).attr('y', bsY + 54)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', amber)
+            .text('DISCIPLINE');
+        svg.append('text').attr('x', W / 2).attr('y', bsY + 72)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10px').attr('font-style', 'italic').attr('fill', amber)
+            .text('recycle, don\u2019t pollute');
+
+        // Connectors from left to middle, middle to right
+        svg.append('line').attr('x1', 340).attr('x2', W / 2 - 57)
+            .attr('y1', bsY + 58).attr('y2', bsY + 58)
+            .attr('stroke', muted).attr('stroke-width', 0.7);
+        svg.append('line').attr('x1', W / 2 + 57).attr('x2', W - 340)
+            .attr('y1', bsY + 58).attr('y2', bsY + 58)
+            .attr('stroke', muted).attr('stroke-width', 0.7);
+
+        // ── Bottom takeaway line ──
+        svg.append('line').attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', H - 68).attr('y2', H - 68)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', H - 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('The same abandoned corpus is a liability if ignored \u2014 a latent asset if disciplined.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', amber)
+            .text('Sustainability in scientific compute is not about producing less code. It is about recycling the intelligence already in it.');
+    }
+
+    // ─── RESEARCH-SOFTWARE GRAVEYARD (the iceberg) ───
+    function researchIceberg(container, config) {
+        var W = 1200, H = 640;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var waterColor = '#4b7088';
+        var iceAbove = '#eef3f7';
+        var iceAboveStroke = '#8ba0b3';
+        var iceBelow = '#7a94a8';
+        var iceBelowStroke = '#48627a';
+        var amber = '#b45309';
+        var crimson = '#a03a2e';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title & subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '23px').attr('font-weight', '700').attr('fill', ink)
+            .text('The Research-Software Graveyard');
+        svg.append('text').attr('x', W / 2).attr('y', 66)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('What you can find on GitHub is the tip. Most of what was built is already gone.');
+
+        // Layout
+        var waterY = 252;                 // waterline
+        var bottomY = H - 90;             // reserved for caption
+
+        // Water body (subtle tint)
+        svg.append('rect').attr('x', 0).attr('y', waterY)
+            .attr('width', W).attr('height', bottomY - waterY)
+            .attr('fill', waterColor).attr('fill-opacity', 0.10);
+        // Waterline
+        svg.append('line').attr('x1', 0).attr('x2', W)
+            .attr('y1', waterY).attr('y2', waterY)
+            .attr('stroke', waterColor).attr('stroke-width', 0.8).attr('stroke-opacity', 0.55);
+
+        // Waterline labels
+        svg.append('text').attr('x', 30).attr('y', waterY - 6)
+            .attr('font-size', '10.5px').attr('letter-spacing', '1.5px')
+            .attr('font-weight', '700').attr('fill', muted).text('VISIBLE');
+        svg.append('text').attr('x', 30).attr('y', waterY + 16)
+            .attr('font-size', '10.5px').attr('letter-spacing', '1.5px')
+            .attr('font-weight', '700').attr('fill', waterColor).text('LOST');
+
+        // ── TIP (above water) — small, light ──
+        var tipX = W / 2;
+        var tipTop = 120;
+        var tipHalfBase = 60;
+        svg.append('path')
+            .attr('d', 'M ' + tipX + ' ' + tipTop +
+                      ' L ' + (tipX - tipHalfBase) + ' ' + waterY +
+                      ' L ' + (tipX + tipHalfBase) + ' ' + waterY + ' Z')
+            .attr('fill', iceAbove)
+            .attr('stroke', iceAboveStroke).attr('stroke-width', 1);
+
+        // Tip labels (maintained, published, runnable, cited)
+        var tipLabels = [ 'cited', 'runnable', 'published', 'maintained'  ];
+        tipLabels.forEach(function(t, i) {
+            svg.append('text').attr('x', tipX).attr('y', 170 + i * 17)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11.5px').attr('fill', ink)
+                .text(t);
+        });
+
+        // Tip annotation (curl to the right)
+        svg.append('text').attr('x', tipX + 130).attr('y', 128)
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', muted)
+            .text('the tip \u2014 curated, cited, found');
+        svg.append('path')
+            .attr('d', 'M ' + (tipX + 70) + ' 150 Q ' + (tipX + 105) + ' 135 ' + (tipX + 128) + ' 125')
+            .attr('fill', 'none').attr('stroke', muted).attr('stroke-width', 0.6);
+
+        // ── SUBMERGED (below water) — irregular, large ──
+        var sTop = waterY;
+        var sPath = 'M ' + (tipX - tipHalfBase) + ' ' + sTop +
+                    ' L ' + (tipX - 195) + ' ' + (sTop + 50) +
+                    ' L ' + (tipX - 265) + ' ' + (sTop + 130) +
+                    ' L ' + (tipX - 290) + ' ' + (sTop + 210) +
+                    ' L ' + (tipX - 215) + ' ' + (bottomY - 20) +
+                    ' L ' + (tipX + 60) + ' ' + bottomY +
+                    ' L ' + (tipX + 230) + ' ' + (bottomY - 40) +
+                    ' L ' + (tipX + 285) + ' ' + (sTop + 180) +
+                    ' L ' + (tipX + 245) + ' ' + (sTop + 90) +
+                    ' L ' + (tipX + 120) + ' ' + (sTop + 35) +
+                    ' L ' + (tipX + tipHalfBase) + ' ' + sTop + ' Z';
+        svg.append('path').attr('d', sPath)
+            .attr('fill', iceBelow).attr('fill-opacity', 0.55)
+            .attr('stroke', iceBelowStroke).attr('stroke-width', 1);
+
+        // Graveyard labels (scattered inside the submerged mass)
+        var grave = [
+            { x: tipX - 185, y: sTop + 85,  text: "postdoc\u2019s laptop, 2019" },
+            { x: tipX - 55,  y: sTop + 105, text: "abandoned after grad school" },
+            { x: tipX + 120, y: sTop + 85,  text: "link rot" },
+            { x: tipX - 215, y: sTop + 165, text: "unfinished" },
+            { x: tipX + 70,  y: sTop + 175, text: "funding expired" },
+            { x: tipX - 70,  y: sTop + 220, text: "not reproducible" },
+            { x: tipX + 190, y: sTop + 150, text: "README left blank" },
+            { x: tipX - 140, y: sTop + 280, text: "only ran on that one server" },
+            { x: tipX + 60,  y: sTop + 250, text: "author unreachable" },
+            { x: tipX + 180, y: sTop + 240, text: "dependency broken" },
+            { x: tipX - 30,  y: sTop + 320, text: "forgotten" }
+        ];
+        grave.forEach(function(g) {
+            svg.append('text').attr('x', g.x).attr('y', g.y)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-style', 'italic')
+                .attr('fill', ink).attr('fill-opacity', 0.72)
+                .text(g.text);
+        });
+
+        // Submerged annotation — left edge, outside the iceberg
+        svg.append('text').attr('x', 40).attr('y', sTop + 170)
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', waterColor)
+            .text('The graveyard.');
+        svg.append('text').attr('x', 40).attr('y', sTop + 192)
+            .attr('font-size', '11.5px').attr('fill', muted)
+            .text('Postdocs write it.');
+        svg.append('text').attr('x', 40).attr('y', sTop + 208)
+            .attr('font-size', '11.5px').attr('fill', muted)
+            .text('Postdocs leave.');
+        svg.append('text').attr('x', 40).attr('y', sTop + 230)
+            .attr('font-size', '11.5px').attr('fill', muted)
+            .text('Nobody else knows');
+        svg.append('text').attr('x', 40).attr('y', sTop + 246)
+            .attr('font-size', '11.5px').attr('fill', muted)
+            .text('how it worked.');
+        svg.append('text').attr('x', 40).attr('y', sTop + 272)
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', crimson)
+            .text('Rebuilding used to');
+        svg.append('text').attr('x', 40).attr('y', sTop + 288)
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', crimson)
+            .text('cost a month.');
+
+        // ── Bottom rhetorical flip ──
+        svg.append('line')
+            .attr('x1', 60).attr('x2', W - 60)
+            .attr('y1', H - 64).attr('y2', H - 64)
+            .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', H - 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('What changes when rebuilding costs hours, not months?');
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', amber)
+            .text('The domain expert can own the whole loop \u2014 not just the first version, but every restoration after.');
+
+        // ── LOUPE — magnifying glass for the graveyard labels ──
+        var defs = svg.append('defs');
+        var clipId = 'iceberg-loupe-clip-' + Math.random().toString(36).slice(2, 8);
+        var lclip = defs.append('clipPath').attr('id', clipId).attr('clipPathUnits', 'userSpaceOnUse');
+        var lclipCircle = lclip.append('circle').attr('r', 74).attr('cx', -1000).attr('cy', -1000);
+
+        var loupeScale = 2.0;
+
+        // Magnified-content layer (clipped). Includes a cream tint disc + redrawn labels + redrawn iceberg outlines for context.
+        var loupeContent = svg.append('g')
+            .attr('class', 'iceberg-loupe-content')
+            .attr('clip-path', 'url(#' + clipId + ')')
+            .style('display', 'none')
+            .style('pointer-events', 'none');
+
+        // Tint disc — makes magnified text pop cleanly against the original small labels underneath
+        loupeContent.append('rect')
+            .attr('x', 0).attr('y', 0).attr('width', W).attr('height', H)
+            .attr('fill', '#faf7f1').attr('fill-opacity', 0.55);
+
+        // Redraw submerged iceberg silhouette inside the loupe (so edges read correctly at zoom)
+        loupeContent.append('path').attr('d', sPath)
+            .attr('fill', iceBelow).attr('fill-opacity', 0.42)
+            .attr('stroke', iceBelowStroke).attr('stroke-width', 0.8);
+
+        // Magnified grave labels — clearer, bolder, fully visible
+        grave.forEach(function(g) {
+            loupeContent.append('text').attr('x', g.x).attr('y', g.y)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px')
+                .attr('font-style', 'italic')
+                .attr('font-weight', '600')
+                .attr('fill', ink).attr('fill-opacity', 0.96)
+                .text(g.text);
+        });
+
+        // ── Loupe frame (wood handle + brass-and-iron ring) ──
+        var loupeFrame = svg.append('g')
+            .attr('class', 'iceberg-loupe-frame')
+            .style('display', 'none')
+            .style('pointer-events', 'none');
+
+        // Handle (wood) — drawn first so the ring overlaps its base
+        loupeFrame.append('line').attr('x1', 52).attr('y1', 52).attr('x2', 108).attr('y2', 108)
+            .attr('stroke', '#3e2a11').attr('stroke-width', 12).attr('stroke-linecap', 'round');
+        loupeFrame.append('line').attr('x1', 52).attr('y1', 52).attr('x2', 108).attr('y2', 108)
+            .attr('stroke', '#8b5a2b').attr('stroke-width', 7).attr('stroke-linecap', 'round');
+        // tiny wood-grain highlight on handle
+        loupeFrame.append('line').attr('x1', 58).attr('y1', 56).attr('x2', 102).attr('y2', 100)
+            .attr('stroke', '#c48a52').attr('stroke-width', 1).attr('stroke-linecap', 'round').attr('opacity', 0.7);
+
+        // Outer iron ring
+        loupeFrame.append('circle').attr('r', 75).attr('cx', 0).attr('cy', 0)
+            .attr('fill', 'none').attr('stroke', '#2b1a08').attr('stroke-width', 5);
+        // Inner brass ring
+        loupeFrame.append('circle').attr('r', 71).attr('cx', 0).attr('cy', 0)
+            .attr('fill', 'none').attr('stroke', '#b8865b').attr('stroke-width', 2.5);
+        // very subtle glass sheen
+        loupeFrame.append('circle').attr('r', 67).attr('cx', 0).attr('cy', 0)
+            .attr('fill', 'rgba(255,253,247,0.05)').attr('stroke', 'none');
+        // small crescent highlight (upper-left)
+        loupeFrame.append('ellipse').attr('cx', -28).attr('cy', -28).attr('rx', 22).attr('ry', 12)
+            .attr('fill', 'rgba(255,255,255,0.35)').attr('stroke', 'none').attr('transform', 'rotate(-30 -28 -28)');
+
+        // ── Hit region — catches mouse events over the submerged area ──
+        var hitRect = svg.append('rect')
+            .attr('x', 0).attr('y', waterY)
+            .attr('width', W).attr('height', bottomY - waterY)
+            .attr('fill', 'transparent')
+            .style('cursor', 'none');
+
+        hitRect.on('mouseenter', function() {
+            loupeFrame.style('display', null);
+            loupeContent.style('display', null);
+        });
+        hitRect.on('mouseleave', function() {
+            loupeFrame.style('display', 'none');
+            loupeContent.style('display', 'none');
+        });
+        hitRect.on('mousemove', function(event) {
+            var p = d3.pointer(event, svg.node());
+            var cx = p[0], cy = p[1];
+            // Position loupe frame
+            loupeFrame.attr('transform', 'translate(' + cx + ',' + cy + ')');
+            // Move clip circle to cursor
+            lclipCircle.attr('cx', cx).attr('cy', cy);
+            // Magnify content centered on cursor:
+            //   translate(cx*(1-s), cy*(1-s)) scale(s)  => point (cx, cy) maps to itself
+            var tx = cx * (1 - loupeScale);
+            var ty = cy * (1 - loupeScale);
+            loupeContent.attr('transform', 'translate(' + tx + ',' + ty + ') scale(' + loupeScale + ')');
+        });
+    }
+
+    // ─── METAPHOR TO MECHANISM (closing visual — Tufte, Visual Explanations) ───
+    function metaphorToMechanism(container, config) {
+        var W = 1280, H = 620;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var cloudFill = '#a8b4c4';
+        var cloudStroke = '#6b7c8f';
+        var cityFill = '#2d3d52';
+        var cityStroke = '#1a2738';
+        var windowFill = '#e8d4a0';
+        var crimson = '#a03a2e';
+        var cardBg = '#fffdf7';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // ── Title / subtitle ──
+        svg.append('text').attr('x', W / 2).attr('y', 42)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '24px').attr('font-weight', '700').attr('fill', ink)
+            .text('The Metaphor Became the Mechanism');
+        svg.append('text').attr('x', W / 2).attr('y', 68)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text("A principle the pioneers of medical informatics embodied in 1980. A mechanism only recently available to the rest of us.");
+        svg.append('text').attr('x', W / 2).attr('y', 86)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text("Hover any milestone for context.");
+
+        // ── Layout ──
+        var margin = 70;
+        var tx0 = margin, tx1 = W - margin;
+        var groundY = 430;
+        var timeScale = d3.scaleLinear().domain([1978, 2027]).range([tx0, tx1]);
+
+        // ── Earth line ──
+        svg.append('line')
+            .attr('x1', tx0).attr('x2', tx1)
+            .attr('y1', groundY).attr('y2', groundY)
+            .attr('stroke', ink).attr('stroke-width', 0.8);
+
+        // ── Cloud (metaphor) — dense left, dissipating right ──
+        var cloudParts = [
+            { y: 1979, cy: 200, r: 42, op: 0.85 },
+            { y: 1981, cy: 170, r: 50, op: 0.90 },
+            { y: 1983, cy: 185, r: 40, op: 0.85 },
+            { y: 1985, cy: 175, r: 32, op: 0.70 },
+            { y: 1987, cy: 195, r: 26, op: 0.58 },
+            { y: 1990, cy: 180, r: 24, op: 0.50 },
+            { y: 1995, cy: 185, r: 22, op: 0.42 },
+            { y: 2001, cy: 180, r: 19, op: 0.34 },
+            { y: 2008, cy: 190, r: 16, op: 0.26 },
+            { y: 2015, cy: 185, r: 13, op: 0.18 },
+            { y: 2020, cy: 193, r: 10, op: 0.12 },
+            { y: 2024, cy: 197, r: 7,  op: 0.07 }
+        ];
+        var cloudLayer = svg.append('g');
+        cloudParts.forEach(function(p) {
+            cloudLayer.append('circle')
+                .attr('cx', timeScale(p.y)).attr('cy', p.cy).attr('r', p.r)
+                .attr('fill', cloudFill).attr('fill-opacity', p.op * 0.55)
+                .attr('stroke', cloudStroke).attr('stroke-width', 0.7).attr('stroke-opacity', p.op);
+        });
+
+        // Inscription — Peter's own line
+        var cloudTextX = timeScale(1981);
+        svg.append('text').attr('x', cloudTextX).attr('y', 160)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-style', 'italic').attr('fill', ink)
+            .text("\u201Csoftware should be");
+        svg.append('text').attr('x', cloudTextX).attr('y', 174)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-style', 'italic').attr('fill', ink)
+            .text("a reflection of");
+        svg.append('text').attr('x', cloudTextX).attr('y', 188)
+            .attr('text-anchor', 'middle').attr('font-size', '11px')
+            .attr('font-style', 'italic').attr('fill', ink)
+            .text("your thought.\u201D");
+
+        // Cloud caption
+        svg.append('text').attr('x', timeScale(1981)).attr('y', 116)
+            .attr('text-anchor', 'middle').attr('font-size', '10.5px')
+            .attr('font-weight', '700').attr('letter-spacing', '1.5px').attr('fill', cloudStroke)
+            .text('THE METAPHOR');
+
+        // ── City (mechanism) — nothing left, sprawling right ──
+        var buildings = [
+            { y: 2002,   w: 14, h: 38,  win: false },
+            { y: 2004,   w: 18, h: 54,  win: false },
+            { y: 2007,   w: 16, h: 46,  win: false },
+            { y: 2009,   w: 22, h: 70,  win: true },
+            { y: 2012,   w: 20, h: 56,  win: true },
+            { y: 2014,   w: 26, h: 86,  win: true },
+            { y: 2016,   w: 22, h: 66,  win: true },
+            { y: 2018,   w: 28, h: 98,  win: true },
+            { y: 2020,   w: 24, h: 78,  win: true },
+            { y: 2022,   w: 30, h: 118, win: true },
+            { y: 2023.3, w: 26, h: 94,  win: true },
+            { y: 2024,   w: 32, h: 138, win: true },
+            { y: 2024.8, w: 24, h: 110, win: true },
+            { y: 2025,   w: 34, h: 168, win: true, emphasize: true },
+            { y: 2025.6, w: 26, h: 128, win: true },
+            { y: 2026,   w: 38, h: 196, win: true, emphasize: true }
+        ];
+        var cityLayer = svg.append('g');
+        buildings.forEach(function(b) {
+            var bx = timeScale(b.y);
+            var bY = groundY - b.h;
+            cityLayer.append('rect')
+                .attr('x', bx - b.w / 2).attr('y', bY)
+                .attr('width', b.w).attr('height', b.h)
+                .attr('fill', b.emphasize ? cityStroke : cityFill)
+                .attr('stroke', cityStroke).attr('stroke-width', 0.7);
+            if (b.win && b.h > 50) {
+                var rows = Math.floor((b.h - 16) / 14);
+                for (var ri = 1; ri <= rows; ri++) {
+                    var wy = bY + ri * 14 - 2;
+                    cityLayer.append('rect')
+                        .attr('x', bx - b.w / 2 + 3).attr('y', wy)
+                        .attr('width', 3).attr('height', 2)
+                        .attr('fill', windowFill).attr('fill-opacity', 0.6);
+                    cityLayer.append('rect')
+                        .attr('x', bx + b.w / 2 - 6).attr('y', wy)
+                        .attr('width', 3).attr('height', 2)
+                        .attr('fill', windowFill).attr('fill-opacity', 0.6);
+                }
+            }
+            if (b.emphasize) {
+                cityLayer.append('line')
+                    .attr('x1', bx).attr('x2', bx)
+                    .attr('y1', bY).attr('y2', bY - 10)
+                    .attr('stroke', cityStroke).attr('stroke-width', 0.8);
+            }
+        });
+
+        svg.append('text').attr('x', timeScale(2025)).attr('y', 116)
+            .attr('text-anchor', 'middle').attr('font-size', '10.5px')
+            .attr('font-weight', '700').attr('letter-spacing', '1.5px').attr('fill', cityStroke)
+            .text('THE MECHANISM');
+
+        // ── Milestones — year, short label, and detail (for hover) ──
+        // Short labels are kept compact; detail reveals on hover ("magnifying glass").
+        var milestones = [
+            { year: 1980, short: 'Lincoln & Korpman',
+              detail: "Pioneers of medical informatics. Published in Science. Automated their own clinical workflow — software that was a reflection of their thought before there was a name for it.",
+              depth: 1 },
+            { year: 1986, short: 'Boehm Spiral',
+              detail: "Boehm's Spiral Model: risk-driven iteration. The first systematic break from waterfall — software built in loops, not a one-way march.",
+              depth: 2 },
+            { year: 1991, short: "Martin's RAD",
+              detail: "James Martin formalizes Rapid Application Development. Tools like Visual Basic and PowerBuilder let the builder iterate with the user in the room.",
+              depth: 1 },
+            { year: 2000, short: 'Baldwin-Clark',
+              detail: '"Design Rules, Vol. 1: The Power of Modularity." The theoretical foundation of composable systems — pieces that have lives of their own.',
+              depth: 2 },
+            { year: 2001.3, short: 'Agile Manifesto',
+              detail: "Signed at Snowbird, February 2001. Twelve principles placing working software and human collaboration above rigid process. XP, pair programming, retrospectives descend from this moment.",
+              depth: 1 },
+            { year: 2005, short: 'Ajax · Web 2.0',
+              detail: "Jesse James Garrett names Ajax. XMLHttpRequest + JSON + dynamic UIs. The browser becomes a platform for real software — not static pages.",
+              depth: 2 },
+            { year: 2008, short: 'GitHub · Stack Overflow',
+              detail: "Both launch. Distributed version control as a shared public good. Every question a programmer had became one someone else had already answered.",
+              depth: 1 },
+            { year: 2013, short: 'Docker',
+              detail: "Containers. The thing you built on your laptop runs everywhere, identically. Reproducible environments become the default, not the exception.",
+              depth: 2 },
+            { year: 2022, short: 'ChatGPT · Copilot',
+              detail: "LLMs enter the developer's workspace. GitHub Copilot (2021) and ChatGPT (Nov 2022). The first mark is free — the blank page dissolves.",
+              depth: 1 },
+            { year: 2025, short: 'Claude Code',
+              detail: "Agentic coding. The threshold collapses. The metaphor becomes the mechanism — you speak the tool into existence.",
+              depth: 2, emphasize: true }
+        ];
+
+        // Group container for all milestones so we can lift hovered one on top.
+        var msLayer = svg.append('g').attr('class', 'milestones');
+
+        // Build milestone elements
+        var groups = milestones.map(function(m, i) {
+            var mx = timeScale(m.year);
+            var mColor = m.emphasize ? crimson : ink;
+            var g = msLayer.append('g').attr('class', 'milestone').attr('data-i', i);
+
+            // Tick
+            g.append('line')
+                .attr('x1', mx).attr('x2', mx)
+                .attr('y1', groundY).attr('y2', groundY + 6)
+                .attr('stroke', mColor).attr('stroke-width', m.emphasize ? 1.5 : 1);
+
+            // Year label — always below the tick, above all short labels
+            g.append('text').attr('x', mx).attr('y', groundY + 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11.5px').attr('font-weight', '700').attr('fill', mColor)
+                .text(String(Math.floor(m.year)));
+
+            // Short label — all below the axis, alternating two depths to avoid collisions
+            var shortY = groundY + (m.depth === 2 ? 58 : 40);
+
+            // Thin guide-line from below the year down to the deeper row
+            if (m.depth === 2) {
+                g.append('line').attr('x1', mx).attr('x2', mx)
+                    .attr('y1', groundY + 30).attr('y2', shortY - 11)
+                    .attr('stroke', mColor).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
+            }
+
+            var shortLabel = g.append('text').attr('x', mx).attr('y', shortY)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('fill', ink)
+                .text(m.short);
+
+            // Dot at the tick — the hover target
+            var dot = g.append('circle')
+                .attr('cx', mx).attr('cy', groundY)
+                .attr('r', 4)
+                .attr('fill', cardBg)
+                .attr('stroke', mColor).attr('stroke-width', 1.5)
+                .style('cursor', 'pointer');
+
+            return { m: m, mx: mx, g: g, dot: dot, shortLabel: shortLabel };
+        });
+
+        // 2025 "threshold collapses" pointer (static — independent of hover)
+        var arrowX = timeScale(2025);
+        var arrowY0 = groundY - 195;
+        var arrowY1 = groundY - 172;
+        svg.append('line')
+            .attr('x1', arrowX).attr('x2', arrowX)
+            .attr('y1', arrowY0).attr('y2', arrowY1)
+            .attr('stroke', crimson).attr('stroke-width', 1.5);
+        svg.append('path')
+            .attr('d', 'M ' + arrowX + ' ' + arrowY1 + ' l -3 -5 l 6 0 z')
+            .attr('fill', crimson);
+        svg.append('text').attr('x', arrowX).attr('y', arrowY0 - 6)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-weight', '700').attr('fill', crimson)
+            .text('the threshold collapses');
+
+        // ── Hover card — one shared card, repositioned per milestone ──
+        var cardLayer = svg.append('g').attr('class', 'hover-card')
+            .style('opacity', 0).style('pointer-events', 'none');
+        var cardW = 280, cardH = 110;
+        var cardRect = cardLayer.append('rect')
+            .attr('width', cardW).attr('height', cardH).attr('rx', 6)
+            .attr('fill', cardBg).attr('stroke', ink).attr('stroke-width', 1)
+            .style('filter', 'drop-shadow(0 3px 6px rgba(0,0,0,0.15))');
+        var cardTitle = cardLayer.append('text')
+            .attr('x', 14).attr('y', 24)
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', ink);
+        var cardBody = cardLayer.append('g').attr('class', 'card-body');
+        var cardArrow = cardLayer.append('path')
+            .attr('fill', cardBg).attr('stroke', ink).attr('stroke-width', 1);
+
+        function wrapLines(text, maxChars) {
+            var words = String(text).split(/\s+/);
+            var lines = [], cur = '';
+            words.forEach(function(w) {
+                if ((cur + ' ' + w).trim().length > maxChars) {
+                    if (cur) lines.push(cur.trim());
+                    cur = w;
+                } else {
+                    cur = (cur + ' ' + w).trim();
+                }
+            });
+            if (cur) lines.push(cur);
+            return lines;
+        }
+
+        function showCard(d) {
+            cardTitle.text(Math.floor(d.m.year) + '  \u00B7  ' + d.m.short);
+            cardBody.selectAll('*').remove();
+            var lines = wrapLines(d.m.detail, 46);
+            lines.forEach(function(ln, i) {
+                cardBody.append('text')
+                    .attr('x', 14).attr('y', 46 + i * 15)
+                    .attr('font-size', '11.5px').attr('fill', ink)
+                    .text(ln);
+            });
+
+            // Position: always above the tick (the label zone is below); clamp within viewBox.
+            var cy = groundY - cardH - 18;
+            var cx = d.mx - cardW / 2;
+            if (cx < 10) cx = 10;
+            if (cx + cardW > W - 10) cx = W - cardW - 10;
+            cardLayer.attr('transform', 'translate(' + cx + ',' + cy + ')');
+
+            // Arrow pointer from the bottom of the card down toward the tick
+            var apX = d.mx - cx;
+            cardArrow.attr('d',
+                'M ' + (apX - 6) + ' ' + cardH +
+                ' L ' + apX + ' ' + (cardH + 10) +
+                ' L ' + (apX + 6) + ' ' + cardH + ' Z');
+
+            cardLayer.transition().duration(150).style('opacity', 1);
+            d.dot.transition().duration(150).attr('r', 7)
+                .attr('fill', d.m.emphasize ? crimson : ink)
+                .attr('stroke', cardBg);
+            d.shortLabel.transition().duration(150)
+                .attr('font-weight', '700')
+                .attr('fill', d.m.emphasize ? crimson : ink);
+        }
+
+        function hideCard(d) {
+            cardLayer.transition().duration(150).style('opacity', 0);
+            d.dot.transition().duration(150).attr('r', 4)
+                .attr('fill', cardBg)
+                .attr('stroke', d.m.emphasize ? crimson : ink);
+            d.shortLabel.transition().duration(150)
+                .attr('font-weight', null)
+                .attr('fill', ink);
+        }
+
+        // Wire up hover on each milestone (dot AND larger invisible hit area covering both label rows)
+        groups.forEach(function(d) {
+            var hit = d.g.append('rect')
+                .attr('x', d.mx - 26).attr('y', groundY - 10)
+                .attr('width', 52).attr('height', 82)
+                .attr('fill', 'transparent')
+                .style('cursor', 'pointer');
+            hit.on('mouseenter', function() { showCard(d); });
+            hit.on('mouseleave', function() { hideCard(d); });
+            d.dot.on('mouseenter', function() { showCard(d); });
+            d.dot.on('mouseleave', function() { hideCard(d); });
+        });
+
+        // ── Bottom closing lines ──
+        svg.append('text').attr('x', W / 2).attr('y', H - 50)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', ink)
+            .text('For forty-five years, a metaphor. For the last six months, a mechanism.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('You think it. You say it. The tool takes shape around it.');
+    }
+
     var registry = {
         'workflow-pipeline': workflowPipeline,
         'abstraction-layers': abstractionLayers,
@@ -5692,8 +9032,1159 @@ const VizLibrary = (function () {
         'wrong-question': wrongQuestion,
         'xenonym-synthesis': xenonymSynthesis,
         'ibis-flow': ibisFlow,
-        'the-ask': theAsk
+        'the-ask': theAsk,
+        'learning-objectives': learningObjectives,
+        'your-role': yourRole,
+        'jig': jig,
+        'metaphor-to-mechanism': metaphorToMechanism,
+        'data-as-flow': dataFlowVsInventory,
+        'research-iceberg': researchIceberg,
+        'ideas-not-zombies': ideasNotZombies,
+        'sheffield-parallel': sheffieldParallel,
+        'ask-moves': theAskFiveLoupes,
+        'question-returns': questionReturns,
+        'two-orders-shift': twoOrdersShift,
+        'compression-stack': compressionStack,
+        'unlocked-zone': unlockedZone,
+        'hersh-caveats': hershCaveats,
+        'consent-form-iframe': consentFormIframe,
+        'synthetic-patient-rig': syntheticPatientRig,
+        'software-consumable': softwareConsumable,
+        'applied-informatics': appliedInformatics,
+        'regulatory-inversion': regulatoryInversion
     };
+
+    // ===== The Regulatory Inversion — IEC 62304 traceability spine =====
+    // Visualizes the paper's central thesis: the IEC 62304 lifecycle is
+    // a five-stage traceability spine; AI lowered the cost of maintaining
+    // it AND raised the cost of NOT maintaining it (drift toward plausibility).
+    // What was a regulatory burden becomes the scaffold for AI-assisted
+    // development of consequential software.
+    function regulatoryInversion(container, config) {
+        var W = 1280, H = 680;
+        var bg       = '#faf7f1';
+        var ink      = '#1f1a14';
+        var muted    = '#6b5c48';
+        var rule     = '#a89c85';
+        var slate    = '#3d5b73';
+        var slateDk  = '#1f3447';
+        var copper   = '#a36015';
+        var copperDk = '#7a460c';
+        var crimsonDk= '#6b1f15';
+        var green    = '#1d6b4a';
+        var greenDk  = '#0e3f2c';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Title + subtitle
+        svg.append('text').attr('x', W / 2).attr('y', 50)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '28px').attr('font-weight', '700').attr('fill', ink)
+            .attr('letter-spacing', '-0.02em')
+            .text('The Regulatory Inversion');
+        svg.append('text').attr('x', W / 2).attr('y', 80)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Burden → Scaffold. The IEC 62304 traceability spine becomes the discipline of consequential software.');
+
+        // ===== THE SPINE =====
+        svg.append('text').attr('x', W / 2).attr('y', 138)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-weight', '700').attr('fill', muted)
+            .attr('letter-spacing', '2.5px')
+            .text('THE TRACEABILITY SPINE');
+
+        var stages = [
+            { short: 'UN',  name: 'User Need',     sub: 'what the user is trying to accomplish' },
+            { short: 'SR',  name: 'Requirement',   sub: 'what the software must do' },
+            { short: 'SDS', name: 'Design',        sub: 'how the software is structured' },
+            { short: 'RC',  name: 'Risk Control',  sub: 'what mitigates each hazard' },
+            { short: 'V',   name: 'Verification',  sub: 'evidence the design meets the need' }
+        ];
+        var spineY = 240, sX = 140, eX = W - 140;
+        var gap = (eX - sX) / (stages.length - 1);
+        var nodeR = 38;
+
+        // Forward connecting line
+        svg.append('line')
+            .attr('x1', sX).attr('y1', spineY).attr('x2', eX).attr('y2', spineY)
+            .attr('stroke', ink).attr('stroke-width', 2);
+
+        // Bidirectional traceability — dashed return arc
+        svg.append('path')
+            .attr('d', 'M ' + (sX + nodeR) + ' ' + (spineY + 20) +
+                       ' Q ' + ((sX + eX) / 2) + ' ' + (spineY + 70) +
+                       ' ' + (eX - nodeR) + ' ' + (spineY + 20))
+            .attr('stroke', muted).attr('stroke-width', 1.2)
+            .attr('stroke-dasharray', '5,4').attr('fill', 'none').attr('opacity', 0.55);
+        svg.append('text').attr('x', W / 2).attr('y', spineY + 88)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('bidirectional — every test back-references the user need');
+
+        stages.forEach(function (st, i) {
+            var x = sX + i * gap;
+            var color   = i === 0 ? slate   : (i === stages.length - 1 ? green   : copper);
+            var colorDk = i === 0 ? slateDk : (i === stages.length - 1 ? greenDk : copperDk);
+
+            // Stage name above the node
+            svg.append('text').attr('x', x).attr('y', spineY - 60)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '15px').attr('font-weight', '700').attr('fill', colorDk)
+                .text(st.name);
+            svg.append('text').attr('x', x).attr('y', spineY - 42)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+                .text(st.sub);
+
+            // Node
+            svg.append('circle').attr('cx', x).attr('cy', spineY).attr('r', nodeR)
+                .attr('fill', color).attr('stroke', ink).attr('stroke-width', 2);
+            svg.append('text').attr('x', x).attr('y', spineY + 5)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '15px').attr('font-weight', '700').attr('fill', '#faf7f1')
+                .attr('letter-spacing', '1px')
+                .text(st.short);
+        });
+
+        // ===== Two-column inversion (YESTERDAY / TODAY) =====
+        var invY = 400;
+        var midX = W / 2;
+        var colW = 480;
+
+        // YESTERDAY (left)
+        var yX = midX - 30 - colW;
+        svg.append('text').attr('x', yX + colW).attr('y', invY)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', crimsonDk)
+            .attr('letter-spacing', '2px')
+            .text('YESTERDAY');
+        svg.append('text').attr('x', yX + colW).attr('y', invY + 24)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '14px').attr('font-weight', '600').attr('fill', ink)
+            .text('Maintaining the spine was expensive.');
+        svg.append('text').attr('x', yX + colW).attr('y', invY + 46)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '13px').attr('fill', muted)
+            .text('Reception patterns: parallel · afterthought · burden.');
+        svg.append('text').attr('x', yX + colW).attr('y', invY + 65)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '13px').attr('fill', muted)
+            .text('Documentation slowed delivery. Discipline was a tax.');
+
+        // TODAY (right)
+        var tX = midX + 30;
+        svg.append('text').attr('x', tX).attr('y', invY)
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', greenDk)
+            .attr('letter-spacing', '2px')
+            .text('TODAY');
+        svg.append('text').attr('x', tX).attr('y', invY + 24)
+            .attr('font-size', '14px').attr('font-weight', '600').attr('fill', ink)
+            .text('AI lowered the cost of having it.');
+        svg.append('text').attr('x', tX).attr('y', invY + 46)
+            .attr('font-size', '13px').attr('fill', muted)
+            .text('AI raised the cost of not — code drifts toward plausibility.');
+        svg.append('text').attr('x', tX).attr('y', invY + 65)
+            .attr('font-size', '13px').attr('fill', muted)
+            .text('The spine maintains itself; humans review the content.');
+
+        // Center divider
+        svg.append('line')
+            .attr('x1', midX).attr('y1', invY - 12)
+            .attr('x2', midX).attr('y2', invY + 78)
+            .attr('stroke', rule).attr('stroke-width', 1)
+            .attr('stroke-dasharray', '4,4').attr('opacity', 0.55);
+        // Inversion arrow at center
+        svg.append('text').attr('x', midX).attr('y', invY + 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '24px').attr('fill', copperDk).text('→');
+
+        // ===== Bottom takeaway band =====
+        var tbY = 530;
+        svg.append('rect')
+            .attr('x', 80).attr('y', tbY).attr('width', W - 160).attr('height', 80)
+            .attr('rx', 6).attr('fill', '#fff8e6')
+            .attr('stroke', copperDk).attr('stroke-width', 1.5).attr('stroke-opacity', 0.6);
+        svg.append('text').attr('x', W / 2).attr('y', tbY + 30)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Same minimum requirement. Lower cost of meeting it. Higher cost of not.');
+        svg.append('text').attr('x', W / 2).attr('y', tbY + 58)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('AI builds the code.   AI builds the proof.   Humans review both.');
+
+        // Footer attribution
+        svg.append('text').attr('x', W / 2).attr('y', H - 14)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Gershkovich P. From Burden to Scaffold — IEC 62304 and AI-Assisted Development of Decision-Supporting Software. Yale Pathology Informatics, 2026.   ·   IEC 62304:2006+A1:2015.');
+    }
+
+    // ===== Applied Informatics — Theory · Engineering · Practice =====
+    // Three columns with the engineering column as the emphasized middle —
+    // visualizing applied informatics as the translational layer between
+    // biomedical-information science and clinical reality.
+    function appliedInformatics(container, config) {
+        var W = 1280, H = 680;
+        var bg       = '#faf7f1';
+        var ink      = '#1f1a14';
+        var muted    = '#6b5c48';
+        var rule     = '#a89c85';
+        var slate    = '#3d5b73';
+        var slateDk  = '#1f3447';
+        var copper   = '#a36015';
+        var copperDk = '#7a460c';
+        var green    = '#1d6b4a';
+        var greenDk  = '#0e3f2c';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // ===== Title + subtitle =====
+        svg.append('text').attr('x', W / 2).attr('y', 44)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '24px').attr('font-weight', '700').attr('fill', ink)
+            .attr('letter-spacing', '-0.01em')
+            .text('Applied Informatics Is the Translational Layer');
+        svg.append('text').attr('x', W / 2).attr('y', 72)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Informatics began as a science of biomedical information, but its clinical impact depends on engineered systems.');
+        svg.append('line').attr('x1', 80).attr('y1', 92)
+            .attr('x2', W - 80).attr('y2', 92)
+            .attr('stroke', rule).attr('stroke-width', 1).attr('opacity', 0.5);
+
+        // ===== Three columns =====
+        var cols = [
+            { num: '01', title: 'THEORY',
+              tag: 'The science of biomedical information',
+              color: slate, colorDk: slateDk, fill: 'rgba(61,91,115,0.06)',
+              items: ['Models', 'Data structures', 'Algorithms', 'Terminology', 'Decision logic'] },
+            { num: '02', title: 'ENGINEERING',
+              tag: 'The translational layer',
+              color: copper, colorDk: copperDk, fill: 'rgba(163,96,21,0.10)',
+              items: ['Workflow-aware software', 'Interfaces', 'Security', 'Validation',
+                      'Monitoring', 'Integration', 'Audit trails'],
+              highlighted: true },
+            { num: '03', title: 'PRACTICE',
+              tag: 'Clinical reality',
+              color: green, colorDk: greenDk, fill: 'rgba(29,107,74,0.06)',
+              items: ['Clinician-facing tools', 'Operational adoption', 'Feedback',
+                      'Measurable clinical improvement'] }
+        ];
+
+        var marginX = 60;
+        var gap = 26;
+        var colW = (W - 2 * marginX - 2 * gap) / 3;
+        var colY = 122;
+        var colH = 380;
+
+        // Connector arrows behind cards
+        [0, 1].forEach(function (i) {
+            var startX = marginX + i * (colW + gap) + colW + 2;
+            var endX = marginX + (i + 1) * (colW + gap) - 2;
+            var midY = colY + colH / 2;
+            svg.append('line')
+                .attr('x1', startX).attr('y1', midY)
+                .attr('x2', endX - 9).attr('y2', midY)
+                .attr('stroke', muted).attr('stroke-width', 1.5).attr('stroke-opacity', 0.7);
+            svg.append('path')
+                .attr('d', 'M' + (endX - 9) + ',' + midY + ' l-10,-6 l0,12 z')
+                .attr('fill', muted).attr('fill-opacity', 0.7);
+        });
+
+        cols.forEach(function (col, i) {
+            var x = marginX + i * (colW + gap);
+            // Card
+            svg.append('rect')
+                .attr('x', x).attr('y', colY)
+                .attr('width', colW).attr('height', colH)
+                .attr('rx', 6).attr('ry', 6)
+                .attr('fill', col.fill)
+                .attr('stroke', col.color)
+                .attr('stroke-width', col.highlighted ? 2.2 : 1)
+                .attr('stroke-opacity', col.highlighted ? 1 : 0.55);
+
+            // Number eyebrow
+            svg.append('text').attr('x', x + 22).attr('y', colY + 32)
+                .attr('font-size', '13px').attr('font-weight', '700')
+                .attr('fill', col.colorDk).attr('letter-spacing', '2px')
+                .style('font-family', "'JetBrains Mono', 'Menlo', monospace")
+                .text(col.num);
+
+            // Title
+            svg.append('text').attr('x', x + 22).attr('y', colY + 62)
+                .attr('font-size', '20px').attr('font-weight', '700').attr('fill', col.colorDk)
+                .attr('letter-spacing', '1.5px')
+                .text(col.title);
+
+            // Tag
+            svg.append('text').attr('x', x + 22).attr('y', colY + 84)
+                .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', muted)
+                .text(col.tag);
+
+            // Hairline divider
+            svg.append('line').attr('x1', x + 22).attr('y1', colY + 102)
+                .attr('x2', x + colW - 22).attr('y2', colY + 102)
+                .attr('stroke', col.color).attr('stroke-width', 1).attr('stroke-opacity', 0.4);
+
+            // Items
+            var itemY = colY + 132;
+            col.items.forEach(function (item) {
+                svg.append('circle').attr('cx', x + 28).attr('cy', itemY - 4).attr('r', 2.6)
+                    .attr('fill', col.color);
+                svg.append('text').attr('x', x + 40).attr('y', itemY)
+                    .attr('font-size', '14px').attr('fill', ink).attr('font-weight', '500')
+                    .text(item);
+                itemY += 28;
+            });
+        });
+
+        // ===== Bottom punchline =====
+        var pY = colY + colH + 56;
+        svg.append('line').attr('x1', marginX).attr('y1', pY - 28)
+            .attr('x2', W - marginX).attr('y2', pY - 28)
+            .attr('stroke', rule).attr('stroke-width', 1).attr('opacity', 0.45);
+        svg.append('text').attr('x', W / 2).attr('y', pY)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('fill', muted).attr('font-style', 'italic')
+            .text('Without applied informatics, discovery remains a paper.');
+        svg.append('text').attr('x', W / 2).attr('y', pY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '15.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('With applied informatics, discovery becomes clinical infrastructure.');
+        svg.append('line').attr('x1', marginX).attr('y1', pY + 46)
+            .attr('x2', W - marginX).attr('y2', pY + 46)
+            .attr('stroke', rule).attr('stroke-width', 1).attr('opacity', 0.45);
+
+        // ===== Citations footer =====
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('fill', muted).attr('letter-spacing', '0.4px')
+            .text('Lindberg 1986  ·  NLM IAIMS Program  ·  Shortliffe & Cimino — Biomedical Informatics  ·  Friedman 2009 — Fundamental Theorem  ·  AMIA — Clinical / Applied / Operational Informatics');
+    }
+
+    // ===== Software as Consumable, Not as Capital =====
+    // Two horizontal lifecycle bands on a shared time axis: capital model
+    // (one long-lived ribbon that ages into debt and abandonment) vs
+    // consumable model (many short build/use/retire ribbons that complete
+    // cleanly).  Same total engineering hours, different shape.
+    function softwareConsumable(container, config) {
+        var W = 1280, H = 620;
+        var bg       = '#faf7f1';
+        var ink      = '#1f1a14';
+        var muted    = '#6b5c48';
+        var rule     = '#a89c85';
+        var slate    = '#3d5b73';
+        var slateDk  = '#1f3447';
+        var copper   = '#a36015';
+        var copperDk = '#7a460c';
+        var crimson  = '#9a3324';
+        var taupe    = '#8a8170';
+        var taupeDk  = '#5e564a';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Layout
+        var bandStartX = 280;
+        var bandEndX   = W - 50;
+        var bandW      = bandEndX - bandStartX;
+        var bandH      = 60;
+        var capitalY    = 130;
+        var consumableY = 360;
+
+        // ===== TIME AXIS (top) =====
+        svg.append('text').attr('x', bandStartX).attr('y', 56)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', muted)
+            .attr('letter-spacing', '1.6px').text('YEAR ZERO');
+        svg.append('text').attr('x', bandEndX).attr('y', 56)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', muted)
+            .attr('letter-spacing', '1.6px').text('TODAY');
+        svg.append('line').attr('x1', bandStartX).attr('y1', 70).attr('x2', bandEndX).attr('y2', 70)
+            .attr('stroke', rule).attr('stroke-width', 1).attr('stroke-dasharray', '3,4').attr('opacity', 0.5);
+
+        // ===== CAPITAL BAND =====
+        // Left labels (vertically centered with the band)
+        svg.append('text').attr('x', 50).attr('y', capitalY + bandH / 2 - 6)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', slateDk)
+            .attr('letter-spacing', '1.3px').text('SOFTWARE AS');
+        svg.append('text').attr('x', 50).attr('y', capitalY + bandH / 2 + 14)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', slateDk)
+            .attr('letter-spacing', '1.3px').text('CAPITAL');
+
+        // The single long ribbon — 4 phases
+        var capPhases = [
+            { name: 'BUILD',     pct: 0.12, color: slate,    fill: 'rgba(61,91,115,0.50)' },
+            { name: 'MAINTAIN',  pct: 0.45, color: copper,   fill: 'rgba(163,96,21,0.32)' },
+            { name: 'DEBT',      pct: 0.25, color: crimson,  fill: 'rgba(154,51,36,0.28)' },
+            { name: 'ABANDONED', pct: 0.18, color: taupeDk,  fill: 'rgba(94,86,74,0.32)' }
+        ];
+        var cx = bandStartX;
+        capPhases.forEach(function (p) {
+            var w = bandW * p.pct;
+            svg.append('rect').attr('x', cx).attr('y', capitalY)
+                .attr('width', w).attr('height', bandH)
+                .attr('fill', p.fill).attr('stroke', p.color).attr('stroke-width', 1.2);
+            if (w > 60) {
+                svg.append('text').attr('x', cx + w / 2).attr('y', capitalY + bandH / 2 + 5)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '11.5px').attr('font-weight', '700').attr('fill', p.color)
+                    .attr('letter-spacing', '1.6px').text(p.name);
+            }
+            cx += w;
+        });
+
+        // Caption below capital band
+        svg.append('text').attr('x', bandStartX).attr('y', capitalY + bandH + 22)
+            .attr('font-size', '12px').attr('fill', muted).attr('font-style', 'italic')
+            .text('Build once  ·  maintain forever  ·  inherit the debt  ·  eventually join the graveyard.');
+
+        // ===== MIDDLE ANNOTATION =====
+        var midY = (capitalY + bandH + consumableY) / 2;
+        svg.append('line').attr('x1', 60).attr('y1', midY - 32)
+            .attr('x2', W - 60).attr('y2', midY - 32)
+            .attr('stroke', rule).attr('stroke-width', 1).attr('opacity', 0.4);
+        svg.append('text').attr('x', W / 2).attr('y', midY - 8)
+            .attr('text-anchor', 'middle').attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .text('Same total engineering hours.  Different shape.  Different outcome.');
+        svg.append('text').attr('x', W / 2).attr('y', midY + 16)
+            .attr('text-anchor', 'middle').attr('font-size', '13px').attr('font-style', 'italic').attr('fill', copperDk)
+            .text('AI didn’t invent this idea. It just made it obvious.');
+        svg.append('line').attr('x1', 60).attr('y1', midY + 32)
+            .attr('x2', W - 60).attr('y2', midY + 32)
+            .attr('stroke', rule).attr('stroke-width', 1).attr('opacity', 0.4);
+
+        // ===== CONSUMABLE BAND =====
+        svg.append('text').attr('x', 50).attr('y', consumableY + bandH / 2 - 6)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', copperDk)
+            .attr('letter-spacing', '1.3px').text('SOFTWARE AS');
+        svg.append('text').attr('x', 50).attr('y', consumableY + bandH / 2 + 14)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', copperDk)
+            .attr('letter-spacing', '1.3px').text('CONSUMABLE');
+
+        // Many short ribbons, each build → use → retire
+        var nRibbons = 9;
+        var ribbonGap = 10;
+        var ribbonW = (bandW - (nRibbons - 1) * ribbonGap) / nRibbons;
+        var subs = [
+            { pct: 0.30, color: slate,  fill: 'rgba(61,91,115,0.55)' },
+            { pct: 0.45, color: copper, fill: 'rgba(163,96,21,0.55)' },
+            { pct: 0.25, color: muted,  fill: 'rgba(107,92,72,0.30)' }
+        ];
+        for (var r = 0; r < nRibbons; r++) {
+            var rx = bandStartX + r * (ribbonW + ribbonGap);
+            var sx = rx;
+            subs.forEach(function (s) {
+                var w = ribbonW * s.pct;
+                svg.append('rect').attr('x', sx).attr('y', consumableY)
+                    .attr('width', w).attr('height', bandH)
+                    .attr('fill', s.fill).attr('stroke', s.color).attr('stroke-width', 0.9);
+                sx += w;
+            });
+        }
+
+        // Caption + tiny inline legend below consumable band
+        svg.append('text').attr('x', bandStartX).attr('y', consumableY + bandH + 22)
+            .attr('font-size', '12px').attr('fill', muted).attr('font-style', 'italic')
+            .text('Build for a question  ·  use it  ·  retire it cleanly.  Nothing inherited; nothing abandoned.');
+
+        var legX = bandEndX - 230;
+        var legY = consumableY + bandH + 22;
+        var legItems = [
+            { label: 'build',  color: slate },
+            { label: 'use',    color: copper },
+            { label: 'retire', color: muted }
+        ];
+        legItems.forEach(function (item) {
+            svg.append('rect').attr('x', legX).attr('y', legY - 9)
+                .attr('width', 12).attr('height', 9)
+                .attr('fill', item.color).attr('fill-opacity', 0.55)
+                .attr('stroke', item.color).attr('stroke-width', 1);
+            svg.append('text').attr('x', legX + 18).attr('y', legY)
+                .attr('font-size', '11px').attr('fill', muted).text(item.label);
+            legX += 78;
+        });
+
+        // ===== Bottom attribution =====
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle').attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .text('McQuade et al., Defense Innovation Board (2019) — “Software Is Never Done.” The argument that software is a service, not a capital asset, predates the AI revolution by half a decade.');
+    }
+
+    // ===== Synthetic Patient Problem — three specimen lanes through a 5-station rig =====
+    function syntheticPatientRig(container, config) {
+        var W = 1280, H = 630;
+        var bg       = '#faf7f1';
+        var ink      = '#1f1a14';
+        var muted    = '#6b5c48';
+        var slate    = '#3d5b73';   // safe + considered (synthetic)
+        var slateDk  = '#1f3447';
+        var crimson  = '#9a3324';   // unsafe (real data)
+        var crimsonDk= '#6b1f15';
+        var taupe    = '#8a8170';   // meaningless (toy data)
+        var taupeDk  = '#5e564a';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        // Hatched pattern for the closed-gate REAL lane
+        var defs = svg.append('defs');
+        var pat = defs.append('pattern').attr('id', 'syn-hatch')
+            .attr('width', 8).attr('height', 8).attr('patternUnits', 'userSpaceOnUse')
+            .attr('patternTransform', 'rotate(45)');
+        pat.append('rect').attr('width', 8).attr('height', 8).attr('fill', 'rgba(154,51,36,0.07)');
+        pat.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 8)
+            .attr('stroke', crimson).attr('stroke-width', 1).attr('stroke-opacity', 0.45);
+
+        // ===== TEST RIG (top) =====
+        var stations = ['Names', 'Search', 'Display', 'Validation', 'Integration'];
+        var n = stations.length;
+        var rigStartX = 360;
+        var rigEndX   = W - 200;
+        var stationGap = (rigEndX - rigStartX) / (n - 1);
+        var rigY = 42;   // hoisted 50px (was 92) — title is gone, slide gives this room back
+
+        svg.append('line')
+            .attr('x1', rigStartX - 30).attr('y1', rigY)
+            .attr('x2', rigEndX + 30).attr('y2', rigY)
+            .attr('stroke', ink).attr('stroke-width', 1.5);
+
+        stations.forEach(function (name, i) {
+            var x = rigStartX + i * stationGap;
+            // Numbered station node
+            svg.append('circle').attr('cx', x).attr('cy', rigY).attr('r', 18)
+                .attr('fill', '#ffffff').attr('stroke', ink).attr('stroke-width', 2);
+            svg.append('text').attr('x', x).attr('y', rigY + 5)
+                .attr('text-anchor', 'middle').attr('font-size', '13px').attr('font-weight', '700').attr('fill', ink)
+                .text(i + 1);
+            // Station name above
+            svg.append('text').attr('x', x).attr('y', rigY - 28)
+                .attr('text-anchor', 'middle').attr('font-size', '13px').attr('font-weight', '600').attr('fill', ink)
+                .text(name);
+        });
+
+        // ===== THREE SPECIMEN LANES =====
+        var lanes = [
+            { id: 'real',  label: 'REAL PATIENT DATA', tag: 'Realistic, but unsafe',
+              color: crimson, colorDk: crimsonDk, bgFill: 'rgba(154,51,36,0.04)',
+              mode: 'gate-closed',
+              gateText: 'GATE CLOSED  ·  HIPAA  ·  IRB  ·  AUDIT  ·  DUA',
+              note: 'Must remain local. Must remain safe.',
+              verdict: 'HIGH RISK' },
+
+            { id: 'synthetic', label: 'SYNTHETIC TEST DATA', tag: 'Safe, structured, adversarial',
+              color: slate, colorDk: slateDk, bgFill: 'rgba(61,91,115,0.08)',
+              mode: 'cells',
+              marks: ['✓','✓','✓','✓','✓'],
+              note: 'Nontra Null. Edge-case names. Cohorts shaped like real ones, owned by no one.',
+              verdict: 'PASSES — AND PUSHES BACK',
+              highlighted: true },
+
+            { id: 'toy', label: 'TOY DATA', tag: 'Safe, but meaningless',
+              color: taupe, colorDk: taupeDk, bgFill: 'rgba(138,129,112,0.05)',
+              mode: 'cells',
+              marks: ['✓','✗','✗','✗','✗'],
+              note: 'John Doe. Jane Doe. X1, X2. Passes the gate because nothing real ever pushed it.',
+              verdict: 'PASSES, PROVES NOTHING' }
+        ];
+
+        var laneStartY = 130;   // hoisted 50px (was 180)
+        var laneH = 130;
+        var laneGap = 14;
+
+        lanes.forEach(function (lane, li) {
+            var y = laneStartY + li * (laneH + laneGap);
+
+            // Lane card
+            svg.append('rect')
+                .attr('x', 50).attr('y', y).attr('width', W - 100).attr('height', laneH)
+                .attr('rx', 6).attr('ry', 6)
+                .attr('fill', lane.bgFill)
+                .attr('stroke', lane.color)
+                .attr('stroke-width', lane.highlighted ? 2 : 1)
+                .attr('stroke-opacity', lane.highlighted ? 1 : 0.45);
+
+            // Specimen avatar (chart card with patient head)
+            var avX = 105, avY = y + laneH / 2;
+            // Head
+            svg.append('circle').attr('cx', avX).attr('cy', avY - 36).attr('r', 9)
+                .attr('fill', '#ffffff').attr('stroke', lane.color).attr('stroke-width', 1.5);
+            // Chart card
+            svg.append('rect').attr('x', avX - 22).attr('y', avY - 24)
+                .attr('width', 44).attr('height', 50).attr('rx', 3)
+                .attr('fill', '#ffffff').attr('stroke', lane.color).attr('stroke-width', 1.5);
+            for (var k = 0; k < 4; k++) {
+                svg.append('line').attr('x1', avX - 14).attr('x2', avX + 14)
+                    .attr('y1', avY - 16 + k * 8).attr('y2', avY - 16 + k * 8)
+                    .attr('stroke', lane.color).attr('stroke-width', 1).attr('stroke-opacity', 0.45);
+            }
+
+            // Label + tag (top-left of card)
+            svg.append('text').attr('x', 160).attr('y', y + 28)
+                .attr('font-size', '13.5px').attr('font-weight', '700')
+                .attr('fill', lane.colorDk).attr('letter-spacing', '1.4px')
+                .text(lane.label);
+            svg.append('text').attr('x', 160).attr('y', y + 48)
+                .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+                .text(lane.tag);
+
+            // Verdict (top-right of card)
+            svg.append('text').attr('x', W - 70).attr('y', y + 28)
+                .attr('text-anchor', 'end')
+                .attr('font-size', '11.5px').attr('font-weight', '700').attr('fill', lane.colorDk)
+                .attr('letter-spacing', '1.5px')
+                .text(lane.verdict);
+
+            if (lane.mode === 'gate-closed') {
+                // Hatched bar across the cell zone — visualizes the lane never opening
+                var barX = rigStartX - 28;
+                var barW = (rigEndX + 28) - barX;
+                svg.append('rect')
+                    .attr('x', barX).attr('y', y + laneH / 2 - 22)
+                    .attr('width', barW).attr('height', 44).attr('rx', 4)
+                    .attr('fill', 'url(#syn-hatch)')
+                    .attr('stroke', lane.color).attr('stroke-width', 1.4);
+                svg.append('text')
+                    .attr('x', barX + barW / 2).attr('y', y + laneH / 2 + 6)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '13px').attr('font-weight', '700')
+                    .attr('fill', lane.colorDk).attr('letter-spacing', '2.2px')
+                    .text(lane.gateText);
+            } else {
+                // Pass/fail cells aligned with rig stations above
+                lane.marks.forEach(function (mark, i) {
+                    var x = rigStartX + i * stationGap;
+                    var pass = mark === '✓';
+                    var cellColor = pass ? slate : lane.color;
+                    var cellFill = pass
+                        ? 'rgba(61,91,115,0.10)'
+                        : (lane.color === crimson ? 'rgba(154,51,36,0.08)' : 'rgba(138,129,112,0.10)');
+                    svg.append('rect')
+                        .attr('x', x - 22).attr('y', y + laneH / 2 - 22)
+                        .attr('width', 44).attr('height', 44).attr('rx', 4)
+                        .attr('fill', cellFill)
+                        .attr('stroke', cellColor).attr('stroke-width', 1.3);
+                    svg.append('text')
+                        .attr('x', x).attr('y', y + laneH / 2 + 8)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '22px').attr('font-weight', '700').attr('fill', cellColor)
+                        .text(mark);
+                });
+            }
+
+            // Note (bottom-left of card)
+            svg.append('text').attr('x', 160).attr('y', y + laneH - 16)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', muted)
+                .text(lane.note);
+        });
+
+        // ===== Bottom annotation =====
+        svg.append('text').attr('x', W / 2).attr('y', H - 22)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Synthetic data is not decoration. It is the test harness for clinical AI engineering.');
+    }
+
+    // ===== Scrollable iframe for the Yale informed-consent form =====
+    // Renders centered on a light-gray full-bleed canvas, with a small
+    // hover-only affordance that reveals the generation prompt.
+    function consentFormIframe(container, config) {
+        var src = (config && config.src) || 'assets/yale-consent-form.html';
+        var height = (config && config.height) || '82vh';
+        var promptHover = (config && config.promptHover) || null;
+
+        // Repaint the slide section in light gray so the form sits on a
+        // calm neutral field instead of the deck's default surface.
+        var section = container.closest('section');
+        if (section) {
+            section.style.background = '#ECECEC';
+            section.setAttribute('data-background-color', '#ECECEC');
+        }
+
+        // Full-bleed gray stage
+        var stage = document.createElement('div');
+        stage.style.cssText =
+            'position:relative;width:100%;height:100%;' +
+            'display:flex;align-items:center;justify-content:center;' +
+            'background:#ECECEC;';
+
+        // Centered form card
+        var wrapper = document.createElement('div');
+        wrapper.style.cssText =
+            'width:100%;max-width:1240px;margin:0 auto;' +
+            'box-shadow:0 8px 32px rgba(0,0,0,0.14);' +
+            'border-radius:6px;overflow:hidden;border:1px solid #d6cfbf;' +
+            'background:#FAF8F3;';
+
+        var frame = document.createElement('iframe');
+        frame.src = src;
+        frame.title = 'Yale Informed Consent — Research Participation';
+        frame.setAttribute('loading', 'lazy');
+        frame.style.cssText =
+            'width:100%;height:' + height + ';border:0;display:block;background:#FAF8F3;';
+
+        wrapper.appendChild(frame);
+        stage.appendChild(wrapper);
+
+        // Hover-only affordance — small "i" mark, top-right of the gray stage
+        if (promptHover) {
+            var info = document.createElement('div');
+            info.style.cssText =
+                'position:absolute;top:18px;right:22px;' +
+                'width:26px;height:26px;border-radius:50%;' +
+                'display:flex;align-items:center;justify-content:center;' +
+                'background:#ffffff;border:1px solid #B8B0A0;' +
+                'color:#4A4538;font-family:\'Spectral\',Georgia,serif;' +
+                'font-style:italic;font-weight:600;font-size:14px;' +
+                'cursor:help;user-select:none;' +
+                'transition:background 0.15s,border-color 0.15s,color 0.15s;' +
+                'z-index:5;';
+            info.textContent = 'i';
+
+            var pop = document.createElement('div');
+            pop.style.cssText =
+                'position:absolute;top:54px;right:22px;' +
+                'width:380px;padding:18px 22px;' +
+                'background:#ffffff;border:1px solid #4A4538;' +
+                'box-shadow:0 6px 22px rgba(0,0,0,0.16);' +
+                'opacity:0;pointer-events:none;' +
+                'transition:opacity 0.18s ease;' +
+                'z-index:6;';
+
+            var eyebrow = document.createElement('div');
+            eyebrow.textContent = 'GENERATED IN ~2 MINUTES WITH THIS PROMPT';
+            eyebrow.style.cssText =
+                'font-family:\'IBM Plex Sans\',system-ui,sans-serif;' +
+                'font-size:9.5px;font-weight:700;letter-spacing:2px;' +
+                'color:#6B6457;text-transform:uppercase;margin-bottom:10px;';
+            pop.appendChild(eyebrow);
+
+            var rule = document.createElement('div');
+            rule.style.cssText =
+                'border-top:1px solid #4A4538;width:100%;' +
+                'opacity:0.4;margin-bottom:12px;';
+            pop.appendChild(rule);
+
+            var promptText = document.createElement('div');
+            promptText.textContent = '“' + promptHover + '”';
+            promptText.style.cssText =
+                'font-family:\'Spectral\',Georgia,serif;' +
+                'font-size:14px;line-height:1.55;color:#141414;' +
+                'font-style:italic;';
+            pop.appendChild(promptText);
+
+            info.addEventListener('mouseenter', function () {
+                info.style.background = '#4A4538';
+                info.style.borderColor = '#4A4538';
+                info.style.color = '#ffffff';
+                pop.style.opacity = '1';
+            });
+            info.addEventListener('mouseleave', function () {
+                info.style.background = '#ffffff';
+                info.style.borderColor = '#B8B0A0';
+                info.style.color = '#4A4538';
+                pop.style.opacity = '0';
+            });
+
+            stage.appendChild(info);
+            stage.appendChild(pop);
+        }
+
+        container.appendChild(stage);
+    }
+
+    // ===== Hersh 2013 Caveats — interactive DIKW pipeline with hover examples =====
+    function hershCaveats(container, config) {
+        // Combined slide: a literature timeline strip on top, the full Hersh
+        // DIKW figure (all seven caveats in their original placement) below,
+        // hover-detail panel at bottom. Replaces the slim 4-caveat version
+        // and absorbs the standalone literature-pivot slide.
+        var W = 1280, H = 720;
+        var bg = '#faf7f1';
+        var ink = '#1f1a14';
+        var muted = '#6b5c48';
+        var rule = '#a89c85';
+        var amber = '#b8860b';
+        var amberBg = '#fef3c7';
+        var amberStroke = '#d97706';
+        var amberStrong = '#92400e';
+        var blueBox = '#dde7f0';
+        var blueStroke = '#1B3A5C';
+        var arrowGrey = '#7a8896';
+
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('font-family', "'Inter', 'Helvetica Neue', sans-serif");
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', bg);
+
+        if (!config || !config.hideHeader) {
+            svg.append('text').attr('x', W / 2).attr('y', 24)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '22px').attr('font-weight', '700').attr('fill', ink)
+                .text('What the Literature Already Knows');
+            svg.append('text').attr('x', W / 2).attr('y', 46)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', muted)
+                .text('Thirteen years of EHR-data-quality literature, organized by Hersh’s DIKW continuum. Hover any caveat for the example from Table 1.');
+        }
+
+        // ===== Literature timeline strip (top) =====
+        var tlY = 78;
+        var tlMarkers = [
+            { x: 200,  year: '2013', author: 'HERSH',           tag: 'seven caveats catalog' },
+            { x: 445,  year: '2013', author: 'WEISKOPF & WENG', tag: 'five quality dimensions' },
+            { x: 690,  year: '2016', author: 'DATA ENGINEERING',     tag: 'the engineered substrate' },
+            { x: 935,  year: '2026', author: 'WORKFLOW ORCHESTRATION', tag: 'the modern theme' },
+            { x: 1180, year: '…',    author: '',                tag: 'and the literature keeps adding' }
+        ];
+        // Connecting line spans all five markers
+        svg.append('line')
+            .attr('x1', 180).attr('y1', tlY)
+            .attr('x2', 1180).attr('y2', tlY)
+            .attr('stroke', amberStroke).attr('stroke-width', 1.4).attr('stroke-opacity', 0.6);
+        tlMarkers.forEach(function (m) {
+            // Dot
+            svg.append('circle').attr('cx', m.x).attr('cy', tlY).attr('r', 5)
+                .attr('fill', amberStroke).attr('opacity', m.author === '' ? 0.5 : 1);
+            // Year above
+            svg.append('text').attr('x', m.x).attr('y', tlY - 12)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('font-weight', '700').attr('fill', amberStrong)
+                .style('font-family', "'JetBrains Mono', 'Menlo', monospace")
+                .attr('letter-spacing', '1.5px').text(m.year);
+            // Author below dot
+            if (m.author) {
+                svg.append('text').attr('x', m.x).attr('y', tlY + 18)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '11px').attr('font-weight', '700').attr('fill', ink)
+                    .attr('letter-spacing', '1.2px').text(m.author);
+            }
+            // Tag below author
+            svg.append('text').attr('x', m.x).attr('y', tlY + 32)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+                .text(m.tag);
+        });
+        // Faint divider below timeline
+        svg.append('line').attr('x1', 60).attr('y1', tlY + 50)
+            .attr('x2', W - 60).attr('y2', tlY + 50)
+            .attr('stroke', rule).attr('stroke-width', 1).attr('opacity', 0.35);
+
+        // ===== DIKW spine (center) — compressed spacing + shifted up so the
+        // hover popup below clears the takeaway ribbon at slide bottom. =====
+        var cx = 640;
+        var dataY = 152;
+        var infoY = 247;
+        var knowY = 342;
+        var boxW = 220, boxH = 50;
+
+        // Vertical translucent shaft
+        svg.append('line')
+            .attr('x1', cx).attr('y1', dataY - 18).attr('x2', cx).attr('y2', knowY + boxH + 18)
+            .attr('stroke', arrowGrey).attr('stroke-width', 30).attr('stroke-opacity', 0.14)
+            .attr('stroke-linecap', 'round');
+
+        var boxes = [
+            { label: 'Data', y: dataY, sub: '' },
+            { label: 'Information', y: infoY, sub: 'data + meaning' },
+            { label: 'Knowledge', y: knowY, sub: '' }
+        ];
+        boxes.forEach(function (b) {
+            svg.append('rect')
+                .attr('x', cx - boxW / 2).attr('y', b.y)
+                .attr('width', boxW).attr('height', boxH)
+                .attr('rx', 5).attr('ry', 5)
+                .attr('fill', blueBox).attr('stroke', blueStroke).attr('stroke-width', 1.6);
+            svg.append('text')
+                .attr('x', cx).attr('y', b.y + boxH / 2 + (b.sub ? -2 : 6))
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '18px').attr('font-weight', '700').attr('fill', blueStroke)
+                .text(b.label);
+            if (b.sub) {
+                svg.append('text')
+                    .attr('x', cx).attr('y', b.y + boxH / 2 + 18)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', '#475467')
+                    .text(b.sub);
+            }
+        });
+
+        // Arrowhead under Knowledge
+        var arrowY = knowY + boxH + 12;
+        svg.append('path')
+            .attr('d', 'M ' + (cx - 14) + ' ' + arrowY + ' L ' + cx + ' ' + (arrowY + 22) + ' L ' + (cx + 14) + ' ' + arrowY + ' Z')
+            .attr('fill', arrowGrey).attr('opacity', 0.55);
+
+        // ===== Caveats — restored to all SEVEN in Hersh's original placement =====
+        // LEFT side: #1, #4 → Data; #2 → Information; #5 → Knowledge
+        // RIGHT side: #7 → Data; #3, #6 → Information
+        var caveats = [
+            // LEFT COLUMN
+            { n: 1, label: 'Inaccurate data', side: 'L', y: 120, target: dataY + boxH / 2 - 8,
+              full: 'EHRs may contain inaccurate (incorrect) data.',
+              row: 'Diagnostic uncertainty',
+              example: 'A patient with suspected diabetes mellitus may have a diabetes code recorded before the diagnosis is confirmed by laboratory testing.' },
+            { n: 4, label: 'Locked in free text', side: 'L', y: 195, target: dataY + boxH / 2 + 8,
+              full: 'Data captured in text in EHRs may not be recoverable for comparative effectiveness research.',
+              row: 'Treatment choice and timing',
+              example: 'The clinical reason for choosing an ACE inhibitor in a hypertensive patient — e.g., concomitant heart failure — may be recorded only later, in narrative text.' },
+            { n: 2, label: 'Incomplete patient story', side: 'L', y: 270, target: infoY + boxH / 2, secondaryTarget: dataY + boxH / 2 + 4,
+              full: 'EHRs often do not tell a complete patient story.',
+              row: 'Diagnostic timing',
+              example: 'A new patient in the system with diabetes may have had diabetes for many years prior to presentation — the EHR sees only the first encounter.' },
+            { n: 5, label: 'Mixed provenance', side: 'L', y: 358, target: knowY + boxH / 2, secondaryTarget: dataY + boxH / 2 + 8,
+              full: 'Multiple sources of data affect data provenance.',
+              row: 'Treatment decisions',
+              example: 'Some treatment decisions are remote to the patient–provider interaction — e.g., insurance restrictions or institutional drug formularies — and aren’t visible as such in the chart.' },
+            // RIGHT COLUMN
+            { n: 7, label: 'Care ≠ research', side: 'R', y: 120, target: dataY + boxH / 2, secondaryTarget: infoY + boxH / 2 - 8,
+              full: 'There are differences between research protocols and clinical care.',
+              row: 'Treatment decisions',
+              example: 'Treatment decisions are not randomized. A physician may choose a treatment based on personal views or biases — not the cohort logic of a trial.' },
+            { n: 3, label: 'Transformed / re-coded', side: 'R', y: 215, target: infoY + boxH / 2 - 8,
+              full: 'Data have been transformed / coded for purposes other than clinical care and research.',
+              row: 'Treatment decisions',
+              example: 'A medication record may reflect what the insurance formulary or institution allowed — what was billable, not necessarily what the clinician would have chosen.' },
+            { n: 6, label: 'Wrong granularity', side: 'R', y: 295, target: infoY + boxH / 2 + 8,
+              full: 'Data granularity in EHRs may not match the needs of comparative effectiveness research.',
+              row: 'Diagnostic uncertainty',
+              example: 'Various forms of upper respiratory infection — sinusitis, pharyngitis, bronchitis, rhinitis — collapse into one billing code, erasing distinctions a researcher needs.' }
+        ];
+
+        var bubW = 280, bubH = 60;
+        var leftX = 50, rightX = W - 50 - bubW;
+
+        var bubGroup = svg.append('g').attr('class', 'caveat-bubbles');
+
+        // Connectors first (behind bubbles)
+        // PRIMARY influence = solid line (matches Hersh figure)
+        // SECONDARY influence = dashed line (matches Hersh figure for caveats #2, #5, #7)
+        caveats.forEach(function (d) {
+            var bx = d.side === 'L' ? leftX + bubW : rightX;
+            var by = d.y + bubH / 2;
+            var tx = d.side === 'L' ? cx - boxW / 2 : cx + boxW / 2;
+            var midX = (bx + tx) / 2;
+
+            // PRIMARY (solid)
+            var ty = d.target;
+            bubGroup.append('path')
+                .attr('class', 'connector connector-' + d.n)
+                .attr('d', 'M ' + bx + ' ' + by + ' Q ' + midX + ' ' + by + ' ' + tx + ' ' + ty)
+                .attr('stroke', amberStroke).attr('stroke-width', 1.3)
+                .attr('fill', 'none').attr('stroke-opacity', 0.6);
+
+            // SECONDARY (dashed) — only if defined
+            if (d.secondaryTarget !== undefined) {
+                var ty2 = d.secondaryTarget;
+                var midY2 = (by + ty2) / 2;
+                bubGroup.append('path')
+                    .attr('class', 'connector-secondary connector-secondary-' + d.n)
+                    .attr('d', 'M ' + bx + ' ' + by + ' Q ' + midX + ' ' + midY2 + ' ' + tx + ' ' + ty2)
+                    .attr('stroke', amberStroke).attr('stroke-width', 1)
+                    .attr('stroke-dasharray', '5,3')
+                    .attr('fill', 'none').attr('stroke-opacity', 0.35);
+            }
+        });
+
+        // Bubbles
+        var bubs = bubGroup.selectAll('g.caveat')
+            .data(caveats).enter()
+            .append('g')
+            .attr('class', function (d) { return 'caveat caveat-' + d.n; })
+            .style('cursor', 'pointer');
+
+        bubs.append('rect')
+            .attr('class', 'bubble-bg')
+            .attr('x', function (d) { return d.side === 'L' ? leftX : rightX; })
+            .attr('y', function (d) { return d.y; })
+            .attr('width', bubW).attr('height', bubH)
+            .attr('rx', 7).attr('ry', 7)
+            .attr('fill', amberBg).attr('stroke', amberStroke).attr('stroke-width', 1.5);
+
+        bubs.append('circle')
+            .attr('cx', function (d) { return d.side === 'L' ? leftX + 24 : rightX + bubW - 24; })
+            .attr('cy', function (d) { return d.y + bubH / 2; })
+            .attr('r', 15).attr('fill', amberStrong).attr('stroke', amberStroke).attr('stroke-width', 1);
+        bubs.append('text')
+            .attr('x', function (d) { return d.side === 'L' ? leftX + 24 : rightX + bubW - 24; })
+            .attr('y', function (d) { return d.y + bubH / 2 + 5; })
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', '#fef3c7')
+            .text(function (d) { return d.n; });
+
+        bubs.append('text')
+            .attr('x', function (d) { return d.side === 'L' ? leftX + 50 : rightX + bubW - 50; })
+            .attr('y', function (d) { return d.y + bubH / 2 + 5; })
+            .attr('text-anchor', function (d) { return d.side === 'L' ? 'start' : 'end'; })
+            .attr('font-size', '15px').attr('font-weight', '600').attr('fill', '#5a4a1f')
+            .text(function (d) { return d.label; });
+
+        // ===== Floating hover popup bubble (hidden by default) =====
+        // Bauhaus-style: white fill, hairline amber border, color block + caveat
+        // number top-left, header in caps with letter-spacing, hairline accent
+        // rule, full text, and the concrete Hersh-Table-1 example. No persistent
+        // panel; the bubble materializes only when a caveat is hovered.
+        var popupW = 660, popupH = 140;
+        var popupX = (W - popupW) / 2;
+        var popupY = 440;
+
+        var popup = svg.append('g').attr('class', 'caveat-popup')
+            .style('opacity', 0).style('pointer-events', 'none');
+
+        // Bubble background — white with subtle drop shadow via two stacked rects
+        popup.append('rect')
+            .attr('x', popupX + 2).attr('y', popupY + 4)
+            .attr('width', popupW).attr('height', popupH)
+            .attr('rx', 8).attr('ry', 8)
+            .attr('fill', '#000').attr('fill-opacity', 0.10);
+        popup.append('rect')
+            .attr('x', popupX).attr('y', popupY)
+            .attr('width', popupW).attr('height', popupH)
+            .attr('rx', 8).attr('ry', 8)
+            .attr('fill', '#ffffff')
+            .attr('stroke', amberStroke).attr('stroke-width', 1.8);
+
+        // Number badge (color block, vertically aligned with the heading line)
+        popup.append('rect')
+            .attr('x', popupX + 16).attr('y', popupY + 16)
+            .attr('width', 28).attr('height', 22)
+            .attr('rx', 3)
+            .attr('fill', amberStrong);
+        var popupNumber = popup.append('text')
+            .attr('x', popupX + 30).attr('y', popupY + 33)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', '#fef3c7');
+
+        // Heading = the full caveat text itself (was a redundant CAPS label before).
+        // Sized as the headline of the popup; wraps to two lines for the longer caveats.
+        var popupFull = popup.append('text')
+            .attr('x', popupX + 56).attr('y', popupY + 33)
+            .attr('font-size', '15.5px').attr('font-weight', '700').attr('fill', ink);
+
+        // Hairline accent rule (sits below a possible 2-line heading)
+        popup.append('line')
+            .attr('x1', popupX + 16).attr('x2', popupX + popupW - 16)
+            .attr('y1', popupY + 70).attr('y2', popupY + 70)
+            .attr('stroke', amberStroke).attr('stroke-width', 0.7).attr('stroke-opacity', 0.55);
+
+        // Example label
+        var popupExLabel = popup.append('text')
+            .attr('x', popupX + 16).attr('y', popupY + 88)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', muted)
+            .attr('letter-spacing', '1.4px');
+
+        // Example italic body — gets the freed space (room for two wrapped lines)
+        var popupEx = popup.append('text')
+            .attr('x', popupX + 16).attr('y', popupY + 108)
+            .attr('font-size', '13.5px').attr('font-style', 'italic').attr('fill', '#3a2f1d');
+
+        function wrapText(textSel, text, maxWidth, lineHeight) {
+            textSel.selectAll('tspan').remove();
+            textSel.text(null);
+            var words = text.split(/\s+/);
+            var x = textSel.attr('x'), y = textSel.attr('y');
+            var line = [];
+            var tspan = textSel.append('tspan').attr('x', x).attr('y', y);
+            for (var i = 0; i < words.length; i++) {
+                line.push(words[i]);
+                tspan.text(line.join(' '));
+                if (tspan.node().getComputedTextLength() > maxWidth && line.length > 1) {
+                    line.pop();
+                    tspan.text(line.join(' '));
+                    line = [words[i]];
+                    tspan = textSel.append('tspan').attr('x', x).attr('dy', lineHeight + 'px').text(words[i]);
+                }
+            }
+        }
+
+        // Hover handler — emphasize active caveat, dim others, light up its
+        // primary (solid) and secondary (dashed) connectors, fade in popup.
+        bubs.on('mouseenter', function (event, d) {
+            bubGroup.selectAll('g.caveat').style('opacity', 0.32);
+            bubGroup.selectAll('path.connector').attr('stroke-opacity', 0.10);
+            bubGroup.selectAll('path.connector-secondary').attr('stroke-opacity', 0.08);
+            d3.select(this).style('opacity', 1);
+            d3.select(this).select('rect.bubble-bg').attr('stroke-width', 2.8);
+            bubGroup.select('path.connector-' + d.n)
+                .attr('stroke-opacity', 1).attr('stroke-width', 2.2);
+            if (d.secondaryTarget !== undefined) {
+                bubGroup.select('path.connector-secondary-' + d.n)
+                    .attr('stroke-opacity', 0.85).attr('stroke-width', 1.5);
+            }
+
+            popupNumber.text(d.n);
+            // Heading = the caveat's full statement (max width accounts for the
+            // color-block on the left, so wrap budget is popupW - 56 - 16).
+            wrapText(popupFull, d.full, popupW - 72, 18);
+            popupExLabel.text('HERSH TABLE 1  ·  ' + d.row.toUpperCase());
+            wrapText(popupEx, d.example, popupW - 32, 17);
+
+            popup.transition().duration(180).style('opacity', 1);
+        }).on('mouseleave', function () {
+            bubGroup.selectAll('g.caveat').style('opacity', 1);
+            bubGroup.selectAll('path.connector')
+                .attr('stroke-opacity', 0.6).attr('stroke-width', 1.3);
+            bubGroup.selectAll('path.connector-secondary')
+                .attr('stroke-opacity', 0.35).attr('stroke-width', 1);
+            bubGroup.selectAll('rect.bubble-bg').attr('stroke-width', 1.5);
+            popup.transition().duration(140).style('opacity', 0);
+        });
+
+        // Legend matching the original Hersh figure — primary (solid) vs secondary (dashed)
+        var legX = 80, legY = H - 110;
+        svg.append('text').attr('x', legX).attr('y', legY)
+            .attr('font-size', '10px').attr('font-weight', '700').attr('fill', muted)
+            .attr('letter-spacing', '1.6px').text('LEGEND');
+        // Primary
+        svg.append('line')
+            .attr('x1', legX + 60).attr('x2', legX + 110)
+            .attr('y1', legY - 3).attr('y2', legY - 3)
+            .attr('stroke', amberStroke).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', legX + 118).attr('y', legY)
+            .attr('font-size', '10.5px').attr('fill', muted)
+            .text('primary influence');
+        // Secondary
+        svg.append('line')
+            .attr('x1', legX + 240).attr('x2', legX + 290)
+            .attr('y1', legY - 3).attr('y2', legY - 3)
+            .attr('stroke', amberStroke).attr('stroke-width', 1.2)
+            .attr('stroke-dasharray', '5,3').attr('stroke-opacity', 0.7);
+        svg.append('text').attr('x', legX + 298).attr('y', legY)
+            .attr('font-size', '10.5px').attr('fill', muted)
+            .text('secondary influence');
+
+        // Combined source attribution — all three papers on the timeline
+        svg.append('text').attr('x', W / 2).attr('y', H - 22)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Hersh et al., Med Care 2013;51(8 Suppl 3):S30–S37 (PMID 23774517)  ·  Weiskopf & Weng, JAMIA 2013;20(1):144–151 (PMID 22733976)  ·  Kahn et al., eGEMs 2016;4(1):1244 (PMID 27713905).');
+        svg.append('text').attr('x', W / 2).attr('y', H - 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', muted)
+            .text('Diagram adapted from Hersh et al. 2013, Figure 1 (Informatics Continuum).');
+    }
 
     function render(name, container, config) {
         var fn = registry[name];

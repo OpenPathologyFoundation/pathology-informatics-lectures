@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pathology Informatics Lectures</title>
+    <title>Open Pathology Learning Lab</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -27,25 +27,28 @@
             width: 100%;
             background: linear-gradient(160deg, #0e6e8c 0%, #1a2e44 100%);
             color: white;
-            padding: 48px 24px 40px;
+            padding: 56px 24px 44px;
             text-align: center;
         }
 
         header h1 {
-            font-size: 2rem;
+            font-size: 2.1rem;
             font-weight: 700;
             letter-spacing: -0.02em;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
-        header p {
+        header .header-sub {
             font-size: 1.05rem;
             font-weight: 300;
-            opacity: 0.85;
+            opacity: 0.9;
+            max-width: 760px;
+            margin: 0 auto;
+            line-height: 1.5;
         }
 
         .author {
-            margin-top: 16px;
+            margin-top: 18px;
             font-size: 0.9rem;
             opacity: 0.7;
         }
@@ -56,15 +59,47 @@
             padding: 40px 24px 60px;
         }
 
-        h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #0e6e8c;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-bottom: 20px;
+        /* ─── Section blocks ─────────────────────────────────── */
+        .section-block {
+            margin-bottom: 48px;
         }
 
+        .section-block:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-header {
+            margin-bottom: 22px;
+        }
+
+        .section-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1a2e44;
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
+            text-transform: none;
+        }
+
+        .section-header .section-sub {
+            font-size: 0.95rem;
+            color: #556270;
+            line-height: 1.5;
+            font-weight: 400;
+            max-width: 720px;
+        }
+
+        .section-header::after {
+            content: "";
+            display: block;
+            width: 44px;
+            height: 2px;
+            background: #0e6e8c;
+            margin-top: 14px;
+            opacity: 0.7;
+        }
+
+        /* ─── Lecture cards ──────────────────────────────────── */
         .lecture-card {
             background: white;
             border-radius: 8px;
@@ -99,6 +134,7 @@
 
         .lecture-card .meta {
             display: flex;
+            flex-wrap: wrap;
             gap: 16px;
             font-size: 0.8rem;
             color: #7f8c8d;
@@ -148,96 +184,144 @@
 
 <body>
     <header>
-        <h1>Pathology Informatics Lectures</h1>
-        <p>Interactive web-based lectures for pathology residents</p>
+        <h1>Open Pathology Learning Lab</h1>
+        <p class="header-sub">Interactive lectures and demonstrations on pathology informatics, clinical data, AI, and open medical infrastructure</p>
         <div class="author">Peter Gershkovich, MD. MHA &mdash; Yale University School of Medicine</div>
     </header>
 
     <main>
-        <h2>Select a Lecture</h2>
+        <!-- ═══ Section 1 — Lectures & Talks ═══════════════════════════════════ -->
+        <section class="section-block">
+            <div class="section-header">
+                <h2>Lectures &amp; Talks</h2>
+                <p class="section-sub">Recent talks for grand rounds, leadership, and conference audiences &mdash; AI-assisted development, clinical data, and the institutional shape of medical software.</p>
+            </div>
 
-        <a class="lecture-card" href="/lecture/its-leadership">
-            <h3>Pathology Informatics at Yale &mdash; The Ask<span class="badge-new">New</span><span
-                    class="badge-new badge-interactive">8 min</span></h3>
-            <div class="description">
-                ITS leadership talk &mdash; what we've built, what AI changed, and what we need next.
-                Four beats: context, track record + velocity, IBIS demo, the ask for enterprise LLM access inside Yale's security perimeter.
-            </div>
-            <div class="meta">
-                <span>10 slides</span>
-                <span>Live IBIS demo</span>
-                <span>8 minutes</span>
-            </div>
-        </a>
+            <a class="lecture-card" href="/lecture/dom-grand-rounds">
+                <h3>Build as You Speak &mdash; Department of Medicine Research Grand Rounds<span class="badge-new">New</span><span
+                        class="badge-new badge-interactive">45 min</span></h3>
+                <div class="description">
+                    AI-assisted development has changed what a small applied-informatics team
+                    can build inside an academic medical center. The talk traces the gap
+                    between operational EHR data and what clinical research actually needs,
+                    the parallel infrastructure departments quietly build to bridge it, and
+                    the institutional discipline that becomes both possible and necessary as
+                    iteration cycles collapse from months to hours. Includes live
+                    demonstrations of IBIS &mdash; natural-language search and cohort
+                    discovery &mdash; and Xenonym, a schema-driven synthetic-data generator.
+                    Closes with the case for applied informatics as the translational layer
+                    that turns biomedical information science into clinical reality.
+                </div>
+                <div class="meta">
+                    <span>39 slides</span>
+                    <span>Live IBIS &middot; Xenonym demo</span>
+                    <span>~45 minutes + discussion</span>
+                </div>
+            </a>
 
-        <a class="lecture-card" href="/lecture/oneit">
-            <h3>The Transformative Effects of AI-Assisted Software Development<span class="badge-new">New</span><span
-                    class="badge-new badge-interactive">Interactive</span></h3>
-            <div class="description">
-                Yale OneIT Conference &mdash; what changes, what doesn't, and what it means for the act of building.
-                Featuring the Xenonym case study, DevSecOps patterns, and the Tufte meta-argument.
-            </div>
-            <div class="meta">
-                <span>29 slides</span>
-                <span>Live demo</span>
-                <span>45&ndash;50 minutes</span>
-            </div>
-        </a>
+            <a class="lecture-card" href="/lecture/its-leadership">
+                <h3>Pathology Informatics at Yale &mdash; The Ask<span class="badge-new">New</span><span
+                        class="badge-new badge-interactive">8 min</span></h3>
+                <div class="description">
+                    ITS leadership talk &mdash; what we&rsquo;ve built, what AI changed, and what we need next.
+                    Four beats: context, track record + velocity, IBIS demo, the ask for enterprise LLM access inside Yale&rsquo;s security perimeter.
+                </div>
+                <div class="meta">
+                    <span>10 slides</span>
+                    <span>Live IBIS demo</span>
+                    <span>8 minutes</span>
+                </div>
+            </a>
 
-        <a class="lecture-card" href="/lecture/intro_pathology_informatics">
-            <h3>1. Relevance of Pathology Informatics<span class="badge-new">New</span><span
-                    class="badge-new badge-interactive">Interactive</span></h3>
-            <div class="description">
-                Logic, workflow, and the future of practice &mdash; featuring live polls, micro-case voting,
-                D3 visualizations, and a JSON-driven slide engine.
-            </div>
-            <div class="meta">
-                <span>41 slides</span>
-                <span>Live polls &amp; voting</span>
-                <span>D3.js visualizations</span>
-            </div>
-        </a>
+            <a class="lecture-card" href="/lecture/oneit">
+                <h3>The Transformative Effects of AI-Assisted Software Development<span class="badge-new">New</span><span
+                        class="badge-new badge-interactive">Interactive</span></h3>
+                <div class="description">
+                    Yale OneIT Conference &mdash; what changes, what doesn&rsquo;t, and what it means for the act of building.
+                    Featuring the Xenonym case study, DevSecOps patterns, and the Tufte meta-argument.
+                </div>
+                <div class="meta">
+                    <span>29 slides</span>
+                    <span>Live demo</span>
+                    <span>45&ndash;50 minutes</span>
+                </div>
+            </a>
 
+            <a class="lecture-card" href="/lecture/pathology_informatics_ai">
+                <h3>Pathology Informatics in the Age of AI<span class="badge-new">New</span><span
+                        class="badge-new badge-interactive">Interactive</span></h3>
+                <div class="description">
+                    How emerging technologies are transforming the tools we build &mdash; combining workflow foundations,
+                    the functionality gap, AI-assisted development evidence (Xenonym, IBIS, WBC &Delta;&Sigma;), and a practical pathway for pathologists.
+                </div>
+                <div class="meta">
+                    <span>37 slides</span>
+                    <span>Live polls &amp; voting</span>
+                    <span>D3.js visualizations</span>
+                </div>
+            </a>
+        </section>
 
-        <a class="lecture-card" href="/lecture/custom_software_dev">
-            <h3>2. Custom Software Development in Pathology<span class="badge-new">New</span><span
-                    class="badge-new badge-interactive">Interactive</span></h3>
-            <div class="description">
-                Why we build, what we build, and how you can too &mdash; featuring the Buy vs. Build debate,
-                problem-first clinical cases, hands-on workshop, live polls, and D3.js cost/architecture visualizations.
+        <!-- ═══ Section 2 — Resident Curriculum ════════════════════════════════ -->
+        <section class="section-block">
+            <div class="section-header">
+                <h2>Pathology Informatics for Residents</h2>
+                <p class="section-sub">A practical curriculum on workflow, data, digital pathology, LIS/IMS, regulation, and AI in anatomic pathology.</p>
             </div>
-            <div class="meta">
-                <span>37 slides</span>
-                <span>Live polls &amp; voting</span>
-                <span>D3.js visualizations</span>
-                <span>Workshop exercise</span>
-            </div>
-        </a>
 
-        <a class="lecture-card" href="/software_dev_clinical_use.html">
-            <h3>3. Software Development for Clinical Use (Original)</h3>
-            <div class="description">
-                The original lecture &mdash; DevSecOps, image analysis tools,
-                digital pathology infrastructure, and spotting workflow gaps.
-            </div>
-            <div class="meta">
-                <span>14 slides</span>
-                <span>Live workflow demo</span>
-            </div>
-        </a>
+            <a class="lecture-card" href="/lecture/intro_pathology_informatics">
+                <h3>1. Relevance of Pathology Informatics<span class="badge-new">New</span><span
+                        class="badge-new badge-interactive">Interactive</span></h3>
+                <div class="description">
+                    Logic, workflow, and the future of practice &mdash; featuring live polls, micro-case voting,
+                    D3 visualizations, and a JSON-driven slide engine.
+                </div>
+                <div class="meta">
+                    <span>41 slides</span>
+                    <span>Live polls &amp; voting</span>
+                    <span>D3.js visualizations</span>
+                </div>
+            </a>
 
-        <a class="lecture-card" href="/index.html">
-            <h3>4. Regulations, Technology, and the Future of Pathology</h3>
-            <div class="description">
-                What every pathology resident should know about LIS and IMS &mdash; covering HIPAA,
-                regulatory frameworks, breach data visualization, and de-identification.
-            </div>
-            <div class="meta">
-                <span>30+ slides</span>
-                <span>D3.js visualizations</span>
-            </div>
-        </a>
+            <a class="lecture-card" href="/lecture/custom_software_dev">
+                <h3>2. Custom Software Development in Pathology<span class="badge-new">New</span><span
+                        class="badge-new badge-interactive">Interactive</span></h3>
+                <div class="description">
+                    Why we build, what we build, and how you can too &mdash; featuring the Buy vs. Build debate,
+                    problem-first clinical cases, hands-on workshop, live polls, and D3.js cost/architecture visualizations.
+                </div>
+                <div class="meta">
+                    <span>37 slides</span>
+                    <span>Live polls &amp; voting</span>
+                    <span>D3.js visualizations</span>
+                    <span>Workshop exercise</span>
+                </div>
+            </a>
 
+            <a class="lecture-card" href="/software_dev_clinical_use.html">
+                <h3>3. Software Development for Clinical Use (Original)</h3>
+                <div class="description">
+                    The original lecture &mdash; DevSecOps, image analysis tools,
+                    digital pathology infrastructure, and spotting workflow gaps.
+                </div>
+                <div class="meta">
+                    <span>14 slides</span>
+                    <span>Live workflow demo</span>
+                </div>
+            </a>
+
+            <a class="lecture-card" href="/index.html">
+                <h3>4. Regulations, Technology, and the Future of Pathology</h3>
+                <div class="description">
+                    What every pathology resident should know about LIS and IMS &mdash; covering HIPAA,
+                    regulatory frameworks, breach data visualization, and de-identification.
+                </div>
+                <div class="meta">
+                    <span>30+ slides</span>
+                    <span>D3.js visualizations</span>
+                </div>
+            </a>
+        </section>
     </main>
 
     <footer>

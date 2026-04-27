@@ -12,10 +12,10 @@
     },
     "glossary": [
       { "term": "AI", "definition": "Artificial Intelligence — in this context, large language models (LLMs) used as development assistants for code generation, design consultation, and review automation." },
-      { "term": "Beaker", "definition": "Epic's laboratory information system (LIS) module — a vintage system that serves a predominantly clerical function, managing specimen tracking, test ordering, and result reporting in clinical laboratories." },
+      { "term": "Beaker", "definition": "Epic's laboratory information system (LIS) module — manages specimen tracking, test ordering, and result reporting under Epic's compliance, billing, and centralized-record framework." },
       { "term": "CI/CD", "definition": "Continuous Integration / Continuous Deployment — automated pipelines that build, test, and release software on every change, making delivery safe and repeatable." },
       { "term": "DevSecOps", "definition": "Development + Security + Operations as a unified practice — security embedded from the start, not bolted on at delivery." },
-      { "term": "Epic", "definition": "A major electronic health record (EHR) vendor — a vintage system that serves a predominantly clerical function within health systems, managing patient records, scheduling, billing, and clinical documentation across large healthcare organizations including Yale." },
+      { "term": "Epic", "definition": "A major electronic health record (EHR) vendor — optimized for compliance, billing, and the production of a legally defensible clinical record under centralized institutional control. Used at Yale and across most large U.S. health systems for patient records, scheduling, and clinical documentation." },
       { "term": "Ephemeral Contract", "definition": "A short-lived, task-scoped agreement with a model provider — established for the duration of a specific workload rather than as a persistent data-sharing relationship." },
       { "term": "FOSSA", "definition": "A software composition analysis tool that scans project dependencies for open-source license compliance issues and known security vulnerabilities with exploitability scoring." },
       { "term": "IBIS", "definition": "Integrated Biospecimen and Informatics System — a natural-language search layer over pathology data built at Yale to make structured and unstructured clinical information accessible without writing queries." },
@@ -51,7 +51,7 @@
       "vizConfig": {},
       "takeaway": {
         "text": "Pathology is the last broad clinical domain still waiting for its digital transformation.",
-        "comment": "Beat 1 — 90 seconds. Pathology sits at the center of oncology decisions, but outside a handful of vendor islands, the field hasn't crossed into digital workflow. The reason is not scientific — it's economic. Building clinical-grade software historically required teams, years, and capital that academic pathology departments don't have. That is the constraint this talk is about. Don't mention specific YNHHS financials — 'significant operating losses in the health system' is sufficient framing."
+        "comment": "Beat 1 — 90 seconds. Pathology sits at the center of oncology decisions, but outside a handful of vendor islands, the field hasn't crossed into digital workflow. The reason is not scientific — it's economic. Building clinical-grade software historically required teams, years, and capital that academic pathology departments don't have. That is the constraint this talk is about."
       }
     },
 
@@ -136,7 +136,7 @@
       "title": "",
       "subtitle": "",
       "vizType": "institutional-context",
-      "speakerNotes": "Beat 4, part 1. Here is the uncomfortable part. Everything I just showed you — the methodology, the velocity, Xenonym, IBIS, this presentation — was built using AI models that are not currently available to me through Yale. I worked around the perimeter, not inside it. I am not proud of that. I am telling you because the workaround is not sustainable, and because the pattern I just demonstrated cannot spread inside the institution until the tools that made it possible are available inside the institution. The institutional context — the concentric rings on this slide — is invisible to the model. But the model has been invisible to the institution too. That is the gap we need to close."
+      "speakerNotes": "Beat 4, part 1. Here is the institutional gap this talk addresses. The methodology, the velocity, Xenonym, IBIS, this presentation — all of it depends on AI tooling that is not yet broadly sanctioned for institutional use at Yale. The pattern cannot spread inside the institution until the tools that make it possible are available inside the institution. The institutional context — the concentric rings on this slide — is invisible to the model. But the model has been invisible to the institution too. That is the gap we need to close."
     },
 
     {
