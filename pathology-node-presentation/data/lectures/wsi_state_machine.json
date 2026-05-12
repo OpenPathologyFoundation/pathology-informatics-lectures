@@ -1,0 +1,1004 @@
+{
+  "meta": {
+    "title": "From “Image Management” to Workflow Orchestration: the WSI Stack as a State Machine",
+    "shortTitle": "WSI as State Machine",
+    "presenter": "Peter Gershkovich, MD. MHA",
+    "institution": "Yale University School of Medicine",
+    "date": "2026",
+    "theme": {
+      "primary": "#1B3A5C",
+      "secondary": "#2E6DA4",
+      "accent": "#D97706"
+    },
+    "glossary": [
+      { "term": "WSI", "definition": "Whole Slide Image — a digitized glass histology slide, typically 50,000 × 50,000 pixels or larger, stored as a multi-resolution tile pyramid." },
+      { "term": "DICOM", "definition": "Digital Imaging and Communications in Medicine — the long-standing radiology imaging standard (ISO 12052) that bundles pixel data, metadata, communication protocol, and security framework into one container." },
+      { "term": "OME-TIFF", "definition": "Open Microscopy Environment TIFF — a TIFF extension carrying scientific imaging metadata in an OME-XML block, widely supported across microscopy platforms." },
+      { "term": "Zarr", "definition": "A chunked, compressed, cloud-optimized container format for large multidimensional arrays — the storage layer of choice for cloud-native pyramidal imaging." },
+      { "term": "DZI", "definition": "Deep Zoom Image — a tile-pyramid container originally for Microsoft Silverlight, now ubiquitous in WSI viewers via OpenSeadragon." },
+      { "term": "COG", "definition": "Cloud Optimized GeoTIFF — a GeoTIFF organized so HTTP range-reads can fetch any tile without downloading the whole file. The geospatial precedent for cloud-native imaging." },
+      { "term": "GeoJSON", "definition": "An open, JSON-based format for geographic feature collections — used in pathology for polygonal annotations because the geometry primitives map cleanly to slide-space coordinates." },
+      { "term": "SVG", "definition": "Scalable Vector Graphics — a W3C XML standard for two-dimensional vector graphics; widely used for browser-rendered overlays and annotation layers." },
+      { "term": "FHIR", "definition": "Fast Healthcare Interoperability Resources — the HL7 standard for clinical data exchange via RESTful APIs over JSON; the metadata layer the modular stack defers to." },
+      { "term": "FSM", "definition": "Finite State Machine — a model of computation where a system occupies one of a finite set of states and transitions between them in response to events." },
+      { "term": "Orchestration", "definition": "Coordination of independent services and modules to produce a coherent workflow — in this lecture, the alternative paradigm to monolithic “image management.”" },
+      { "term": "Tile Server", "definition": "An HTTP service that returns image tiles at requested zoom levels and coordinates — the unit of access for any cloud-native pyramidal image." },
+      { "term": "Pelican", "definition": "Pathology Explorer for Large Images, Collaboration, Annotation, and Navigation — the open-source tile server and viewer stack used as a worked example in this lecture (forked from Kitware large_image)." },
+      { "term": "Starling", "definition": "An open pathology platform that provides the orchestration layer (worklist, login, case navigation, viewer launcher) above modular imaging, annotation, and report-authoring services." },
+      { "term": "Willet", "definition": "Workspace for Integrated Linguistic Laboratory Evaluation and Transmission — a Starling module for diagnostic report authoring; demonstrates how a report becomes a participant in the case state machine." },
+      { "term": "REALM", "definition": "Rapidly Evolving Agile Laboratory Modules — the family of clinical and research informatics applications built inside Yale Pathology over nearly two decades; the empirical evidence base for the modular operating model." },
+      { "term": "FDP", "definition": "Focus Declaration Protocol — the WebSocket-based session-awareness service in Starling that tracks which case each user has open across viewer windows, surfacing safety warnings when nested-state assumptions fail." },
+      { "term": "PACS", "definition": "Picture Archiving and Communication System — the radiology image-storage system DICOM was designed to populate; the institutional template that pathology has so far been pushed to copy." },
+      { "term": "LIS", "definition": "Laboratory Information System — the system of record for specimens, accessions, results, and report distribution in anatomic pathology." },
+      { "term": "Postmessage Bridge", "definition": "A typed JavaScript message-passing channel between two browser windows (e.g., orchestrator and viewer); the mechanism Starling uses to provision JWTs, switch cases, and forward audit events without coupling the two applications." },
+      { "term": "OpenSeadragon", "definition": "An open-source JavaScript viewer for high-resolution zoomable images; the rendering surface beneath most modern WSI viewers, including Pelican’s digital-viewer." },
+      { "term": "Slim", "definition": "An open-source DICOM-aware WSI viewer built on OpenLayers; cited in the fur-coat paper as evidence that DICOM-based annotation tooling is constrained relative to GeoJSON/SVG-based alternatives." },
+      { "term": "OpenLayers", "definition": "A high-performance, open-source JavaScript library for rendering map and image tiles in browsers — the geospatial library that ports cleanly to WSI viewing because the math is the same." },
+      { "term": "NIST SP 800-53", "definition": "The U.S. National Institute of Standards and Technology catalog of security and privacy controls; the basis for the layered security overlay the fur-coat paper proposes as an alternative to DICOM’s embedded security section." },
+      { "term": "State Machine", "definition": "Used in this lecture as both a literal computational model and the unifying metaphor: every clinically meaningful pathology workflow is a graph of states connected by typed, observable, auditable transitions." },
+      { "term": "Statechart", "definition": "Harel’s extension of finite-state machines (1987) that adds hierarchy, concurrency, and reactive behavior — the formalism most appropriate for clinical workflows because real care is rarely flat or strictly sequential." },
+      { "term": "BPMN", "definition": "Business Process Model and Notation — an OMG standard for diagramming processes, widely used in healthcare workflow modelling alongside (and sometimes overlapping with) statechart-based approaches." },
+      { "term": "businessStatus", "definition": "An optional FHIR Task field that carries the operational meaning of the current state — distinct from the technical Task.status. The distinction is the canonical lesson against collapsing display labels and lifecycle state into a single column." },
+      { "term": "DSA-WSI-DeID", "definition": "Digital Slide Archive — Whole Slide Image De-Identification: an open-source workflow that handles header redaction, label scanning, and PHI-on-image quarantine. The practical reference implementation of the de-identification state machine." },
+      { "term": "Quarantine (de-id)", "definition": "A first-class state in the de-identification state machine: a slide where automated screening detected PHI on the image (label, sticker, ink annotation) and which now requires human review before any derivative envelope can be issued." },
+      { "term": "Merkle Tree", "definition": "A tree of cryptographic hashes in which each non-leaf node is the hash of its children; lets any single leaf (e.g., a tile) be verified against a single signed root in O(log n) hashes — the standard mechanism for efficient integrity checking of large pyramidal datasets." },
+      { "term": "C2PA", "definition": "Coalition for Content Provenance and Authenticity — an open standard (originated by Adobe, BBC, Microsoft, Intel, others) for cryptographically signing the origin and edit history of digital media. The provenance pattern transfers cleanly to WSI tiles and derived overlays." },
+      { "term": "Adversarial Example", "definition": "An input crafted (or perturbed) to cause an ML model to misclassify, often by changes imperceptible to humans (Goodfellow et al., 2014). Documented in computational-pathology classifiers; the reason “integrity-validated” must be a real state, not a checkbox." },
+      { "term": "Integrity-Validated (state)", "definition": "An explicit state in the slide / case state machine indicating that pixel content has been verified against its signed Merkle root since the most recent transition. Required precondition for moves into AI-inference, research-cohort, or teaching-set envelopes." },
+      { "term": "Test-Driven Modular Design", "definition": "An architectural discipline in which each module exposes a tested integration contract (API, message schema, state semantics) and is independently runnable against mocks. The contract is the test surface — the property that makes both AI-assisted development and cross-mission composition safe." }
+    ]
+  },
+  "slides": [
+
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "zoom",
+      "title": "From “Image Management” to Workflow Orchestration",
+      "subtitle": "The WSI Stack as a State Machine",
+      "presenter": "Peter Gershkovich, MD. MHA",
+      "institution": "Yale University School of Medicine",
+      "date": "2026"
+    },
+
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "Author of the open-source projects discussed in this lecture: <strong>Starling</strong> (orchestrator), <strong>Pelican</strong> (tile server, forked from Kitware large_image), and <strong>Willet</strong> (report module).",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter’s independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "hook-slide-five-places",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "hook",
+      "bgColor": "#0f172a",
+      "title": "The Slide That Lived in Five Places",
+      "subtitle": "Same pixels. Five contexts. Five permission envelopes. One file system was never going to hold them all.",
+      "cards": [
+        { "icon": "🩺", "label": "Clinical Sign-Out", "value": "Diagnostic", "description": "Pathologist on a worklist case — PHI present, audited, two-window FDP-protected.", "accentColor": "#60a5fa" },
+        { "icon": "🎯", "label": "Tumor Board", "value": "Multidisciplinary", "description": "Same image, broader audience, different identity context, different annotation set.", "accentColor": "#fbbf24" },
+        { "icon": "🏫", "label": "Education", "value": "De-identified", "description": "Resident teaching set — PHI stripped, annotations curated, derivative state, citable URI.", "accentColor": "#a78bfa" },
+        { "icon": "🔬", "label": "Research", "value": "Cohort Member", "description": "Pulled into a study under IRB — cohort identifier, version pin, derived features attached.", "accentColor": "#34d399" },
+        { "icon": "🤖", "label": "AI Pipeline", "value": "Inference Substrate", "description": "Foundation-model inference at tile level — different security envelope, different audit, different output type.", "accentColor": "#f87171" }
+      ],
+      "takeaway": {
+        "text": "The image didn’t move. The envelope around it changed. “Where is the file?” was always the wrong question.",
+        "comment": "Open with the recognition. Every working pathologist has lived this. The file existed; the institution’s ability to coherently express what state it was in did not. That gap — between the physical artifact and the semantic state — is what the rest of the lecture is about."
+      }
+    },
+
+    {
+      "id": "thesis",
+      "type": "two-column",
+      "transition": "fade",
+      "title": "Thesis",
+      "subtitle": "“Image management” is a category error. What we actually do is workflow orchestration.",
+      "left": {
+        "heading": "What “Image Management” Implies",
+        "bullets": [
+          "<strong>Inventory</strong> — a place where files live",
+          "<strong>One container per image</strong> — pixels, metadata, security, annotations bundled",
+          "<strong>One protocol per institution</strong> — the PACS pattern from radiology",
+          "<strong>The file is the unit of work</strong> — ship it, store it, secure it, retrieve it"
+        ]
+      },
+      "right": {
+        "heading": "What Pathology Actually Does",
+        "highlight": true,
+        "bullets": [
+          "<strong>Coordinates</strong> a graph of state transitions",
+          "<strong>Composes</strong> independent services — pixels, metadata, annotations, security, communication — each evolving on its own clock",
+          "<strong>Operates polyglot</strong> — TIFF, SVS, NDPI, OME-TIFF, DZI, Zarr already coexist; AI foundation models train on TIFF/SVS/JPEG, not DICOM (Gershkovich, JPI 2025)",
+          "<strong>The case is the unit of work</strong> — the file is one observable in a much larger machine"
+        ]
+      },
+      "takeaway": {
+        "text": "If we keep building “image management” systems, we will keep producing PACS-shaped artifacts that solve the wrong problem at scale.",
+        "comment": "Lay the thesis down here, plain. Pathology has been told for fifteen years that it needs a PACS. The argument of this lecture is not that DICOM is wrong — it is that the noun is wrong. We don’t manage images. We orchestrate workflows in which images are one observable signal among many."
+      }
+    },
+
+    {
+      "id": "objectives",
+      "type": "visualization",
+      "transition": "fade",
+      "title": "",
+      "subtitle": "",
+      "vizType": "learning-objectives",
+      "vizConfig": {},
+      "speakerNotes": "Five learning objectives that anchor the talk for an academic informatics audience: (1) Articulate why ‘image management’ is a category error in pathology, drawing on the JPI 2025 critique of DICOM’s monolithic file-centric architecture. (2) Model a clinical pathology case as a finite state machine — with a nested per-slide FSM — and identify which transitions are AI-eligible, which are human-only, and which require both. (3) Map the five decoupled layers (pixels, metadata, annotations, security, communication) to currently available open standards (TIFF/Zarr, FHIR, GeoJSON/SVG, NIST SP 800-53, REST/microservices). (4) Compare the orchestration pattern in Starling/Pelican/Willet to the geospatial precedent (COG, Zarr, GeoJSON, OpenLayers) and identify what each domain learned that the other should adopt. (5) Specify, for one workflow in your own institution, the state diagram and the responsible service for each transition — and recognize where today’s monolithic assumptions force the workflow to lie about its own state."
+    },
+
+    {
+      "id": "fur-coat",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "title": "Wearing a Fur Coat in the Summertime",
+      "subtitle": "The metaphor that names the problem (<a href='https://doi.org/10.1016/j.jpi.2025.100450' target='_blank'>Gershkovich, JPI 2025</a>)",
+      "left": {
+        "heading": "What DICOM Bundled — in 1993",
+        "bullets": [
+          "<strong>Pixel data</strong> — the imaging primitive",
+          "<strong>Metadata</strong> — patient identifiers, study descriptors, equipment provenance",
+          "<strong>Communication protocol</strong> — DIMSE, SCU/SCP, store/find/move",
+          "<strong>Security framework</strong> — attribute-level controls embedded in the file",
+          "<strong>Annotations</strong> — structured reports as part of the image envelope"
+        ]
+      },
+      "right": {
+        "heading": "Why That Coat Doesn’t Fit Pathology",
+        "highlight": true,
+        "bullets": [
+          "Pixel data alone is <strong>orders of magnitude larger</strong> than radiology — and lives best in cloud-optimized formats (OME-TIFF, Zarr) the bundle wasn’t designed for",
+          "Metadata changes on a <strong>different clock</strong> than the image — patient IDs update, encounter contexts shift, derivations accumulate",
+          "Annotations span <strong>pre-analytic, analytic, and post-analytic</strong> workflows — dynamic, versioned, queryable; not a frozen attachment",
+          "<strong>Security is a discipline</strong>, not a section header — NIST SP 800-53 is layered over systems, networks, and data; not embedded in a file"
+        ]
+      },
+      "takeaway": {
+        "text": "DICOM solved 1993’s problem — effectively, durably, and worth honoring. It is the wrong garment for 2026’s climate.",
+        "comment": "Pathology was urged to copy radiology’s pattern. The pattern works for radiology partly because radiology was built around it, and partly because radiology has not yet had to pay the bill that pathology will pay if it does the same. The metaphor is generous to DICOM — a fur coat is the right garment somewhere. Just not here."
+      }
+    },
+
+    {
+      "id": "dicom-monolith",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "title": "What the Monolith Costs",
+      "subtitle": "Five concerns, one container — the architectural shape that resists every modern requirement",
+      "vizType": "modular-stack-pathology",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Embedding mutable metadata, security, and annotations alongside immutable pixels couples lifecycles that should be independent — and the coupling is what hurts.",
+        "comment": "Walk the diagram left to right. On the left, the monolithic DICOM stack: one envelope, five concerns. On the right, the same five concerns split into independently evolvable services. The right-hand picture is not aspirational — every box has a production-grade open-standard candidate today. The transition between them is what the rest of the lecture argues is already happening, whether or not the institutions paying for monolithic systems have noticed."
+      }
+    },
+
+    {
+      "id": "breach-reality",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "bgColor": "#1a0a0a",
+      "title": "The Cost of Coupling — The Breach Record",
+      "subtitle": "OCR-reported healthcare provider breaches, 2022–2025 (n = 1,475; ~141.7M individuals)",
+      "cards": [
+        { "icon": "🌐", "label": "Network Server", "value": "63%", "description": "929 breaches affecting ~123.9M individuals — the dominant attack surface, where image servers live", "accentColor": "#ef4444" },
+        { "icon": "✉️", "label": "Email", "value": "24.9%", "description": "368 breaches affecting ~7.6M individuals — phishing into the same imaging perimeter", "accentColor": "#f59e0b" },
+        { "icon": "📁", "label": "EHR (Direct)", "value": "5.8%", "description": "86 breaches, ~4.8M individuals — the EHR is harder to compromise than the image store", "accentColor": "#3b82f6" },
+        { "icon": "🔒", "label": "Image Stores Frequently Lack…", "value": "Parity", "description": "…the access controls, encryption, and audit primitives the EHR has had for a decade", "accentColor": "#a78bfa" }
+      ],
+      "takeaway": {
+        "text": "When pixels, identifiers, and security live in the same envelope, every routine update invalidates every signature — and the institution defaults to perimeter security alone.",
+        "comment": "The numbers are from OCR’s breach portal as cited in the JPI 2025 paper. The point is not to argue that DICOM caused the breaches. The point is that a file format which embeds PHI inside the same envelope as immutable pixels makes layered security mathematically harder to apply. NIST SP 800-160 calls this exactly: modularity is the discipline that lets security overlays do their job."
+      }
+    },
+
+    {
+      "id": "polyglot-already",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "title": "Pathology Is Already Polyglot",
+      "subtitle": "The argument for one format ignores what is already running in production",
+      "left": {
+        "heading": "What Pathology Actually Stores",
+        "bullets": [
+          "<strong>SVS</strong> (Aperio) — TIFF-based, dominant scanner output",
+          "<strong>NDPI</strong> (Hamamatsu), <strong>SCN</strong> (Leica), <strong>MRXS</strong> (3DHISTECH), <strong>BIF</strong> (Ventana) — vendor TIFF variants",
+          "<strong>OME-TIFF</strong> — open scientific imaging metadata",
+          "<strong>DZI</strong> — tile pyramid for browser viewers (OpenSeadragon)",
+          "<strong>Zarr</strong> — chunked cloud-native arrays for AI workloads",
+          "<strong>DICOM-WSI</strong> — supported, but rarely the source of truth"
+        ]
+      },
+      "right": {
+        "heading": "What This Tells You",
+        "highlight": true,
+        "bullets": [
+          "Bio-Formats already supports ~160 formats so users can keep what fits their workflow (Moore et al., 2015)",
+          "Most published <strong>AI foundation models in pathology</strong> rely on TIFF, SVS, or JPEG — not DICOM (Gershkovich, JPI 2025)",
+          "<strong>OpenLayers, OpenSeadragon, IIIF</strong> — the rendering layer is already standards-driven and format-agnostic",
+          "<strong>The polyglot environment is the asset</strong>, not the deficiency — it is what lets each layer evolve"
+        ]
+      },
+      "takeaway": {
+        "text": "Insisting on one container is mandating a single vehicle for all traffic. The right answer is a shared road — protocols, not formats.",
+        "comment": "Lang et al. (2023) on neurophysiology made the same point against DICOM in their domain. The lesson generalizes: standards are most valuable at the boundaries between systems. They become liabilities when they prescribe the internal anatomy of every component."
+      }
+    },
+
+    {
+      "id": "geospatial-parallel",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "diagnosis",
+      "title": "The Discipline That Already Solved This — Geospatial",
+      "subtitle": "Pyramidal tiles, vector overlays, layered security — different industry, same math, decade-long head start",
+      "vizType": "geospatial-parallel",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Pathology and geospatial face the same engineering problem: serve arbitrary tiles from terabyte pyramids, overlay typed vector geometry, layer security at the network and identity tiers. Geospatial chose modularity. The tooling and patterns are reusable.",
+        "comment": "Cloud Optimized GeoTIFF, Zarr, GeoJSON, OpenLayers, MapServer, the OGC API family — all of these are direct cousins of what pathology needs. The Slim viewer is built on OpenLayers. Pelican uses OpenSeadragon. The math underneath is tiles, transforms, and tile-coordinate features. We are not inventing a new discipline. We are catching up to one that already chose the modular path and proved it works at planetary scale."
+      }
+    },
+
+    {
+      "id": "category-error",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "“Image Management” — A Category Error",
+      "subtitle": "The noun doesn’t describe the work. It misdescribes it in a way that produces wrong systems.",
+      "left": {
+        "heading": "What “Image Management” Optimizes For",
+        "bullets": [
+          "Storage capacity",
+          "Retrieval latency",
+          "Format conformance to one container",
+          "<em>The image as the primary object</em>"
+        ]
+      },
+      "right": {
+        "heading": "What Pathology Actually Needs Optimized",
+        "highlight": true,
+        "bullets": [
+          "<strong>Case state</strong> — what does this case currently demand of which person or service?",
+          "<strong>Annotation provenance</strong> — who said what, when, against which version of the pixels?",
+          "<strong>Identity envelope</strong> — what permissions surround the image right now, in this context?",
+          "<strong>Derivation lineage</strong> — what was computed from the image, and is it still valid?",
+          "<em>The image as one observable in a state machine</em>"
+        ]
+      },
+      "takeaway": {
+        "text": "If you optimize for the wrong noun, you get a system that knows where the file is and nothing about the work the file is part of.",
+        "comment": "The category error is not academic. It produces real artifacts: PACS-shaped pathology systems that file PHI inside immutable image envelopes; vendor lock-in around containers that no AI pipeline actually consumes; institutional security perimeters built around a file format that breaks if you re-identify a single field. The cure is to change the noun. The next twelve slides develop the noun the work actually needs — beginning, for the room, with what a state machine actually is."
+      }
+    },
+
+    {
+      "id": "state-machine-primer",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "primer",
+      "title": "What Is a State Machine?",
+      "subtitle": "A small idea from computer science that turns out to describe most clinical work",
+      "vizType": "state-machine-primer",
+      "vizConfig": {},
+      "speakerNotes": "Pause here. Some people in this room have seen state machines since their first programming class; others have never heard the term. Define it simply: a state machine is a model of any system that, at any moment, is in exactly one of a small set of named states — and changes state only in response to specific named events that move it along specific named transitions. Three primitives: states (where you are), transitions (the move from one state to another), and events (what triggers a transition). The trick of the model is that it forces you to be honest about what is possible. If a transition isn’t drawn, it isn’t allowed. If it isn’t allowed, the system can refuse it. That is the entire safety property in one sentence. Show the example on screen — a lab order, four states, four transitions — and point out that every clinical workflow you have ever participated in has a state machine inside it, whether someone drew it or not. The choice is not whether to have one. The choice is whether to make it explicit.",
+      "takeaway": {
+        "text": "States are where the system is. Transitions are how it moves. Events are why. Every workflow has a state machine inside it — drawing the picture is what changes.",
+        "comment": "Anchor the vocabulary in this slide. Everything that follows will use ‘state’, ‘transition’, and ‘event’ as load-bearing words. If they’re soft here, the rest of the talk wobbles. If they’re crisp here, the case FSM in three slides lands as recognition rather than architecture."
+      }
+    },
+
+    {
+      "id": "medicine-already-programs-state-machines",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "primer",
+      "title": "We Have Been Programming Clinical State Machines for Forty Years",
+      "subtitle": "Pathology imaging is the last major diagnostic pillar entering the digital, stateful era — and it can avoid the historical compromises",
+      "vizType": "medicine-fsm-timeline",
+      "vizConfig": {},
+      "speakerNotes": "Pathology has often been told it is ‘behind’ radiology. The accurate picture is more interesting. Each major diagnostic pillar of medicine became digital and stateful at a different moment — laboratory medicine in the 1970s with the early LIS pioneers, pharmacy and order entry in the 1980s, scheduling and ADT and HL7 v2 messaging through the 1990s, EHR documentation and care pathways in the 2000s. Radiology imaging is digital and stateful too, but its state machine was bundled into the DICOM container at the moment of digitization — and it has been living with that constraint ever since. Pathology is the last analog holdout, finally crossing into the digital era. The advantage is real: pathology gets to learn from forty years of clinical state-machine experience and from radiology’s architectural compromises. The state-machine framing in this lecture is not a novelty for medicine. It is the deepest pattern in medical informatics. What is new is that pathology imaging joins it — and pathology can do it well.",
+      "takeaway": {
+        "text": "We are not introducing state machines to medicine. We are extending a forty-year tradition to its last analog diagnostic pillar — and choosing not to repeat the bundling mistake.",
+        "comment": "The slide cuts an objection at the root: ‘this is a CS abstraction being imposed on a clinical domain.’ It isn’t. Medical informatics has been a discipline of stateful workflows since Lincoln, Korpman, Lindberg, Greenes — pathologists in this room may have written CPOE rules or LIS workflow scripts in their training. The novelty is not the architecture; the novelty is that pathology imaging finally has the substrate to participate. And because we are arriving last, we get to skip the bundling compromise that radiology’s 1993 standard committed it to."
+      }
+    },
+
+    {
+      "id": "healthcare-as-journey",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "primer",
+      "title": "Healthcare Is Already a State Machine — and Most of It Goes Unrepresented",
+      "subtitle": "The patient journey is a sequence of states. The state determines what should happen next.",
+      "left": {
+        "heading": "What the Journey Actually Looks Like",
+        "bullets": [
+          "<strong>Pre-encounter</strong> — referred, scheduled, prepared",
+          "<strong>Encounter</strong> — admitted, triaged, in workup, on a ward, on a service",
+          "<strong>Decision</strong> — diagnosed, staged, planned",
+          "<strong>Treatment</strong> — pre-op, intra-op, post-op, on-protocol, on-medication",
+          "<strong>Resolution</strong> — discharged, surveilled, followed-up, transitioned",
+          "<em>Each one is a state. Each handoff is a transition. Each event is what triggered the move.</em>"
+        ]
+      },
+      "right": {
+        "heading": "What an Explicit FSM Lets You Do",
+        "highlight": true,
+        "bullets": [
+          "<strong>Program urgency</strong> — a state can declare its own deadline; the system can escalate when the clock runs out",
+          "<strong>Codify intention</strong> — the next allowable transition <em>is</em> the plan",
+          "<strong>Make handoffs visible</strong> — every transition has a sender, a receiver, and an audit trail",
+          "<strong>Catch impossible moves</strong> — the system can refuse a transition that doesn’t exist on the diagram",
+          "<strong>Talk to AI safely</strong> — agents propose transitions; the FSM decides whether the move is even legal"
+        ]
+      },
+      "takeaway": {
+        "text": "“The state of the patient determines what should happen next.” That single sentence is the entire informatics argument — and it has been hiding in plain sight in every clinical workflow we run.",
+        "comment": "This is the slide that should make a clinical attendee feel they already know this stuff — they just didn’t have a name for it. Use the patient-journey vocabulary they already speak. Then point out: in most institutions, almost none of this is represented as state. It lives as flags, as phone calls, as sticky notes, as ‘ask the resident on call.’ Whenever the system can’t answer ‘what state is this patient in?’ it’s because someone decided not to draw the machine."
+      }
+    },
+
+    {
+      "id": "pathology-best-fit",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "primer",
+      "bgColor": "#0f172a",
+      "title": "Why Pathology Is the Hardest — and the Best — Fit",
+      "subtitle": "Most clinical workflows are a checklist with branches. Pathology is a graph of nested machines.",
+      "cards": [
+        { "icon": "🪺", "label": "Nested Artifacts", "value": "Case ⊃ Block ⊃ Slide ⊃ Stain ⊃ Annotation", "description": "A case is a container of containers. Each level has its own lifecycle. A flat workflow vocabulary cannot describe what is happening.", "accentColor": "#60a5fa" },
+        { "icon": "🛤️", "label": "Parallel Pathways", "value": "Concurrent FSMs", "description": "Special stains, molecular workups, AI inference, second-opinion consults run alongside the main case — each on its own clock, each producing state the case must reconcile.", "accentColor": "#34d399" },
+        { "icon": "🌗", "label": "Context Shifts", "value": "Clinical → Education → Research → AI", "description": "The same slide moves through identity envelopes that change permissions, audit, and downstream consequence — without the pixels ever being copied.", "accentColor": "#a78bfa" },
+        { "icon": "↩️", "label": "First-Class Reversibility", "value": "Amend · Addend · Retract", "description": "A signed-out report is not the end of the line. Forks are routine, expected, and clinically meaningful — the model has to represent them as states, not as an exception path.", "accentColor": "#fbbf24" },
+        { "icon": "⏱️", "label": "Heterogeneous Time", "value": "Minutes ↔ Months", "description": "Sign-out happens in hours. Special stains in a day. Send-out in a week. Retrospective research in years. One scheduling model cannot serve all of them.", "accentColor": "#f97316" },
+        { "icon": "🧭", "label": "Rare Among Specialties", "value": "Context-Heavy", "description": "Many clinical workflows are tractable as a checklist. Pathology is one of a small set — alongside oncology pathways and complex critical care — where the work is genuinely a graph and the state matters more than the next box.", "accentColor": "#22d3ee" }
+      ],
+      "takeaway": {
+        "text": "Pathology is one of the few clinical disciplines where the workflow simply cannot be flattened into a checklist. That makes the state-machine reframing not an aesthetic preference — it is the minimum representation that doesn’t lie.",
+        "comment": "The point of this slide for a mixed audience is to give the room permission to feel that pathology IS unusually hard. It is. Many smart, well-intentioned attempts to import EHR-style workflow tooling into pathology have failed at exactly the points called out here — nested artifacts, parallel pathways, context shifts, reversibility. The reason isn’t that the tooling was bad. It’s that the underlying problem is genuinely a graph of nested state machines, and a tool designed for a checklist will always fall short of describing it. Honest representation precedes good architecture."
+      }
+    },
+
+    {
+      "id": "literature-pedigree",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "primer",
+      "bgColor": "#0f172a",
+      "title": "This Is Not a New Idea — It Is an Underused One",
+      "subtitle": "The state-machine framing has decades of literature in clinical workflow, formal methods, and standards work — pathology has yet to claim it as architecture",
+      "cards": [
+        { "icon": "📐", "label": "Statecharts (1987)", "value": "Harel", "description": "The foundational visual formalism for hierarchical, concurrent, reactive systems — the model healthcare workflows actually need. <em>Sci Comput Program 8(3):231–274.</em>", "accentColor": "#60a5fa" },
+        { "icon": "🏥", "label": "Statecharts in Care Delivery", "value": "Sobolev et al.", "description": "Modelled perioperative care as a reactive system — concurrent clinical and managerial activities with permissible chronologies. Same shape as a pathology case.", "accentColor": "#34d399" },
+        { "icon": "🔁", "label": "FHIR Task &amp; businessStatus", "value": "HL7", "description": "Modern standard that explicitly separates <strong>request authorization status</strong> from <strong>execution state</strong> — the design error this lecture warns against. <a href='https://hl7.org/fhir/task.html' target='_blank' style='color:#fde68a'>hl7.org/fhir/task</a>", "accentColor": "#a78bfa" },
+        { "icon": "📊", "label": "BPMN in Healthcare", "value": "Pufahl et al. · 2022 review", "description": "Catalogues the recurring modelling pain points — exceptions, roles, parallelism, inter-organizational handoffs — that flat status fields cannot represent.", "accentColor": "#fbbf24" },
+        { "icon": "🧪", "label": "Abstract State Machines", "value": "Arcaini et al.", "description": "Formal-methods evidence that medical software can be specified, model-checked, and verified using state-machine semantics — under regulatory expectation.", "accentColor": "#f97316" },
+        { "icon": "🏷️", "label": "NIST LIMS Roadmap", "value": "Workflow management as a core function", "description": "Treats workflow management — defined steps, controlled progression, automated interfaces — as foundational LIMS architecture. State-machine logic, named differently.", "accentColor": "#22d3ee" }
+      ],
+      "takeaway": {
+        "text": "The phrase “LIS systems use finite-state machines” is rare in the literature. The substance is everywhere: workflow modelling, Task vs. status, statecharts, BPMN, formal verification. Pathology should adopt the architecture explicitly — and the vocabulary along with it.",
+        "comment": "This slide answers an objection that any rigorous audience will surface: ‘You’re imposing a CS abstraction on a clinical domain.’ Answer: no — the abstraction is already in the FHIR specification, the BPMN literature, the statechart-based clinical-process modelling work, and NIST’s LIMS roadmap. What’s missing is the institutional discipline of treating it as architecture. The honesty in FHIR Task — that an order’s authorization is one state machine and its execution is another — is the single most useful design lesson a lab system can absorb."
+      }
+    },
+
+    {
+      "id": "every-action-is-a-transition",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "framework",
+      "bgColor": "#0f172a",
+      "title": "Every Pathology Action Is a State Transition",
+      "subtitle": "Re-cast the routine vocabulary in the language of state machines",
+      "cards": [
+        { "icon": "📥", "label": "“Accession”", "value": "→ Registered", "description": "Specimen identity created. Case enters the machine.", "accentColor": "#60a5fa" },
+        { "icon": "👤", "label": "“Assign”", "value": "→ In-Review", "description": "Case bound to a pathologist. Identity envelope tightens.", "accentColor": "#34d399" },
+        { "icon": "✏️", "label": "“Annotate”", "value": "+ Derived State", "description": "New observable attached to the case. Provenance recorded.", "accentColor": "#a78bfa" },
+        { "icon": "📝", "label": "“Sign Out”", "value": "→ Reported", "description": "Diagnostic report finalized. Outbound HL7/FHIR event emitted.", "accentColor": "#fbbf24" },
+        { "icon": "🔁", "label": "“Amend”", "value": "→ Amended", "description": "Reported state forks. Old report is preserved; new report supersedes.", "accentColor": "#f97316" },
+        { "icon": "📚", "label": "“Send to Teaching Set”", "value": "Context Forks", "description": "A derivative state is created — same pixels, different identity envelope.", "accentColor": "#22d3ee" }
+      ],
+      "takeaway": {
+        "text": "The verbs we already use — accession, assign, annotate, sign out, amend, send out — are state transitions that the system either represents or hides.",
+        "comment": "Most LIS systems represent these transitions as status flags. That works clinically but breaks the moment you ask: who can observe this transition? Which downstream service needs to know? Can a machine propose the transition? The state-machine reframing makes the answers tractable."
+      }
+    },
+
+    {
+      "id": "case-fsm",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "The Case State Machine",
+      "subtitle": "Anatomic pathology case — explicit states, typed transitions, observable events",
+      "vizType": "case-fsm",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Every transition is a place where a service must act, a person must authorize, or a record must be written. Drawing the machine makes the responsibilities visible.",
+        "comment": "Walk the diagram once. Note that some transitions are mandatory and linear (Accessioned → Assigned), others are bidirectional (Assigned ↔ Reassigned), and some are forks that create new states from old ones (Reported → Amended preserves the original report). This is not novel computer science. It is making the implicit machine explicit so that the modular services can plug into specific transitions instead of having to reason about the whole."
+      }
+    },
+
+    {
+      "id": "slide-fsm",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "The Slide State Machine — Inside Each Case",
+      "subtitle": "The per-slide lifecycle that runs underneath the case-level FSM",
+      "vizType": "slide-fsm",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Each slide carries its own lifecycle — scanned, registered, QC’d, annotated, derived, archived. The case FSM is a function of all the slide FSMs plus assignment and report state.",
+        "comment": "This is where the pixel meets the workflow. Slides can be in different states within the same case — one annotated, one awaiting QC, one already pulled into a research cohort. A monolithic image-management system has no language for this. A nested state machine does."
+      }
+    },
+
+    {
+      "id": "nested-fsm",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Nested State Machines — The Architectural Truth",
+      "subtitle": "Case state is a function of constituent slide states, assignment, and report — not a flag in a database",
+      "vizType": "nested-fsm",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The case is not in one state. It is in a composition of states — one for assignment, one for the report, and one for each slide. The architecture must say so.",
+        "comment": "This slide is the hinge of the talk. A monolithic system pretends the case has a single status field. The reality is that the case is a parent state machine whose state is derived from a set of nested machines plus a few orthogonal axes (identity, audit, observability). Once you accept this picture, modular orchestration becomes the only design that fits — and the rest of the architecture (Starling, Pelican, Willet) is an attempt to honor it."
+      }
+    },
+
+    {
+      "id": "annotations-as-data",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Annotations Are Data — Not Decoration",
+      "subtitle": "Action items, tile selectors, attention markers, urgency signals, provenance carriers, computable observables",
+      "left": {
+        "heading": "What an Annotation Actually Carries",
+        "bullets": [
+          "An <strong>action item</strong> — “needs CK7 IHC” is a transition request, not a comment; the case FSM should pick it up",
+          "A <strong>tile selector</strong> — geometry pinned to slide-space coordinates, driving viewer navigation and AI region-of-interest extraction",
+          "An <strong>attention marker</strong> — where humans and models looked, at what zoom, for how long; the substrate of QA, training, and review-quality metrics",
+          "An <strong>urgency / severity signal</strong> — built into properties (category, confidence, escalation) — drives downstream queueing and notification",
+          "A <strong>provenance bundle</strong> — author identity, model name and version, parameters, training-data version, time, image version it was made against",
+          "A <strong>derivation</strong> — function of (pixels, observer, intent, time); versioned alongside the pixels it references",
+          "A <strong>computable observable</strong> — queryable, joinable, aggregatable across cases and cohorts"
+        ]
+      },
+      "right": {
+        "heading": "What This Unlocks — and Why It Cannot Live in the Image File",
+        "highlight": true,
+        "bullets": [
+          "Annotations <strong>drive case state transitions</strong> — a “needs IHC” mark from a resident generates a stain order; an “invasive front” model output triggers a research-cohort match",
+          "Annotations <strong>enable cross-case queries</strong> — “show me all cases in this cohort with positive p53 in the invasive front, by IHC pattern” — impossible if they are buried in image binaries",
+          "Annotations <strong>version alongside pixels</strong> — a re-scan triggers re-validation of pixel-coupled annotations through the integrity layer (next slide)",
+          "Annotations <strong>carry their own access policy</strong> — a resident draft is not an attending sign-off; an AI proposal is not a human accept",
+          "Annotations <strong>are an institutional data asset</strong> — independent of any vendor’s image format, queryable in standard tooling (PostGIS, Elasticsearch, parquet, FHIR Observation)",
+          "Built on <strong>GeoJSON</strong> (typed feature collections) and <strong>SVG</strong> (browser-native overlays) — the same formats geospatial has used at planetary scale for over a decade"
+        ]
+      },
+      "takeaway": {
+        "text": "Annotations are not decoration. They are first-class data — they drive transitions, encode attention and urgency, carry provenance, and live longer than any single sign-out. Bury them in the image and the institution loses the asset.",
+        "comment": "This is the slide most pathologists will hear differently than informaticists. For pathologists, the message is: your annotations are not just notes — they are the data you have generated, and the institution’s ability to use them across clinical / educational / research missions depends on whether they live as queryable data or as binary attachments. For informaticists, the message is the architectural one: the moment annotations have their own lifecycle, their own access policy, and their own audit trail, the case becomes a system instead of a folder. HistomicsUI on GeoJSON, Slim on OpenLayers, Pelican’s separate annotation API — the pattern already exists in production."
+      }
+    },
+
+    {
+      "id": "context-flow-traversal",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Same Pixels, Three Contexts — Clinical → Education → Research",
+      "subtitle": "The image doesn’t move. The envelope does.",
+      "vizType": "context-flow-traversal",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The unit that traverses contexts is not the file. It is the case-plus-envelope — the bundle of pixels, identity, permission, derivation, and audit that the orchestration layer assembles on demand.",
+        "comment": "This is the most concrete answer to ‘why isn’t image management enough?’. A clinical image, a teaching image, and a research image are different envelopes around the same bytes. A file-centric system has to copy the pixels (and lose the connection between copies) or build elaborate gating. An orchestration-centric system serves the pixels once and assembles the envelope at request time. This is also where AI fits naturally: an inference run is yet another envelope, with its own audit and its own derivation lineage."
+      }
+    },
+
+    {
+      "id": "tile-stateful-access",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Every Tile Request Crosses a State Gate",
+      "subtitle": "A tile is not a static asset — it is a stateful resource served under a current envelope",
+      "vizType": "tile-state-gate",
+      "vizConfig": {},
+      "speakerNotes": "Pelican (or any modern tile server) doesn’t just answer ‘what bytes are at zoom 8, x=45, y=67?’. The honest version of the question is ‘what bytes should this requester, in this case state, under this envelope, at this audit context, see at zoom 8, x=45, y=67?’ The answer can be: serve the tile, transform it (e.g., redact a corner where a label is visible, downsample for a teaching set), refuse it (case archived, identity expired, envelope mismatched), or queue it (waiting on QC, waiting on de-id review). All four are legal outputs of a state-machine-gated tile fetch. This slide is the architectural rebuttal to ‘you can’t do per-tile policy enforcement without making the system slow’ — you can, because the gate is decided at the envelope level, not per-pixel.",
+      "takeaway": {
+        "text": "The same coordinate at the same zoom can return different bytes — or no bytes — depending on which state envelope is in effect at the moment of the fetch. The tile is the leaf of a state machine, not the root.",
+        "comment": "This is the bridge between the case FSM (high-level) and the actual byte-serving infrastructure (low-level). It is also the slide that quietly defuses a common architectural worry: ‘won’t the gate make the viewer slow?’ The answer is that the gate is evaluated once per envelope, cached, and inherited by every tile in that session — so the per-tile cost is essentially zero, while the per-envelope cost is paid once and audited."
+      }
+    },
+
+    {
+      "id": "deid-fsm",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "De-Identification Is Itself a State Machine",
+      "subtitle": "PHI on the slide is real — and the safe path through it is not “run a script,” it is a workflow with quarantine, review, and provenance",
+      "vizType": "deid-fsm",
+      "vizConfig": {},
+      "speakerNotes": "De-identification of WSIs is famously not just a header-stripping problem. The risk that surfaces in real labs is PHI burned into the pixels themselves — handwritten labels on the tissue, sticker fragments at the slide edge, marker annotations across the specimen, accession numbers in tissue ink. Header redaction misses all of these. So the de-id workflow has to be modelled as a state machine: ingested → text/PHI screening (OCR + label detector) → branching: clean (auto-process) vs. detected (quarantine). The quarantine path requires a human review state with three terminal transitions: redact-and-approve, reject-and-return, or escalate-to-source. Only after the publish() transition does the slide enter a derivative envelope (teaching set or research cohort) — and the audit trail records every step. The DSA-WSI-DeID workflow is one production-grade implementation of this pattern; treating it as a state machine is what lets it be safely automated where automation is safe and quarantined where it is not.",
+      "takeaway": {
+        "text": "Header-strip-and-publish is not de-identification — it is de-identification theatre. A de-id workflow that doesn’t represent the PHI-on-image quarantine state will, eventually, leak.",
+        "comment": "This slide pays a real safety dividend for the audience. Almost every institution has a near-miss story here. The point of the FSM framing is that ‘safe automation’ and ‘human review for hard cases’ are not in conflict — they are two transitions out of the same fork. The state machine is what makes the choice principled instead of ad hoc."
+      }
+    },
+
+    {
+      "id": "image-integrity-attacks",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Image Integrity Is Itself a State",
+      "subtitle": "Adversarial perturbations, tampering, silent corruption — when AI is the consumer, validation has to be tile-granular, fast, and a transition the system can refuse",
+      "vizType": "integrity-state",
+      "vizConfig": {},
+      "speakerNotes": "Three classes of threat are growing as digital pathology scales. First, adversarial perturbations: small pixel changes — sometimes imperceptible to humans — that reliably flip an AI model’s prediction (Goodfellow et al., 2014, foundational; the computational-pathology literature has documented this for histology classifiers). Second, targeted tampering: pixel-level alteration to change a diagnostic appearance. Third, silent corruption: storage drift, partial-write failures, codec bugs — uninteresting until the image they damaged becomes the basis of a sign-out or a research finding. The challenge is scale. A WSI is 10–40 GB. Validating the whole pyramid byte-by-byte on every access is infeasible. The mature answer is tile-level Merkle hashing: each tile has a hash, hashes form a tree, the root is signed once. Any tile can be verified against the signed root in O(log n) hashes. Detached signatures — the modular alternative the fur-coat paper argues for — let signing keys rotate independently of pixels, which is impossible when the signature is bundled inside the DICOM envelope. The state-machine framing makes ‘integrity-validated’ a real state with explicit transitions in and out: a slide cannot transition to ‘available for AI inference’ until validated; cannot transition to ‘research cohort’ until provenance chain is complete; failed validation moves to a quarantine state, just like the de-id machine. NIST SP 800-53 SC-13 specifies cryptographic protection at rest and in transit; the modular architecture is what makes per-layer signing tractable. Emerging standards like C2PA carry exactly this provenance pattern across general media; pathology can adopt the same primitives.",
+      "takeaway": {
+        "text": "‘Integrity’ is not a checkbox you tick at ingestion. It is a state the case can occupy, lose, and re-enter — and the architecture decides whether the gate is enforceable.",
+        "comment": "This slide pays a real safety dividend for an audience that is increasingly expected to deploy AI models against WSIs. The argument is not theoretical — adversarial vulnerability of histology classifiers has been published, and once foundation-model inference is part of the workflow, the question of whether the pixels you are inferring on are exactly the pixels that were signed becomes a clinical safety question. The fur-coat paper’s objection to bundled signatures is the architectural lever: the modular stack lets you sign pixels, metadata, and annotations independently, rotate keys, and verify on access without re-encrypting 30 GB."
+      }
+    },
+
+    {
+      "id": "poll-where-does-yours-break",
+      "type": "poll",
+      "transition": "fade",
+      "title": "Poll: Where Does Your System Stop Telling the Truth?",
+      "prompt": "In your institution, which of these states does the system actually represent — and which does it hide behind a flag, a workaround, or a phone call?",
+      "options": [
+        "Slide-level QC state (most LISs only know per-case)",
+        "Annotation lifecycle (proposed / accepted / retracted)",
+        "Multi-pathologist concurrent review (FDP-style)",
+        "Cross-context derivative state (clinical → research / education)",
+        "AI inference as a participating proposer (with audit)",
+        "Report amendments as forks rather than overwrites",
+        "All of the above are flags pretending to be states"
+      ],
+      "note": "We will return to your answers when we look at how Starling, Pelican, and Willet handle each of these explicitly."
+    },
+
+    {
+      "id": "five-decoupled-layers",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "architecture",
+      "bgColor": "#0f172a",
+      "title": "Five Decoupled Layers — Each Independently Evolvable",
+      "subtitle": "What the modular pathology stack looks like when the noun is right",
+      "cards": [
+        { "icon": "🧱", "label": "Pixels", "value": "TIFF · OME-TIFF · Zarr · DZI", "description": "Cloud-optimized, format-agnostic, served as tiles via HTTP", "accentColor": "#60a5fa" },
+        { "icon": "🪪", "label": "Metadata", "value": "HL7 FHIR", "description": "Patient, encounter, specimen, result — RESTful, queryable, mutable on its own clock", "accentColor": "#34d399" },
+        { "icon": "🖍️", "label": "Annotations", "value": "GeoJSON · SVG", "description": "Typed feature collections and vector overlays — versioned, query-indexable, AI-proposable", "accentColor": "#a78bfa" },
+        { "icon": "🛡️", "label": "Security Overlay", "value": "NIST SP 800-53", "description": "Layered identity, network, and data controls applied across components — not embedded inside any one of them", "accentColor": "#f97316" },
+        { "icon": "🔌", "label": "Communication", "value": "REST · Microservices · Event Bus", "description": "Open APIs at the boundaries; internal anatomy of each service is its own choice", "accentColor": "#fbbf24" }
+      ],
+      "takeaway": {
+        "text": "These five layers are not aspirational. Each one has a production-grade open-standard candidate today. The fur-coat paper documents the inventory; this lecture demonstrates the orchestration that ties them together.",
+        "comment": "This is the architectural restatement of Fig. 2 from the JPI 2025 paper, expressed in terms of currently shipping technology. The next four slides walk through what one specific instantiation looks like — Starling on top, Pelican for pixels, Willet for reports, with FHIR and a security overlay across all of them."
+      }
+    },
+
+    {
+      "id": "starling-architecture",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "Starling — One Concrete Instantiation",
+      "subtitle": "Open-source orchestrator: worklist, login, viewer launcher, audit (<a href='https://github.com/OpenPathologyFoundation' target='_blank'>github.com/OpenPathologyFoundation</a>)",
+      "left": {
+        "heading": "What Starling Provides",
+        "bullets": [
+          "<strong>Worklist + case navigation</strong> — the operator’s view of the case FSM",
+          "<strong>OIDC/SAML login</strong> via Keycloak — identity envelope at the door",
+          "<strong>Two-window orchestrator + viewer</strong> pattern — the case lives in one window; the pixels live in another",
+          "<strong>Audit and event forwarding</strong> — every transition emits an event",
+          "<strong>HL7/FHIR boundary</strong> — outbound to LIS, EHR, and research substrates"
+        ]
+      },
+      "right": {
+        "heading": "What It Deliberately Doesn’t Do",
+        "highlight": true,
+        "bullets": [
+          "Doesn’t serve pixels — that’s Pelican’s job",
+          "Doesn’t author reports — that’s Willet’s job",
+          "Doesn’t store annotations in proprietary blobs — they live in a separate API as GeoJSON/SVG",
+          "Doesn’t mandate one image format — Pelican adapts to whatever the lab acquired",
+          "Doesn’t bundle security inside its data model — security is a layer over identity, network, and audit"
+        ]
+      },
+      "takeaway": {
+        "text": "Starling is the orchestrator. The architectural value is in what it refuses to absorb.",
+        "comment": "The name was chosen for the murmuration metaphor — independent modules coordinating through a shared protocol to produce unified behavior. This is the operating principle. Most institutional ‘pathology platforms’ try to be the whole flock. The applied-informatics insight is that you build the protocol and let the modules be modular."
+      }
+    },
+
+    {
+      "id": "starling-bridge-fdp",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "The PostMessage Bridge and the Focus Declaration Protocol",
+      "subtitle": "Two small mechanisms that make nested state safe across windows",
+      "left": {
+        "heading": "PostMessage Bridge",
+        "bullets": [
+          "<strong>Typed message channel</strong> between orchestrator window and viewer window",
+          "Provisions <strong>JWT</strong> from orchestrator to viewer; refreshes on cadence",
+          "Carries <strong>case-switch</strong> commands and <strong>heartbeat</strong> for orphan detection",
+          "Forwards <strong>audit events</strong> from viewer back to orchestrator",
+          "Lets two independent applications behave as one machine — without coupling their codebases"
+        ]
+      },
+      "right": {
+        "heading": "Focus Declaration Protocol",
+        "highlight": true,
+        "bullets": [
+          "WebSocket service — every viewer <strong>declares</strong> which case it has open",
+          "Surfaces a <strong>safety warning</strong> when the same user has the same case open in multiple contexts (a known source of diagnostic drift)",
+          "Treats <strong>the user’s attention</strong> as part of the case state — not just the database row",
+          "Implements at the protocol level what monolithic systems try (and fail) to enforce with locks"
+        ]
+      },
+      "takeaway": {
+        "text": "The hard problems of nested state — concurrency, ownership, attention — are solved at the protocol layer with small primitives. Not by absorbing everything into one application.",
+        "comment": "FDP is a useful concrete example for an academic informatics audience because it answers a question the field has been asking for years: how do you represent the pathologist’s attention as part of the workflow? The answer is: declare it on a websocket, treat it as observable state, and let the orchestrator reason about it the same way it reasons about case status."
+      }
+    },
+
+    {
+      "id": "pelican-tiles",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "Pelican — Pixels as a Service",
+      "subtitle": "FastAPI tile server forked from Kitware’s large_image; the boundary the rest of the stack crosses to reach pixels",
+      "left": {
+        "heading": "What Pelican Does",
+        "bullets": [
+          "Serves tiles over HTTP via <strong>XYZ, DeepZoom, and IIIF</strong> protocols",
+          "Reads <strong>SVS, NDPI, OME-TIFF, DICOM-WSI, BigTIFF, Zarr</strong> through a unified Python API",
+          "Provides <strong>region access at any resolution</strong> for AI workloads — not just viewer pans",
+          "Exposes <strong>annotation endpoints</strong> separately — no embedding into pixels",
+          "Runs <strong>standalone</strong>, behind nginx, or as part of the Starling stack"
+        ]
+      },
+      "right": {
+        "heading": "Why This Boundary Matters",
+        "highlight": true,
+        "bullets": [
+          "<strong>One API</strong> across all WSI formats — the viewer doesn’t know what’s in the file",
+          "<strong>Cloud-native</strong> by construction — tiles are URL-addressable, cacheable, range-readable",
+          "<strong>Format independence</strong> means new acquisitions don’t require new viewers — the bus stays stable",
+          "<strong>Same library</strong> serves geospatial pyramids and pathology pyramids — the math is the same; the discipline is shared"
+        ]
+      },
+      "takeaway": {
+        "text": "Pelican is what ‘pixels as a service’ looks like in production. The viewer, the AI pipeline, and the research extractor all reach the same tiles through the same API.",
+        "comment": "The lineage matters: the library was built for geospatial first (large_image at Kitware), then proven on pathology by HistomicsTK and DSA. The fork into Pelican focuses the FastAPI surface on WSI workflows, drops Girder dependencies, and integrates with the Starling auth boundary. This is the modular argument made operational: the same engine serves planets and slides because the engineering problem is the same."
+      }
+    },
+
+    {
+      "id": "willet-and-handoffs",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "Willet — A Report Is a State Machine Too",
+      "subtitle": "Workspace for Integrated Linguistic Laboratory Evaluation and Transmission",
+      "left": {
+        "heading": "What Willet Is",
+        "bullets": [
+          "A <strong>case-scoped report authoring workspace</strong> — keyboard, voice, and LLM-assisted",
+          "Drafts move through <strong>explicit states</strong>: drafted → reviewed → finalized → transmitted",
+          "<strong>HL7/FHIR transmission</strong> back to the LIS — the report joins the institutional record as data, not as a PDF",
+          "Standalone Svelte 5 module — boots independently for development and validation",
+          "Mounts into Starling via a <strong>three-point contract</strong>: props, event bus, postMessage"
+        ]
+      },
+      "right": {
+        "heading": "Why This Demonstrates the Argument",
+        "highlight": true,
+        "bullets": [
+          "The report is <strong>another nested FSM</strong> inside the case",
+          "The <strong>LLM is a transition proposer</strong> — it can suggest a clause, never finalize it",
+          "<strong>Voice dictation, vocabulary correction, clause routing</strong> are independent services with audit",
+          "<strong>The report-state and the case-state interact</strong>, but they don’t live in the same database row",
+          "The whole module runs on <strong>mocked services</strong> in standalone mode — proof that a participant in a state machine can be developed in isolation"
+        ]
+      },
+      "takeaway": {
+        "text": "Once you accept nested state machines, ‘the report’ stops being a document attachment and becomes a participating service with its own lifecycle and its own observers.",
+        "comment": "For an academic informatics audience, this is the demonstration that the architecture is not theoretical. The same operating model that says ‘pixels are a service’ says ‘report authoring is a service’ — same integration contract, same mocking discipline for offline development, same boundary crossing back into the case FSM through events."
+      }
+    },
+
+    {
+      "id": "realm-as-evidence",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "evidence",
+      "title": "What an Applied Team Produces — Nineteen Years of REALM",
+      "subtitle": "Rapidly Evolving Agile Laboratory Modules — the operational landscape one applied team has built inside one institution",
+      "vizType": "realm-diagram",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Starling, Pelican, and Willet are the latest entries in a nineteen-year evidence record that the modular operating model works at institutional scale.",
+        "comment": "REALM started before AI assistance was a meaningful accelerator. The discipline produced the architecture; AI then made the architecture cheaper to extend. The point of pointing at REALM is not to claim Yale solved pathology informatics — it is to argue that the operating model has long enough a track record that institutions adopting it now are not taking a research bet."
+      }
+    },
+
+    {
+      "id": "three-missions-one-substrate",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "Three Missions, One Modular Substrate",
+      "subtitle": "Clinical, educational, research — three state machines composed over the same pixels-metadata-annotations-security-comm. Test-driven modularity is what makes this affordable; AI-assisted development is what makes it fast.",
+      "vizType": "three-missions-substrate",
+      "vizConfig": {},
+      "speakerNotes": "This is the integrative slide of the lecture. Three observations pulled together. First: the same image, the same annotations, and the same metadata serve three institutional missions — clinical sign-out, education, and research — but each mission runs its own state machine. The clinical case FSM is bound by sign-out and amendment; the educational FSM is bound by curation, anonymization, learning objectives, and assessment; the research FSM is bound by cohort definition, version pinning, IRB scope, and derivation lineage. They are different machines, but they all read and write through the same modular layers. Second: the only reason the substrate can serve all three is that each module is independently testable. Pelican boots with synthetic test images; Willet runs in a standalone Svelte mode with MSW-mocked services; the auth-system tests against Testcontainers Postgres. The integration contract is the test surface — and a contract that can be tested is a contract that can be safely composed across missions. Third — and this is where the prior lectures on AI-assisted development come back — the cost of building and maintaining a modular substrate of this kind has dropped roughly two orders of magnitude in the last few years. That is what closes the loop. AI did not invent the architecture; the architecture has the discipline behind it. AI is the cost-shift that finally makes a small applied team able to build the substrate that all three missions can compose over. ‘Image as data’ is the operational meaning of this picture. The pixels are not in clinical care, in education, or in research. They are in a substrate. Missions are state machines that read from and write to it. The substrate carries the integrity, the annotations, the security overlay, and the audit. The missions carry the intent.",
+      "takeaway": {
+        "text": "Image-as-data is not a slogan — it is what you get when the substrate is modular, the modules are independently testable, and the missions are state machines composed over them. AI-assisted development is what made building such a substrate affordable for a small applied team.",
+        "comment": "This is also the cleanest slide for tying the talk back to the build-as-you-speak / AI-assisted-development thread. The argument is the inverse of the usual ‘AI changes everything.’ AI does not change what needs to be built. It changes the cost of building it cleanly enough that one institution can support clinical, educational, and research missions over the same substrate without each mission re-implementing its own pipeline. The applied team is the operating model; the modular state-machine substrate is the architecture; AI is the cost-shift that brings them within reach of a department, not just a national lab."
+      }
+    },
+
+    {
+      "id": "pitfalls-and-pattern",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "Common Pitfalls — and the Pattern That Avoids Them",
+      "subtitle": "State machines fail when they are mis-modelled. The architecture below is what works in production.",
+      "left": {
+        "heading": "Anti-Patterns to Recognize",
+        "style": "bad",
+        "bullets": [
+          "<strong>State explosion</strong> — every operational nuance becomes a top-level state; the diagram becomes unreadable and the tests untestable",
+          "<strong>Status confused with state</strong> — a display label leaks into the lifecycle; downstream services parse UI strings",
+          "<strong>One global FSM</strong> — every module reads every other module’s status codes; the system is monolithic by accident",
+          "<strong>Hidden parallelism</strong> — flat in-progress can’t represent that H&amp;E, special stains, molecular, and AI are running concurrently",
+          "<strong>Direct mutation</strong> — <code>UPDATE case SET status = 'SIGNED_OUT'</code> from a job, a script, an interface engine; transitions bypass any guard",
+          "<strong>Over-rigid workflow</strong> — the diagram blocks legitimate clinical variance; staff invent off-system workarounds the system can no longer see"
+        ]
+      },
+      "right": {
+        "heading": "The Pattern That Holds Up",
+        "style": "good",
+        "bullets": [
+          "<strong>Command → Guard → Transition → Event → Subscribers</strong> — every state change funnels through a transition service that validates, commits, and emits",
+          "<strong>Separate axes</strong> — lifecycle <em>state</em>, business <em>status</em>, exception <em>flags</em>, work-queue <em>assignment</em> live in different fields with different governance",
+          "<strong>Each module owns its FSM</strong> — others subscribe to its events; nobody mutates anyone else’s state",
+          "<strong>Statecharts (or hierarchical FSMs) for concurrency</strong> — when work is genuinely parallel (it is, in pathology), the model must say so",
+          "<strong>Event log is the audit trail</strong> — auditability is a free consequence of the architecture, not a feature bolted on later",
+          "<strong>Model the lifecycle of clinical objects</strong> — case, specimen, block, slide, image, report, consult, ancillary — <em>not</em> the screens of the application"
+        ]
+      },
+      "takeaway": {
+        "text": "Bounded, composable state machines per clinical object — connected by typed events, governed by an explicit transition service — beat one big global workflow diagram in every dimension that matters to a regulated lab.",
+        "comment": "This slide gives the room a tested architecture they can take home. Command → Guard → Transition → Event → Subscribers is short enough to memorize and rich enough to be the skeleton of a production design. The companion idea — model the lifecycle of clinical objects, not the screens — saves teams from the most common failure mode: a state machine that mirrors the UI and breaks the moment the UI changes."
+      }
+    },
+
+    {
+      "id": "ai-in-the-stack",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "Two Roles for AI — Builder of the Stack, Participant in the Stack",
+      "left": {
+        "heading": "AI as Transition Proposer (in production)",
+        "style": "good",
+        "bullets": [
+          "<strong>Suggests</strong> annotations against tile coordinates — author-attributed, confidence-attached, integrity-validated",
+          "<strong>Drafts</strong> report clauses for human acceptance — never finalizes; finalize() stays a human transition",
+          "<strong>Pre-orders</strong> stains or molecular tests at accession — proposed transitions, not executed ones",
+          "<strong>Detects</strong> nested-state inconsistencies (e.g., FDP-style attention warnings; integrity-validation failures)",
+          "<strong>Subscribes</strong> to the event stream as another observer with its own audit identity",
+          "<em>Why this is safe:</em> every proposal is a typed event against a typed transition, with a typed authorizer — the FSM refuses moves that aren’t on the diagram"
+        ]
+      },
+      "right": {
+        "heading": "AI as Builder of the Stack (in development)",
+        "style": "good",
+        "bullets": [
+          "<strong>~100× cost reduction</strong> in building modular layers — see the “Build As You Speak” lectures for the existence proofs (IBIS, Xenonym, REALM extensions)",
+          "<strong>Per-module iteration</strong> — Pelican, Willet, the auth-system each tested in isolation against mocks; AI iterates against test surfaces, not against the running system",
+          "<strong>Integration contracts as test surfaces</strong> — the postMessage bridge, the FDP protocol, the FHIR boundary are all tested before AI-generated code touches them",
+          "<strong>Same quality gates</strong> — IEC 62304-grade traceability, SBOM, test coverage; AI doesn’t lower the bar, it lowers the cost of meeting it",
+          "<em>Non-negotiable:</em> no PHI in prompts; no autonomous sign-out logic; no silent rewrites; modular boundaries make these enforceable <strong>structurally</strong>, not by policy"
+        ]
+      },
+      "takeaway": {
+        "text": "AI plays both roles best in this architecture: it builds the modular substrate cheaply (because each module is small and testable), and it participates in production safely (because every proposal is a typed transition the FSM can refuse). Same property — explicit, typed, modular state — does both jobs.",
+        "comment": "This is the slide that pulls the AI-assisted-development thread through Act 5. The build-as-you-speak / DOM grand-rounds talks made the case for AI as builder. This lecture makes the complementary case for AI as participant — and observes that the same architectural property (explicit, typed, modular state machines) is what makes both safe. Vague intent + AI = working code that does the wrong thing, faster than ever. Precise FSM + AI = a substrate the institution can trust enough to compose missions over."
+      }
+    },
+
+    {
+      "id": "dicom-as-gateway",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "DICOM Doesn’t Disappear — It Becomes a Gateway",
+      "subtitle": "A reasonable role for a standard whose original mission still matters",
+      "left": {
+        "heading": "Where DICOM Continues to Work",
+        "bullets": [
+          "<strong>Inter-institutional exchange</strong> with radiology and DICOM-native partners",
+          "<strong>Storage SCP / Image Manager</strong> at the institutional perimeter",
+          "<strong>Long-term archival</strong> of records originally produced under DICOM",
+          "<strong>Regulatory contexts</strong> where DICOM conformance is the contractual primitive"
+        ]
+      },
+      "right": {
+        "heading": "Where DICOM Becomes a Gateway, Not a Core",
+        "highlight": true,
+        "bullets": [
+          "Adapted at the <strong>boundary</strong> — incoming DICOM is unpacked into pixels + FHIR + GeoJSON inside",
+          "Generated at the <strong>boundary</strong> — outgoing DICOM is composed from the modular store on demand",
+          "The <strong>internal anatomy</strong> of the institution is no longer constrained by what DICOM can express",
+          "<strong>Future formats</strong> (Zarr, OME-NGFF, whatever comes next) plug into the same internal stack"
+        ]
+      },
+      "takeaway": {
+        "text": "DICOM as gateway is the honoring of what the standard does well. DICOM as core is the wearing of the fur coat in the wrong season.",
+        "comment": "Make explicit that this is not a call to retire DICOM. It is a call to reposition it where its strengths actually pay. The fur-coat paper makes the same point — DICOM has thirty years of advocacy and institutional weight that pathology should leverage at the boundary, not inherit at the core."
+      }
+    },
+
+    {
+      "id": "operating-model",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "operating-model",
+      "title": "The Operating Model This Architecture Requires",
+      "subtitle": "Applied informatics teams — small, embedded, inside the security perimeter",
+      "vizType": "applied-informatics",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "The architecture and the operating model are inseparable. A modular stack maintained by a service center becomes a monolith again on a five-year timescale.",
+        "comment": "Borrowed framing from the build-as-you-speak deck because the same logic applies: the modular stack only stays modular if there is a team accountable for its boundaries. Vendors will sell you a unified ‘pathology platform’; service centers will package it; only an applied team will keep cutting the stack into the right modules as the standards underneath continue to evolve."
+      }
+    },
+
+    {
+      "id": "your-role",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "action",
+      "title": "",
+      "vizType": "your-role",
+      "vizConfig": {
+        "epigraph": {
+          "text": "Draw the state machine. Then ask which service owns each transition. The architecture comes from the answer."
+        },
+        "steps": [
+          { "number": 1, "question": "Map the FSM",          "detail": "Pick one workflow — sign-out, send-out, amendment, teaching set, research extract. Draw the states and transitions. Note which transitions are AI-eligible." },
+          { "number": 2, "question": "Find the lies",         "detail": "For each transition, ask whether your current system represents it as state — or hides it behind a flag, a phone call, or a spreadsheet." },
+          { "number": 3, "question": "Locate the boundary",   "detail": "For each layer (pixels, metadata, annotations, security, communication), name the open standard the modular alternative would use." },
+          { "number": 4, "question": "Pick one module",       "detail": "Identify one component you could extract from the monolith and build as a standalone service — with mocked dependencies for offline development." },
+          { "number": 5, "question": "Stand up the team",     "detail": "If you don’t have an applied informatics team, your one-page state diagram is the strongest case you can make for funding one." }
+        ],
+        "takeaway": {
+          "text": "The new superpower is the precise question — and a state machine drawn explicitly is the precise question’s native form.",
+          "comment": "Same closing rhythm as build-as-you-speak: the bottleneck is no longer code; it is clarity about what should change states when, and who is allowed to propose the transition."
+        }
+      },
+      "speakerNotes": "Five actions arranged on a commitment timeline. Today: map the FSM. This week: find the lies your current system tells about its own state. This month: locate the boundaries where open standards already work. This quarter: pick one module and build it modularly. This year: build (or fund) the applied team that can keep doing this. Walk it left to right. Make each step sound small — because individually each one is.",
+      "takeaway": {
+        "text": "The new superpower is the precise question — and a state machine drawn explicitly is the precise question’s native form.",
+        "comment": "Same closing rhythm as build-as-you-speak: the bottleneck is no longer code; it is clarity about what should change states when, and who is allowed to propose the transition."
+      }
+    },
+
+    {
+      "id": "takeaways",
+      "type": "takeaways",
+      "transition": "convex",
+      "title": "Key Takeaways",
+      "items": [
+        "<strong>Forty years of clinical state machines</strong> — labs, pharmacy, scheduling, EHR, radiology — have already proven the pattern. Pathology imaging is the last analog diagnostic pillar entering it; we get to skip the bundling mistake.",
+        "<strong>“Image management” is a category error.</strong> Pathology orchestrates a graph of state transitions; the image is one observable inside it.",
+        "<strong>The case is a state machine, the slide is a state machine, the de-identification pipeline is a state machine, every tile fetch is a state-gated decision, and integrity is itself a state.</strong>",
+        "<strong>Annotations are data, not decoration</strong> — action items, tile selectors, attention markers, urgency signals, provenance carriers, queryable observables. They drive transitions; they don’t belong inside the image file.",
+        "<strong>Five layers, five open standards.</strong> Pixels (TIFF/Zarr), metadata (FHIR), annotations (GeoJSON/SVG), security (NIST SP 800-53 overlay), communication (REST/microservices). Geospatial proved this works at planetary scale.",
+        "<strong>Three missions over one substrate.</strong> Clinical, educational, research run as separate state machines composed over the same modular substrate; test-driven modularity makes mission portability cheap.",
+        "<strong>Command → Guard → Transition → Event → Subscribers</strong> is the architectural pattern that holds up in a regulated lab. Starling / Pelican / Willet is one production instantiation; AI-assisted development is the cost-shift that brought it within reach of an applied team."
+      ],
+      "cta": {
+        "label": "Your challenge:",
+        "text": "Pick one workflow you live inside. Draw its state machine on a single page — states as boxes, transitions as labeled arrows, derived state as side-channels. Mark which transitions your current system represents as state, and which it hides as flags. Then mark which transitions an AI service could safely propose. That one page is the brief for the next module worth building."
+      }
+    },
+
+    {
+      "id": "sources",
+      "type": "content",
+      "transition": "fade",
+      "title": "Sources &amp; Further Reading",
+      "subtitle": "Key references informing this lecture",
+      "bullets": [
+        "<strong>Primary Argument</strong>",
+        "<a href='https://doi.org/10.1016/j.jpi.2025.100450' target='_blank'>Gershkovich P. Wearing a fur coat in the summertime: Should digital pathology redefine medical imaging? J Pathol Inform. 2025;18:100450.</a>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/26262515/' target='_blank'>Gershkovich P, Sinard JH. Customizing Laboratory Information Systems: Closing the Functionality Gap. Adv Anat Pathol. 2015;22(5):323-330.</a>",
+        "<a href='https://pubmed.ncbi.nlm.nih.gov/23372985/' target='_blank'>Sinard JH, Gershkovich P. Custom software development for use in a clinical laboratory. J Pathol Inform. 2012;3:44.</a>",
+        "<strong>Modularity Theory</strong>",
+        "Baldwin CY, Clark KB. <em>Design Rules, Volume 1: The Power of Modularity</em>. MIT Press, 2000.",
+        "<a href='https://csrc.nist.gov/publications/detail/sp/800-160/vol-1-rev-1/final' target='_blank'>NIST SP 800-160 Vol. 1 — Systems Security Engineering. Definition of modularity.</a>",
+        "<strong>Imaging Standards &amp; Tooling</strong>",
+        "<a href='https://doi.org/10.1117/12.2086370' target='_blank'>Moore J, Linkert M, Blackburn C, et al. OMERO and Bio-Formats 5: flexible access to large bioimaging datasets at scale. SPIE Med Imaging 2015.</a>",
+        "<a href='https://github.com/girder/large_image' target='_blank'>Kitware large_image — the upstream library Pelican is forked from.</a>",
+        "<a href='https://doi.org/10.1093/jamiaopen/ooac023' target='_blank'>Gordon WJ, Rudin RS. Why APIs? Anticipated value, barriers, and opportunities for standards-based application programming interfaces in healthcare. JAMIA Open. 2022.</a>",
+        "<a href='https://doi.org/10.14569/IJACSA.2024.0150901' target='_blank'>Kaloudis M. Evolving software architectures from monolithic systems to resilient microservices: best practices, challenges and future trends. Int J Adv Comput Sci Appl. 2024.</a>",
+        "<strong>Annotation &amp; Viewer Evidence</strong>",
+        "<a href='https://github.com/DigitalSlideArchive/HistomicsUI' target='_blank'>HistomicsUI — GeoJSON-based annotation in production WSI workflows.</a>",
+        "<a href='https://doi.org/10.1097/01278-021-00522-6' target='_blank'>Tang ST, Tjia V, Noga T, et al. Creating a medical imaging workflow based on FHIR, DICOMweb, and SVG. J Digit Imaging. 2023;36(3):794–803.</a>",
+        "<strong>Geospatial Precedent</strong>",
+        "<a href='https://www.cogeo.org/' target='_blank'>Cloud Optimized GeoTIFF (COG) — specification and ecosystem.</a>",
+        "<a href='https://zarr.dev/' target='_blank'>Zarr — chunked, compressed, cloud-optimized N-dimensional arrays.</a>",
+        "<a href='https://geojson.org/' target='_blank'>GeoJSON (RFC 7946) — geographic feature collections.</a>",
+        "<a href='https://openlayers.org/' target='_blank'>OpenLayers — high-performance browser-side tile and vector rendering.</a>",
+        "<strong>Image Integrity, Adversarial Attacks &amp; Provenance</strong>",
+        "<a href='https://arxiv.org/abs/1412.6572' target='_blank'>Goodfellow IJ, Shlens J, Szegedy C. Explaining and Harnessing Adversarial Examples. ICLR 2015 (arXiv:1412.6572).</a>",
+        "Foote A, Asif A, Rajpoot N, et al. Studies on adversarial robustness of computational-pathology classifiers — adversarial vulnerability of histology models is documented and growing.",
+        "<a href='https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final' target='_blank'>NIST SP 800-53 Rev. 5 — control SC-13 (Cryptographic Protection) and the layered overlay model.</a>",
+        "<a href='https://c2pa.org/' target='_blank'>C2PA — Content Authenticity Initiative. Open standard for media provenance; the same primitives apply to WSI tiles and derived overlays.</a>",
+        "<strong>AI-Assisted Development Thread (companion lectures)</strong>",
+        "<a href='/lecture/dom-grand-rounds' target='_blank'>“Build As You Speak” — DOM Grand Rounds. The cost-shift argument for modular informatics under AI-assisted development.</a>",
+        "<a href='/lecture/oneit' target='_blank'>“The Transformative Effects of AI-Assisted Software Development” — Yale OneIT. Methodology and existence proofs (Xenonym, IBIS).</a>",
+        "<a href='https://metr.org/blog/2026-02-24-uplift-update/' target='_blank'>METR — measured productivity effects of AI-assisted development on experienced engineers.</a>",
+        "<strong>State-Machine &amp; Workflow Pedigree</strong>",
+        "Harel D. Statecharts: A visual formalism for complex systems. <em>Sci Comput Program</em>. 1987;8(3):231–274.",
+        "<a href='https://hl7.org/fhir/task.html' target='_blank'>HL7 FHIR — Task resource (request authorization vs. execution state, businessStatus).</a>",
+        "<a href='https://hl7.org/fhir/workflow.html' target='_blank'>HL7 FHIR — Workflow module (request/event pattern, Task lifecycle).</a>",
+        "Sobolev BG, Sanchez V, Vasilakis C. Modeling the rate-limiting elective admission processes for cardiac surgery: a discrete-event simulation study. <em>Health Care Manag Sci</em>. 2008;11(4):369–377. (Statechart-based clinical-process modelling.)",
+        "Pufahl L, et al. BPMN in healthcare: Challenges and opportunities. <em>Business Process Management literature, 2022 scoping review.</em>",
+        "Arcaini P, Gargantini A, Riccobene E. Modeling and analyzing medical software with Abstract State Machines. <em>Proceedings on formal methods in medical software development.</em>",
+        "<a href='https://www.nist.gov/programs-projects/laboratory-information-management-system-lims-roadmap' target='_blank'>NIST — Laboratory Information Management System (LIMS) Roadmap. Workflow management as core LIMS function.</a>",
+        "<a href='https://www.aphl.org/programs/informatics/Pages/lis-project-management.aspx' target='_blank'>APHL — Laboratory Information System Project Management Guidebook.</a>",
+        "<strong>Open-Source Existence Proofs</strong>",
+        "<a href='https://github.com/OpenPathologyFoundation' target='_blank'>Starling, Pelican, and Willet — the modular pathology platform discussed in this lecture.</a>",
+        "<a href='https://github.com/DigitalSlideArchive/DSA-WSI-DeID' target='_blank'>DSA-WSI-DeID — open WSI de-identification, the production-grade reference for the de-id state machine.</a>"
+      ],
+      "fragments": false
+    },
+
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions",
+      "subtitle": "What workflow in your institution is your system not telling the truth about?",
+      "presenter": "Peter Gershkovich, MD. MHA",
+      "email": "peter.gershkovich@yale.edu",
+      "institution": "Yale University School of Medicine"
+    }
+  ]
+}

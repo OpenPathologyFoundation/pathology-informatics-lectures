@@ -58,7 +58,12 @@ var SlideEngine = (function () {
             _slideMap.push({
                 index: i,
                 id: slide.id || '',
-                title: slide.title || 'Slide ' + (i + 1),
+                // The dock-nav uses this label on hover. Most JSON titles are
+                // the H2 the slide renders above its visualization, but many
+                // slides intentionally have no H2 — for those, the JSON
+                // provides a `dockTitle` so the dock still labels them
+                // properly instead of falling back to "Slide N".
+                title: slide.dockTitle || slide.title || 'Slide ' + (i + 1),
                 badge: slide.badge || (slide.type === 'poll' || slide.type === 'micro-case' || slide.type === 'timer' || slide.type === 'workshop' || slide.type === 'snippets' ? 'interactive' : null),
                 isOptional: isOpt,
                 rendered: shouldRender,

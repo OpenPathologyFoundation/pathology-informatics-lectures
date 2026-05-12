@@ -10186,6 +10186,3730 @@ const VizLibrary = (function () {
             .text('Diagram adapted from Hersh et al. 2013, Figure 1 (Informatics Continuum).');
     }
 
+    // ============================================================
+    //  WSI STATE MACHINE LECTURE — six new visualizations
+    // ============================================================
+
+    // Shared palette (matches the warm Tufte-ish look used elsewhere).
+    var WSI_PAL = {
+        bg:        '#faf7f1',
+        ink:       '#1f1a14',
+        muted:     '#6b5c48',
+        rule:      '#a89c85',
+        slate:     '#3d5b73',
+        slateDk:   '#1f3447',
+        copper:    '#a36015',
+        copperDk:  '#7a460c',
+        crimson:   '#9b3324',
+        green:     '#1d6b4a',
+        greenDk:   '#0e3f2c',
+        amber:     '#c08a2e',
+        violet:    '#6b4a8a',
+        teal:      '#2a7a78'
+    };
+
+    // Helper: word-wrap a <text> selection
+    function wsiWrap(textSel, str, maxWidth, lineHeight) {
+        textSel.selectAll('tspan').remove();
+        textSel.text(null);
+        var words = String(str || '').split(/\s+/);
+        var x = textSel.attr('x'), y = textSel.attr('y');
+        var line = [], tspan = textSel.append('tspan').attr('x', x).attr('y', y);
+        for (var i = 0; i < words.length; i++) {
+            line.push(words[i]);
+            tspan.text(line.join(' '));
+            if (tspan.node().getComputedTextLength() > maxWidth && line.length > 1) {
+                line.pop();
+                tspan.text(line.join(' '));
+                line = [words[i]];
+                tspan = textSel.append('tspan').attr('x', x).attr('dy', lineHeight + 'px').text(words[i]);
+            }
+        }
+    }
+
+    // ─── 1. modular-stack-pathology ─────────────────────────────
+    //  Side-by-side: monolithic DICOM stack (left) vs modular five-layer
+    //  pathology stack (right). Adapted from Gershkovich, JPI 2025 Fig. 2.
+    function modularStackPathology(container, config) {
+        var W = 1280, H = 680;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        // Column headings
+        svg.append('text').attr('x', W * 0.25).attr('y', 36)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', P.crimson)
+            .text('Monolithic — DICOM Container');
+        svg.append('text').attr('x', W * 0.75).attr('y', 36)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .text('Modular — Pathology Stack');
+
+        // Vertical rule between columns
+        svg.append('line').attr('x1', W / 2).attr('x2', W / 2)
+            .attr('y1', 60).attr('y2', H - 60)
+            .attr('stroke', P.rule).attr('stroke-width', 0.7).attr('stroke-dasharray', '3,4');
+
+        // ── LEFT: monolithic stack ──
+        var leftX = 90, leftW = 460;
+        var monoLayers = [
+            { label: 'Pixel Data',           sub: '50K × 50K WSI tiles' },
+            { label: 'Communication',        sub: 'DIMSE · SCU/SCP · store/find/move' },
+            { label: 'Security Framework',   sub: 'Embedded attribute-level controls' },
+            { label: 'Metadata',             sub: 'Patient · study · equipment · series' },
+            { label: 'Annotations',          sub: 'Structured Reports inside the file' }
+        ];
+        var stackTop = 90, stackBot = H - 130;
+        var rowH = (stackBot - stackTop) / monoLayers.length;
+        // Outer wrapper showing the “one envelope”
+        svg.append('rect')
+            .attr('x', leftX - 14).attr('y', stackTop - 14)
+            .attr('width', leftW + 28).attr('height', stackBot - stackTop + 28)
+            .attr('rx', 14).attr('fill', 'none')
+            .attr('stroke', P.crimson).attr('stroke-width', 2.4)
+            .attr('stroke-dasharray', '6,5');
+        svg.append('text').attr('x', leftX + leftW / 2).attr('y', stackTop - 22)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.crimson)
+            .text('one container — every concern bundled, every lifecycle coupled');
+
+        monoLayers.forEach(function (lyr, i) {
+            var y = stackTop + i * rowH;
+            svg.append('rect')
+                .attr('x', leftX).attr('y', y + 4)
+                .attr('width', leftW).attr('height', rowH - 8)
+                .attr('rx', 6).attr('fill', '#fff')
+                .attr('stroke', P.crimson).attr('stroke-width', 1.4);
+            svg.append('text').attr('x', leftX + 22).attr('y', y + rowH / 2 - 2)
+                .attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(lyr.label);
+            svg.append('text').attr('x', leftX + 22).attr('y', y + rowH / 2 + 17)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(lyr.sub);
+        });
+
+        // Issues block under the monolith
+        var issues = [
+            'PHI bound to immutable pixels',
+            'Updates invalidate cryptographic signatures',
+            'Cloud-native partial access requires shimming',
+            'Each component must move on the file’s clock'
+        ];
+        svg.append('text').attr('x', leftX).attr('y', H - 80)
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', P.crimson)
+            .attr('letter-spacing', '1.4px').text('CONSEQUENCES');
+        issues.forEach(function (t, i) {
+            svg.append('text').attr('x', leftX).attr('y', H - 60 + i * 16)
+                .attr('font-size', '11.5px').attr('fill', P.ink)
+                .text('•  ' + t);
+        });
+
+        // ── RIGHT: modular stack ──
+        var rightX = W / 2 + 90, rightW = 460;
+        // Top: security overlay band
+        var sw = rightW, sx = rightX;
+        svg.append('rect').attr('x', sx).attr('y', 90)
+            .attr('width', sw).attr('height', 56)
+            .attr('rx', 8).attr('fill', '#e9efe9')
+            .attr('stroke', P.greenDk).attr('stroke-width', 1.6);
+        svg.append('text').attr('x', sx + 18).attr('y', 116)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .text('Security Overlay');
+        svg.append('text').attr('x', sx + 18).attr('y', 134)
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('NIST SP 800-53 — layered identity, network, data controls');
+
+        // Communication band
+        svg.append('rect').attr('x', sx).attr('y', 158)
+            .attr('width', sw).attr('height', 56)
+            .attr('rx', 8).attr('fill', '#fff5e1')
+            .attr('stroke', P.copperDk).attr('stroke-width', 1.6);
+        svg.append('text').attr('x', sx + 18).attr('y', 184)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.copperDk)
+            .text('Communication');
+        svg.append('text').attr('x', sx + 18).attr('y', 202)
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('REST · HL7 FHIR · event bus · microservices');
+
+        // Three side-by-side service boxes (pixels / metadata / annotations)
+        var svcY = 230, svcH = 130, svcGap = 14;
+        var svcW = (sw - 2 * svcGap) / 3;
+        var services = [
+            { label: 'Pixels',      sub: 'TIFF · OME-TIFF',      sub2: 'DZI · Zarr',  color: P.slate },
+            { label: 'Metadata',    sub: 'HL7 FHIR',             sub2: 'JSON / DB',   color: P.teal },
+            { label: 'Annotations', sub: 'GeoJSON · SVG',        sub2: 'versioned',   color: P.violet }
+        ];
+        services.forEach(function (s, i) {
+            var x = sx + i * (svcW + svcGap);
+            svg.append('rect').attr('x', x).attr('y', svcY)
+                .attr('width', svcW).attr('height', svcH)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', s.color).attr('stroke-width', 1.6);
+            svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 30)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', s.color)
+                .text(s.label);
+            svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 64)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('fill', P.ink)
+                .text(s.sub);
+            svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 84)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('fill', P.ink)
+                .text(s.sub2);
+            svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 110)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text('independent lifecycle');
+        });
+
+        // Bottom row: integration tier (AI / Cloud Storage)
+        var intY = svcY + svcH + 24;
+        var intW = (sw - svcGap) / 2;
+        [
+            { label: 'AI Integration',     sub: 'inference at tile granularity',     color: P.crimson },
+            { label: 'Cloud Storage',      sub: 'tile-addressable, range-readable', color: P.amber }
+        ].forEach(function (s, i) {
+            var x = sx + i * (intW + svcGap);
+            svg.append('rect').attr('x', x).attr('y', intY)
+                .attr('width', intW).attr('height', 76)
+                .attr('rx', 8).attr('fill', '#fdfaf3')
+                .attr('stroke', s.color).attr('stroke-width', 1.4);
+            svg.append('text').attr('x', x + intW / 2).attr('y', intY + 30)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', s.color)
+                .text(s.label);
+            svg.append('text').attr('x', x + intW / 2).attr('y', intY + 54)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(s.sub);
+        });
+
+        // Benefits caption
+        svg.append('text').attr('x', rightX).attr('y', H - 80)
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .attr('letter-spacing', '1.4px').text('CONSEQUENCES');
+        var benefits = [
+            'Each layer evolves independently',
+            'PHI separable from pixels by construction',
+            'Open standards at every boundary',
+            'AI plugs in at tile and metadata tiers — no shimming'
+        ];
+        benefits.forEach(function (t, i) {
+            svg.append('text').attr('x', rightX).attr('y', H - 60 + i * 16)
+                .attr('font-size', '11.5px').attr('fill', P.ink)
+                .text('•  ' + t);
+        });
+
+        // Source line
+        svg.append('text').attr('x', W / 2).attr('y', H - 14)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Adapted from Gershkovich P. J Pathol Inform 2025;18:100450, Fig. 2.');
+    }
+
+    // ─── 2. geospatial-parallel ─────────────────────────────────
+    //  Two columns mapping pathology stack layers to their geospatial cousins.
+    function geospatialParallel(container, config) {
+        var W = 1280, H = 660;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        svg.append('text').attr('x', W * 0.27).attr('y', 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', P.slateDk)
+            .text('Pathology');
+        svg.append('text').attr('x', W * 0.73).attr('y', 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .text('Geospatial');
+        svg.append('text').attr('x', W / 2).attr('y', 64)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Same engineering problem · same math · the older discipline already chose modularity');
+
+        var rows = [
+            { layer: 'Pixel container',          path: 'TIFF · SVS · OME-TIFF',      geo: 'GeoTIFF · COG' },
+            { layer: 'Cloud-native arrays',      path: 'Zarr · OME-NGFF',            geo: 'Zarr · COG · COPC' },
+            { layer: 'Tile delivery protocol',   path: 'DZI · IIIF',                 geo: 'XYZ · WMTS · OGC API – Tiles' },
+            { layer: 'Vector overlays',          path: 'GeoJSON · SVG',              geo: 'GeoJSON · GeoPackage · MVT' },
+            { layer: 'Browser viewer',           path: 'OpenSeadragon · Slim',       geo: 'OpenLayers · Leaflet · MapLibre' },
+            { layer: 'Spatial query',            path: 'WSI annotation API',         geo: 'PostGIS · STAC · OGC API – Features' },
+            { layer: 'Security model',           path: 'NIST SP 800-53 overlay',     geo: 'OAuth2 · row-level + tile-level ACL' }
+        ];
+
+        var topY = 92, rowH = 64;
+        rows.forEach(function (r, i) {
+            var y = topY + i * rowH;
+            // Pathology column box
+            svg.append('rect').attr('x', 100).attr('y', y).attr('width', 460).attr('height', rowH - 12)
+                .attr('rx', 6).attr('fill', '#fff')
+                .attr('stroke', P.slate).attr('stroke-width', 1.3);
+            svg.append('text').attr('x', 116).attr('y', y + 22)
+                .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.slateDk)
+                .text(r.layer);
+            svg.append('text').attr('x', 116).attr('y', y + 40)
+                .attr('font-size', '12px').attr('fill', P.ink).text(r.path);
+
+            // Mapping arrow with double-head to indicate translatable in either direction
+            svg.append('path')
+                .attr('d', 'M 580 ' + (y + (rowH - 12) / 2) + ' L 700 ' + (y + (rowH - 12) / 2))
+                .attr('stroke', P.copper).attr('stroke-width', 1.8)
+                .attr('marker-end', 'url(#wsi-geo-head)')
+                .attr('marker-start', 'url(#wsi-geo-head-rev)');
+
+            // Geospatial column box
+            svg.append('rect').attr('x', 720).attr('y', y).attr('width', 460).attr('height', rowH - 12)
+                .attr('rx', 6).attr('fill', '#fff')
+                .attr('stroke', P.green).attr('stroke-width', 1.3);
+            svg.append('text').attr('x', 736).attr('y', y + 22)
+                .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.greenDk)
+                .text(r.layer);
+            svg.append('text').attr('x', 736).attr('y', y + 40)
+                .attr('font-size', '12px').attr('fill', P.ink).text(r.geo);
+        });
+
+        // Arrow marker definitions
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-geo-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 8).attr('refY', 0)
+            .attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', P.copper);
+        defs.append('marker').attr('id', 'wsi-geo-head-rev')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 2).attr('refY', 0)
+            .attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto')
+            .append('path').attr('d', 'M 8,-4 L 0,0 L 8,4 Z').attr('fill', P.copper);
+
+        // Caption / lesson
+        svg.append('text').attr('x', W / 2).attr('y', H - 30)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Every row on the right has fifteen-plus years of production scale behind it.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Pathology can either re-derive these patterns or adopt them.');
+    }
+
+    // ─── 3. case-fsm ────────────────────────────────────────────
+    //  Directed graph of case states. Linear spine plus side-states.
+    function caseFsm(container, config) {
+        var W = 1280, H = 620;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        // Title
+        svg.append('text').attr('x', W / 2).attr('y', 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '18px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Case finite-state machine — anatomic pathology');
+        svg.append('text').attr('x', W / 2).attr('y', 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Boxes are states. Labelled arrows are transitions. Side states are forks the system must represent.');
+
+        // Arrow marker
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-fsm-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', P.slateDk);
+
+        // Main spine states
+        var spineY = 250;
+        var states = [
+            { id: 'accessioned', label: 'Accessioned',    note: 'identity created',    x: 110 },
+            { id: 'assigned',    label: 'Assigned',       note: 'pathologist bound',   x: 320 },
+            { id: 'in-review',   label: 'In Review',      note: 'attention engaged',   x: 530 },
+            { id: 'reported',    label: 'Reported',       note: 'finalized; FHIR out', x: 740 },
+            { id: 'archived',    label: 'Archived',       note: 'closed; query-only',  x: 1110 }
+        ];
+
+        function stateBox(s, color) {
+            var w = 150, h = 64;
+            var g = svg.append('g').attr('transform', 'translate(' + (s.x - w / 2) + ',' + (spineY - h / 2) + ')');
+            g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 10).attr('fill', '#fff')
+                .attr('stroke', color || P.slateDk).attr('stroke-width', 1.8);
+            g.append('text').attr('x', w / 2).attr('y', 26)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', color || P.slateDk)
+                .text(s.label);
+            g.append('text').attr('x', w / 2).attr('y', 46)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(s.note);
+            return g;
+        }
+
+        states.forEach(function (s) { stateBox(s, P.slateDk); });
+
+        // Spine arrows with transition labels
+        var spineEdges = [
+            { from: 'accessioned', to: 'assigned',  label: 'assign(pathologist)',         x: 215 },
+            { from: 'assigned',    to: 'in-review', label: 'open(case)',                  x: 425 },
+            { from: 'in-review',   to: 'reported',  label: 'sign-out()',                  x: 635 },
+            { from: 'reported',    to: 'archived',  label: 'retention threshold',         x: 925 }
+        ];
+        function findX(id) { for (var i = 0; i < states.length; i++) if (states[i].id === id) return states[i].x; }
+        spineEdges.forEach(function (e) {
+            var x1 = findX(e.from) + 75, x2 = findX(e.to) - 75;
+            svg.append('line').attr('x1', x1).attr('x2', x2)
+                .attr('y1', spineY).attr('y2', spineY)
+                .attr('stroke', P.slateDk).attr('stroke-width', 1.6)
+                .attr('marker-end', 'url(#wsi-fsm-head)');
+            svg.append('text').attr('x', e.x).attr('y', spineY - 12)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-weight', '600').attr('fill', P.copperDk)
+                .text(e.label);
+        });
+
+        // Side state: Reassigned (between assigned and in-review, drop down)
+        var sideY1 = spineY + 130;
+        var reassignedX = 320;
+        var reassigned = { id: 'reassigned', label: 'Reassigned', note: 'identity re-bound', x: reassignedX };
+        // Custom box (smaller)
+        (function () {
+            var w = 130, h = 54;
+            var g = svg.append('g').attr('transform', 'translate(' + (reassignedX - w / 2) + ',' + (sideY1 - h / 2) + ')');
+            g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', P.amber).attr('stroke-width', 1.5).attr('stroke-dasharray', '4,3');
+            g.append('text').attr('x', w / 2).attr('y', 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', P.copperDk)
+                .text('Reassigned');
+            g.append('text').attr('x', w / 2).attr('y', 40)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text('identity re-bound');
+        })();
+        // Arrow down + back up
+        svg.append('path')
+            .attr('d', 'M ' + (reassignedX - 30) + ' ' + (spineY + 32) +
+                       ' Q ' + (reassignedX - 30) + ' ' + sideY1 + ' ' + (reassignedX - 30) + ' ' + (sideY1 - 27))
+            .attr('fill', 'none').attr('stroke', P.amber).attr('stroke-width', 1.4)
+            .attr('marker-end', 'url(#wsi-fsm-head)');
+        svg.append('path')
+            .attr('d', 'M ' + (reassignedX + 30) + ' ' + (sideY1 - 27) +
+                       ' Q ' + (reassignedX + 30) + ' ' + sideY1 + ' ' + (reassignedX + 30) + ' ' + (spineY + 32))
+            .attr('fill', 'none').attr('stroke', P.amber).attr('stroke-width', 1.4)
+            .attr('marker-end', 'url(#wsi-fsm-head)');
+        svg.append('text').attr('x', reassignedX + 78).attr('y', sideY1 - 8)
+            .attr('font-size', '10px').attr('fill', P.copperDk).attr('font-style', 'italic')
+            .text('reassign() / resume()');
+
+        // Side state: Sent-Out (consultation) — branches off in-review
+        var sentOutX = 530;
+        (function () {
+            var w = 130, h = 54;
+            var g = svg.append('g').attr('transform', 'translate(' + (sentOutX - w / 2) + ',' + (sideY1 - h / 2) + ')');
+            g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', P.violet).attr('stroke-width', 1.5).attr('stroke-dasharray', '4,3');
+            g.append('text').attr('x', w / 2).attr('y', 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', P.violet)
+                .text('Sent for Consult');
+            g.append('text').attr('x', w / 2).attr('y', 40)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text('external opinion in-flight');
+        })();
+        svg.append('path')
+            .attr('d', 'M ' + (sentOutX - 30) + ' ' + (spineY + 32) +
+                       ' Q ' + (sentOutX - 30) + ' ' + sideY1 + ' ' + (sentOutX - 30) + ' ' + (sideY1 - 27))
+            .attr('fill', 'none').attr('stroke', P.violet).attr('stroke-width', 1.4)
+            .attr('marker-end', 'url(#wsi-fsm-head)');
+        svg.append('path')
+            .attr('d', 'M ' + (sentOutX + 30) + ' ' + (sideY1 - 27) +
+                       ' Q ' + (sentOutX + 30) + ' ' + sideY1 + ' ' + (sentOutX + 30) + ' ' + (spineY + 32))
+            .attr('fill', 'none').attr('stroke', P.violet).attr('stroke-width', 1.4)
+            .attr('marker-end', 'url(#wsi-fsm-head)');
+        svg.append('text').attr('x', sentOutX + 78).attr('y', sideY1 - 8)
+            .attr('font-size', '10px').attr('fill', P.violet).attr('font-style', 'italic')
+            .text('send-out() / receive()');
+
+        // Side state: Amended — branches off reported
+        var amendedX = 925;
+        (function () {
+            var w = 150, h = 64;
+            var g = svg.append('g').attr('transform', 'translate(' + (amendedX - w / 2) + ',' + (spineY - h / 2 - 130) + ')');
+            g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 10).attr('fill', '#fff')
+                .attr('stroke', P.crimson).attr('stroke-width', 1.8);
+            g.append('text').attr('x', w / 2).attr('y', 26)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.crimson)
+                .text('Amended');
+            g.append('text').attr('x', w / 2).attr('y', 46)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text('fork — original preserved');
+        })();
+        svg.append('path')
+            .attr('d', 'M 740 ' + (spineY - 32) +
+                       ' Q ' + (amendedX - 60) + ' ' + (spineY - 130) + ' ' + (amendedX - 75) + ' ' + (spineY - 130))
+            .attr('fill', 'none').attr('stroke', P.crimson).attr('stroke-width', 1.6)
+            .attr('marker-end', 'url(#wsi-fsm-head)');
+        svg.append('text').attr('x', 825).attr('y', spineY - 88)
+            .attr('font-size', '11px').attr('font-weight', '600').attr('fill', P.crimson)
+            .text('amend(reason)');
+
+        // Caption legend
+        var legY = H - 56;
+        svg.append('text').attr('x', 110).attr('y', legY)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', P.muted)
+            .attr('letter-spacing', '1.4px').text('LEGEND');
+        // Solid line / state
+        svg.append('line').attr('x1', 200).attr('x2', 240).attr('y1', legY - 4).attr('y2', legY - 4)
+            .attr('stroke', P.slateDk).attr('stroke-width', 1.6);
+        svg.append('text').attr('x', 246).attr('y', legY)
+            .attr('font-size', '11px').attr('fill', P.ink).text('mandatory transition');
+        // Dashed = optional/back
+        svg.append('line').attr('x1', 410).attr('x2', 450).attr('y1', legY - 4).attr('y2', legY - 4)
+            .attr('stroke', P.amber).attr('stroke-width', 1.6).attr('stroke-dasharray', '4,3');
+        svg.append('text').attr('x', 456).attr('y', legY)
+            .attr('font-size', '11px').attr('fill', P.ink).text('reversible transition');
+        // Crimson = fork
+        svg.append('line').attr('x1', 620).attr('x2', 660).attr('y1', legY - 4).attr('y2', legY - 4)
+            .attr('stroke', P.crimson).attr('stroke-width', 1.6);
+        svg.append('text').attr('x', 666).attr('y', legY)
+            .attr('font-size', '11px').attr('fill', P.ink).text('fork — original preserved');
+    }
+
+    // ─── 4. slide-fsm ───────────────────────────────────────────
+    //  Per-slide lifecycle FSM.
+    function slideFsm(container, config) {
+        var W = 1280, H = 540;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        svg.append('text').attr('x', W / 2).attr('y', 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '18px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Slide finite-state machine — runs underneath each case');
+        svg.append('text').attr('x', W / 2).attr('y', 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Each slide carries its own lifecycle. The case state is a function of all slide states + assignment + report.');
+
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-slide-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', P.teal);
+
+        var midY = 240;
+        var states = [
+            { label: 'Acquired',     note: 'pixels written',            x: 110, color: P.slate },
+            { label: 'Registered',   note: 'tile pyramid indexed',      x: 290, color: P.slate },
+            { label: 'QC’d',         note: 'focus / staining checked',  x: 470, color: P.teal },
+            { label: 'Bound to Case',note: 'joins case FSM',            x: 650, color: P.teal },
+            { label: 'Annotated',    note: 'observers attach state',    x: 830, color: P.violet },
+            { label: 'Derived',      note: 'features / inferences',     x: 1010, color: P.violet },
+            { label: 'Archived',     note: 'tile-readable, query-only', x: 1190, color: P.slateDk }
+        ];
+
+        function box(s) {
+            var w = 140, h = 60;
+            var g = svg.append('g').attr('transform', 'translate(' + (s.x - w / 2) + ',' + (midY - h / 2) + ')');
+            g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', s.color).attr('stroke-width', 1.6);
+            g.append('text').attr('x', w / 2).attr('y', 24)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', s.color)
+                .text(s.label);
+            g.append('text').attr('x', w / 2).attr('y', 44)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(s.note);
+        }
+        states.forEach(box);
+
+        // Connecting arrows
+        for (var i = 0; i < states.length - 1; i++) {
+            var x1 = states[i].x + 70, x2 = states[i + 1].x - 70;
+            svg.append('line').attr('x1', x1).attr('x2', x2)
+                .attr('y1', midY).attr('y2', midY)
+                .attr('stroke', P.teal).attr('stroke-width', 1.4)
+                .attr('marker-end', 'url(#wsi-slide-head)');
+        }
+
+        // Reject loop from QC
+        svg.append('path')
+            .attr('d', 'M 470 ' + (midY - 30) + ' Q 470 130 290 130 Q 290 ' + (midY - 30) + ' 290 ' + (midY - 30))
+            .attr('fill', 'none').attr('stroke', P.crimson).attr('stroke-width', 1.4)
+            .attr('marker-end', 'url(#wsi-slide-head)').attr('stroke-dasharray', '4,3');
+        svg.append('text').attr('x', 380).attr('y', 116)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.crimson)
+            .text('reject() — re-scan required');
+
+        // Re-annotation loop (Derived back to Annotated)
+        svg.append('path')
+            .attr('d', 'M 1010 ' + (midY + 30) + ' Q 1010 380 830 380 Q 830 ' + (midY + 30) + ' 830 ' + (midY + 30))
+            .attr('fill', 'none').attr('stroke', P.violet).attr('stroke-width', 1.4)
+            .attr('marker-end', 'url(#wsi-slide-head)').attr('stroke-dasharray', '4,3');
+        svg.append('text').attr('x', 920).attr('y', 396)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.violet)
+            .text('re-annotate() — model improvement');
+
+        // Below-spine note
+        svg.append('text').attr('x', W / 2).attr('y', H - 30)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Slides can occupy different states inside the same case. The system must say so.');
+    }
+
+    // ─── 5. nested-fsm ──────────────────────────────────────────
+    //  Outer case FSM containing a row of slide FSMs and side-machines
+    //  for assignment and report.
+    function nestedFsm(container, config) {
+        var W = 1280, H = 700;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        // Outer container = Case
+        var caseX = 70, caseY = 70, caseW = W - 140, caseH = H - 140;
+        svg.append('rect').attr('x', caseX).attr('y', caseY)
+            .attr('width', caseW).attr('height', caseH)
+            .attr('rx', 16).attr('fill', '#ffffff')
+            .attr('stroke', P.slateDk).attr('stroke-width', 2.4);
+        svg.append('text').attr('x', caseX + 22).attr('y', caseY + 32)
+            .attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.slateDk)
+            .text('CASE FSM');
+        svg.append('text').attr('x', caseX + 122).attr('y', caseY + 32)
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('state = ƒ(assignment, report, slide_states)');
+
+        // Assignment side-machine (top-right)
+        var asgX = caseX + caseW - 340, asgY = caseY + 60, asgW = 320, asgH = 80;
+        svg.append('rect').attr('x', asgX).attr('y', asgY).attr('width', asgW).attr('height', asgH)
+            .attr('rx', 10).attr('fill', '#fef7ec').attr('stroke', P.amber).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', asgX + 14).attr('y', asgY + 22)
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.copperDk)
+            .text('ASSIGNMENT FSM');
+        ['unassigned', 'assigned', 'reassigned'].forEach(function (s, i) {
+            var xx = asgX + 18 + i * 100, yy = asgY + 50;
+            svg.append('rect').attr('x', xx).attr('y', yy - 14).attr('width', 90).attr('height', 22)
+                .attr('rx', 5).attr('fill', '#fff').attr('stroke', P.amber).attr('stroke-width', 1.1);
+            svg.append('text').attr('x', xx + 45).attr('y', yy + 1)
+                .attr('text-anchor', 'middle').attr('font-size', '11px').attr('fill', P.ink)
+                .text(s);
+            if (i < 2) {
+                svg.append('line').attr('x1', xx + 90).attr('x2', xx + 100)
+                    .attr('y1', yy - 3).attr('y2', yy - 3)
+                    .attr('stroke', P.amber).attr('stroke-width', 1.2);
+            }
+        });
+
+        // Report side-machine (top-left, below the title)
+        var repX = caseX + 22, repY = caseY + 60, repW = 360, repH = 80;
+        svg.append('rect').attr('x', repX).attr('y', repY).attr('width', repW).attr('height', repH)
+            .attr('rx', 10).attr('fill', '#f0e9f3').attr('stroke', P.violet).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', repX + 14).attr('y', repY + 22)
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.violet)
+            .text('REPORT FSM (Willet)');
+        ['drafted', 'reviewed', 'finalized', 'transmitted'].forEach(function (s, i) {
+            var xx = repX + 14 + i * 88, yy = repY + 50;
+            svg.append('rect').attr('x', xx).attr('y', yy - 14).attr('width', 78).attr('height', 22)
+                .attr('rx', 5).attr('fill', '#fff').attr('stroke', P.violet).attr('stroke-width', 1.1);
+            svg.append('text').attr('x', xx + 39).attr('y', yy + 1)
+                .attr('text-anchor', 'middle').attr('font-size', '11px').attr('fill', P.ink)
+                .text(s);
+            if (i < 3) {
+                svg.append('line').attr('x1', xx + 78).attr('x2', xx + 88)
+                    .attr('y1', yy - 3).attr('y2', yy - 3)
+                    .attr('stroke', P.violet).attr('stroke-width', 1.2);
+            }
+        });
+
+        // Slide FSM mini-rows — three slides in different states
+        var slideRowY = caseY + 180, slideRowH = 130;
+        var slideStates = ['acquired', 'registered', 'QC’d', 'bound', 'annotated', 'derived', 'archived'];
+        var slides = [
+            { label: 'Slide A — H&E',     active: 4 },
+            { label: 'Slide B — H&E',     active: 2 },
+            { label: 'Slide C — IHC CK7', active: 5 }
+        ];
+
+        slides.forEach(function (sl, idx) {
+            var y = slideRowY + idx * slideRowH;
+            // Outer mini-container
+            svg.append('rect').attr('x', caseX + 22).attr('y', y).attr('width', caseW - 44).attr('height', slideRowH - 16)
+                .attr('rx', 8).attr('fill', '#fafdfd').attr('stroke', P.teal).attr('stroke-width', 1.3);
+            svg.append('text').attr('x', caseX + 38).attr('y', y + 24)
+                .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.teal)
+                .text(sl.label);
+            svg.append('text').attr('x', caseX + 38).attr('y', y + 42)
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text('SLIDE FSM (Pelican-served pixels, GeoJSON annotations)');
+
+            // States row
+            var sx = caseX + 240, sy = y + 80, gap = (caseW - 44 - 240) / (slideStates.length);
+            slideStates.forEach(function (st, i) {
+                var cx = sx + i * gap, isActive = i === sl.active;
+                svg.append('rect')
+                    .attr('x', cx - 38).attr('y', sy - 14)
+                    .attr('width', 76).attr('height', 26)
+                    .attr('rx', 6)
+                    .attr('fill', isActive ? P.teal : '#fff')
+                    .attr('stroke', P.teal).attr('stroke-width', isActive ? 1.8 : 1.0);
+                svg.append('text').attr('x', cx).attr('y', sy + 3)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10.5px').attr('font-weight', isActive ? '700' : '500')
+                    .attr('fill', isActive ? '#fff' : P.ink)
+                    .text(st);
+                if (i < slideStates.length - 1) {
+                    svg.append('line').attr('x1', cx + 38).attr('x2', cx + gap - 38)
+                        .attr('y1', sy - 1).attr('y2', sy - 1)
+                        .attr('stroke', P.teal).attr('stroke-width', 1.0).attr('stroke-opacity', 0.55);
+                }
+            });
+        });
+
+        // Bottom caption
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Three slides, three different states — inside one case that is itself in a composite state.');
+    }
+
+    // ─── 6. context-flow-traversal ──────────────────────────────
+    //  Same image at center, four context-envelopes around it.
+    function contextFlowTraversal(container, config) {
+        var W = 1280, H = 700;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        svg.append('text').attr('x', W / 2).attr('y', 40)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '18px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Same pixels — four contexts, four envelopes');
+        svg.append('text').attr('x', W / 2).attr('y', 62)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Pelican serves the tiles once. The orchestrator assembles the envelope at request time.');
+
+        // Center: WSI tile cluster
+        var cx = W / 2, cy = H / 2 + 10;
+        var tile = function (x, y, w, h, c) {
+            svg.append('rect').attr('x', x).attr('y', y).attr('width', w).attr('height', h)
+                .attr('fill', c).attr('opacity', 0.85)
+                .attr('stroke', P.ink).attr('stroke-width', 0.5);
+        };
+        // Tiny pyramid mosaic suggestion
+        var s = 26;
+        for (var r = 0; r < 4; r++) {
+            for (var cl = 0; cl < 4; cl++) {
+                var shade = ['#c9a085', '#b78b6f', '#a87a5d', '#955f44'][(r + cl) % 4];
+                tile(cx - 2 * s + cl * s, cy - 2 * s + r * s, s - 1, s - 1, shade);
+            }
+        }
+        svg.append('text').attr('x', cx).attr('y', cy + 70)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('the same tile pyramid');
+        svg.append('text').attr('x', cx).attr('y', cy + 88)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('one URL · one cache · one source of truth');
+
+        // Four envelopes — placed on a diamond around the center
+        var envelopes = [
+            { label: 'Clinical Sign-Out', color: P.crimson, ang: -Math.PI / 2,
+              attrs: ['identity: full PHI', 'audit: complete', 'permissions: assigned pathologist', 'derivations: none'] },
+            { label: 'Tumor Board',       color: P.amber,   ang: 0,
+              attrs: ['identity: PHI present', 'audit: meeting log', 'permissions: MDT roster', 'derivations: shared overlays'] },
+            { label: 'Education Set',     color: P.violet,  ang: Math.PI / 2,
+              attrs: ['identity: de-identified', 'audit: course log', 'permissions: enrolled residents', 'derivations: curated annotations'] },
+            { label: 'Research Cohort',   color: P.greenDk, ang: Math.PI,
+              attrs: ['identity: cohort ID', 'audit: IRB-bound', 'permissions: study team', 'derivations: features + version pin'] }
+        ];
+
+        var R = 240;
+        envelopes.forEach(function (env) {
+            var ex = cx + R * Math.cos(env.ang);
+            var ey = cy + R * Math.sin(env.ang);
+            var w = 240, h = 124;
+            var rx = ex - w / 2, ry = ey - h / 2;
+            // Card
+            svg.append('rect').attr('x', rx).attr('y', ry).attr('width', w).attr('height', h)
+                .attr('rx', 10).attr('fill', '#fff')
+                .attr('stroke', env.color).attr('stroke-width', 1.8);
+            svg.append('rect').attr('x', rx).attr('y', ry).attr('width', 6).attr('height', h)
+                .attr('fill', env.color);
+            svg.append('text').attr('x', rx + 18).attr('y', ry + 22)
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', env.color)
+                .text(env.label);
+            env.attrs.forEach(function (a, i) {
+                svg.append('text').attr('x', rx + 18).attr('y', ry + 44 + i * 16)
+                    .attr('font-size', '10.5px').attr('fill', P.ink).text('•  ' + a);
+            });
+
+            // Connector arrow from envelope to center pyramid
+            // Trim line so it doesn't pierce the boxes
+            var dx = cx - ex, dy = cy - ey, mag = Math.sqrt(dx * dx + dy * dy);
+            var ux = dx / mag, uy = dy / mag;
+            var startX = ex + ux * 60, startY = ey + uy * 50;
+            var endX = cx - ux * 70,    endY = cy - uy * 70;
+            svg.append('line').attr('x1', startX).attr('x2', endX)
+                .attr('y1', startY).attr('y2', endY)
+                .attr('stroke', env.color).attr('stroke-width', 1.4)
+                .attr('stroke-dasharray', '5,4').attr('opacity', 0.7);
+        });
+
+        // Small footer caption
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('The image doesn’t move between contexts. The envelope does.');
+    }
+
+    // ─── 7. state-machine-primer ────────────────────────────────
+    //  Pedagogical anchor for clinical attendees. Shows a familiar
+    //  lab-order workflow as an explicit FSM and labels the three
+    //  primitives (state, transition, event) with callouts.
+    function stateMachinePrimer(container, config) {
+        var W = 1280, H = 620;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        // Small italic caption (the slide-engine title above already reads
+        // "What Is a State Machine?"; this just names the example used here
+        // without competing visually with the title).
+        svg.append('text').attr('x', W / 2).attr('y', 70)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '14px')
+            .attr('font-style', 'italic').attr('fill', P.muted)
+            .text('an example — an anatomic pathology case');
+
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-prim-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', P.slateDk);
+
+        // Five state boxes for the anatomic-pathology chain. Boxes at 160 px
+        // wide, centres spaced 250 px apart, so the gap between any two boxes
+        // is 90 px — wide enough to hold a short italic event label cleanly.
+        var midY = 230;
+        var states = [
+            { label: 'Collected',      note: 'specimen at bedside', x: 130  },
+            { label: 'Received',       note: 'in accessioning',     x: 380  },
+            { label: 'Gross complete', note: 'blocks submitted',    x: 630  },
+            { label: 'Stain verified', note: 'slides QC-passed',    x: 880  },
+            { label: 'Reported',       note: 'case signed out',     x: 1130 }
+        ];
+
+        states.forEach(function (s, i) {
+            var w = 160, h = 80;
+            var g = svg.append('g').attr('transform', 'translate(' + (s.x - w / 2) + ',' + (midY - h / 2) + ')');
+            g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 12).attr('fill', '#fff')
+                .attr('stroke', P.slateDk).attr('stroke-width', 2.0);
+            g.append('text').attr('x', w / 2).attr('y', 32)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', P.slateDk)
+                .text(s.label);
+            g.append('text').attr('x', w / 2).attr('y', 54)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(s.note);
+        });
+
+        // Transition arrows + event labels. Event labels sit in the 90-px
+        // gap between state boxes, so each event name is kept short — the
+        // EVENT callout below the chain already supplies the category.
+        var transitions = [
+            { x: 255,  label: 'accession()', evt: 'courier' },
+            { x: 505,  label: 'gross()',     evt: 'PA gross' },
+            { x: 755,  label: 'stain()',     evt: 'stain QC' },
+            { x: 1005, label: 'sign()',      evt: 'sign-off' }
+        ];
+        transitions.forEach(function (t, i) {
+            var x1 = states[i].x + 80, x2 = states[i + 1].x - 80;
+            svg.append('line').attr('x1', x1).attr('x2', x2)
+                .attr('y1', midY).attr('y2', midY)
+                .attr('stroke', P.slateDk).attr('stroke-width', 1.8)
+                .attr('marker-end', 'url(#wsi-prim-head)');
+            // transition function name above
+            svg.append('text').attr('x', t.x).attr('y', midY - 12)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('font-weight', '600').attr('fill', P.copperDk)
+                .text(t.label);
+            // event label below in italic
+            svg.append('text').attr('x', t.x).attr('y', midY + 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(t.evt);
+        });
+
+        // Three callouts — STATE, TRANSITION, EVENT — placed in a row
+        // directly below the chain. Each is anchored on the specific element
+        // it describes, with a short vertical dashed line dropping into the
+        // label. Tufte-clean: direct labelling, no crossing lines, no
+        // decorative curves, short subtitles.
+        function callout(text, sub, anchorX, anchorY, labelY, color) {
+            // Anchor dot just outside the chain
+            svg.append('circle').attr('cx', anchorX).attr('cy', anchorY).attr('r', 4).attr('fill', color);
+            // Thin vertical dashed connector from anchor down to just above the label
+            svg.append('line').attr('x1', anchorX).attr('y1', anchorY + 6)
+                .attr('x2', anchorX).attr('y2', labelY - 16)
+                .attr('stroke', color).attr('stroke-width', 1.0)
+                .attr('stroke-dasharray', '3,3').attr('opacity', 0.75);
+            // Label (small caps) centred under the anchor
+            svg.append('text').attr('x', anchorX).attr('y', labelY)
+                .attr('text-anchor', 'middle')
+                .attr('font-family', SANS)
+                .attr('font-size', '12px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', color).text(text);
+            // Subtitle, serif italic, also centred
+            svg.append('text').attr('x', anchorX).attr('y', labelY + 20)
+                .attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-style', 'italic')
+                .attr('font-size', '12.5px').attr('fill', P.muted).text(sub);
+        }
+
+        // STATE — anchored under the middle box (Gross complete) at x=630
+        callout('STATE',       'where the case is',   630, midY + 50, midY + 130, P.slate);
+        // TRANSITION — anchored under the gross() arrow at x=505
+        callout('TRANSITION',  'an allowable move',   505, midY + 50, midY + 130, P.copperDk);
+        // EVENT — anchored under the stain() arrow at x=755
+        callout('EVENT',       'what triggered it',   755, midY + 50, midY + 130, P.violet);
+
+        // Bottom takeaway band
+        svg.append('text').attr('x', W / 2).attr('y', H - 56)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Reading the diagram: “The case is currently Stain verified. The only move allowed from here is sign(), which transitions it to Reported.”');
+        svg.append('text').attr('x', W / 2).attr('y', H - 32)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Every clinical workflow has a state machine inside it, whether someone drew it or not.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 14)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', P.crimson)
+            .text('The choice is whether to make it explicit.');
+    }
+
+    // ─── 8. tile-state-gate ─────────────────────────────────────
+    //  A tile-fetch request crossing a state-gate that decides
+    //  whether to serve, transform, refuse, or queue.
+    function tileStateGate(container, config) {
+        var W = 1280, H = 640;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        svg.append('text').attr('x', W / 2).attr('y', 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '18px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('A tile fetch is not a static lookup — it is a state-machine decision');
+        svg.append('text').attr('x', W / 2).attr('y', 60)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Same coordinate, same zoom — different bytes, depending on the envelope in effect at the moment of the request');
+
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-gate-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', P.slateDk);
+
+        // Left: incoming request
+        var reqX = 130, reqY = 280, reqW = 200, reqH = 96;
+        svg.append('rect').attr('x', reqX).attr('y', reqY)
+            .attr('width', reqW).attr('height', reqH)
+            .attr('rx', 10).attr('fill', '#fff')
+            .attr('stroke', P.slate).attr('stroke-width', 1.6);
+        svg.append('text').attr('x', reqX + reqW / 2).attr('y', reqY + 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.slateDk)
+            .text('GET /tiles/...');
+        svg.append('text').attr('x', reqX + reqW / 2).attr('y', reqY + 48)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('fill', P.ink)
+            .text('case=C-12345 · slide=A · z=8 · x=45 · y=67');
+        svg.append('text').attr('x', reqX + reqW / 2).attr('y', reqY + 72)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('+ JWT, audit context, envelope id');
+
+        // Center: the gate (diamond)
+        var gateCx = 580, gateCy = 328;
+        svg.append('polygon')
+            .attr('points', (gateCx) + ',' + (gateCy - 90) + ' ' +
+                            (gateCx + 130) + ',' + gateCy + ' ' +
+                            (gateCx) + ',' + (gateCy + 90) + ' ' +
+                            (gateCx - 130) + ',' + gateCy)
+            .attr('fill', '#fdf2e2').attr('stroke', P.copperDk).attr('stroke-width', 2);
+        svg.append('text').attr('x', gateCx).attr('y', gateCy - 16)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.copperDk)
+            .text('STATE GATE');
+        svg.append('text').attr('x', gateCx).attr('y', gateCy + 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('fill', P.ink)
+            .text('case state · envelope · identity');
+        svg.append('text').attr('x', gateCx).attr('y', gateCy + 22)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10.5px').attr('fill', P.ink)
+            .text('derivation lineage · audit context');
+
+        // Arrow request → gate
+        svg.append('line').attr('x1', reqX + reqW + 4).attr('x2', gateCx - 134)
+            .attr('y1', reqY + reqH / 2).attr('y2', gateCy)
+            .attr('stroke', P.slateDk).attr('stroke-width', 1.6)
+            .attr('marker-end', 'url(#wsi-gate-head)');
+
+        // Right: four outcomes
+        var outX = 870, outW = 280, outH = 88, outGap = 22;
+        var outcomes = [
+            { label: 'SERVE',     desc: 'tile returned as-is — clinical envelope, full PHI', color: P.green },
+            { label: 'TRANSFORM', desc: 'redact label region · downsample for teaching · style for AI input', color: P.amber },
+            { label: 'QUEUE',     desc: 'awaiting QC, awaiting de-id review, awaiting re-scan', color: P.violet },
+            { label: 'REFUSE',    desc: 'envelope mismatch · case archived · identity expired', color: P.crimson }
+        ];
+        outcomes.forEach(function (o, i) {
+            var y = 130 + i * (outH + outGap);
+            svg.append('rect').attr('x', outX).attr('y', y)
+                .attr('width', outW).attr('height', outH)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', o.color).attr('stroke-width', 1.6);
+            svg.append('rect').attr('x', outX).attr('y', y)
+                .attr('width', 6).attr('height', outH).attr('fill', o.color);
+            svg.append('text').attr('x', outX + 18).attr('y', y + 28)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', o.color)
+                .text(o.label);
+            // Wrap description text
+            var t = svg.append('text').attr('x', outX + 18).attr('y', y + 50)
+                .attr('font-size', '11.5px').attr('fill', P.ink);
+            wsiWrap(t, o.desc, outW - 30, 14);
+
+            // Arrow gate → outcome
+            var gx = gateCx + 130, gy = gateCy;
+            var ox = outX, oy = y + outH / 2;
+            svg.append('line').attr('x1', gx).attr('x2', ox - 4)
+                .attr('y1', gy).attr('y2', oy)
+                .attr('stroke', o.color).attr('stroke-width', 1.4)
+                .attr('marker-end', 'url(#wsi-gate-head)');
+        });
+
+        // Bottom annotation: per-envelope, not per-pixel
+        svg.append('text').attr('x', W / 2).attr('y', H - 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('The gate is evaluated once per envelope, cached, and inherited by every tile in that session.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Per-tile cost: ~zero.   Per-envelope cost: paid once and audited.');
+    }
+
+    // ─── 9. deid-fsm ────────────────────────────────────────────
+    //  De-identification as a state machine: ingested → screen →
+    //  branch (auto vs. quarantine) → review → publish (or reject).
+    function deidFsm(container, config) {
+        //  H reduced and SVG title/subtitle removed — the JSON H2 title above
+        //  the SVG already names this slide. The colored-path legend in the
+        //  upper-left explains how to read the machine.
+        var W = 1280, H = 600;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-deid-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', P.slateDk);
+
+        function box(x, y, w, h, label, sub, color, dashed) {
+            var g = svg.append('g').attr('transform', 'translate(' + (x - w / 2) + ',' + (y - h / 2) + ')');
+            var rect = g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 10).attr('fill', '#fff')
+                .attr('stroke', color).attr('stroke-width', 1.8);
+            if (dashed) rect.attr('stroke-dasharray', '5,4');
+            g.append('text').attr('x', w / 2).attr('y', 26)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', color)
+                .text(label);
+            if (sub) {
+                g.append('text').attr('x', w / 2).attr('y', 46)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                    .text(sub);
+            }
+            return g;
+        }
+
+        function arrow(x1, y1, x2, y2, color, label, labelOffsetY, dashed) {
+            var path = svg.append('line')
+                .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
+                .attr('stroke', color || P.slateDk).attr('stroke-width', 1.5)
+                .attr('marker-end', 'url(#wsi-deid-head)');
+            if (dashed) path.attr('stroke-dasharray', '4,3');
+            if (label) {
+                var mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+                svg.append('text').attr('x', mx).attr('y', my + (labelOffsetY || -6))
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10.5px').attr('font-style', 'italic')
+                    .attr('fill', color || P.copperDk)
+                    .text(label);
+            }
+        }
+
+        // Layout — shifted up by ~80 px since SVG title was removed.
+        var leftX = 150, midX = 420, screenX = 660, decisionX = 660;
+        var topY = 150, midY = 320, botY = 470;
+
+        // Ingested → Screening
+        box(leftX, midY, 160, 64, 'Ingested', 'WSI received', P.slateDk);
+        box(midX, midY, 170, 64, 'Screening', 'OCR · label · markers', P.slate);
+        arrow(leftX + 80, midY, midX - 85, midY, P.slateDk, 'screen()', -10);
+
+        // Screening → Decision diamond
+        var dx = decisionX, dy = midY;
+        svg.append('polygon')
+            .attr('points', (dx) + ',' + (dy - 60) + ' ' +
+                            (dx + 100) + ',' + dy + ' ' +
+                            (dx) + ',' + (dy + 60) + ' ' +
+                            (dx - 100) + ',' + dy)
+            .attr('fill', '#fef3e0').attr('stroke', P.copperDk).attr('stroke-width', 1.8);
+        svg.append('text').attr('x', dx).attr('y', dy - 6)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', P.copperDk)
+            .text('PHI on image?');
+        svg.append('text').attr('x', dx).attr('y', dy + 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('detector verdict');
+        arrow(midX + 85, midY, dx - 100 + 4, dy, P.slate);
+
+        // YES branch — Quarantined (above the spine, right side).
+        // Tighter widths + bigger gap so the connector labels (queue(), etc.)
+        // sit cleanly between the boxes instead of clipping into them.
+        var quarantineX = 880;
+        box(quarantineX, topY, 190, 70, 'Quarantined', 'PHI detected — held', P.crimson, true);
+        arrow(dx + 50, dy - 50, quarantineX - 95, topY + 12, P.crimson, 'yes — flag()', -8);
+
+        // Quarantined → Manual Review
+        var reviewX = 1140;
+        box(reviewX, topY, 170, 70, 'Manual Review', 'human in the loop', P.crimson);
+        arrow(quarantineX + 95, topY, reviewX - 85, topY, P.crimson, 'queue()', -8);
+
+        // From Manual Review — two branches
+        // 1. redact-and-approve → Redacted (returns to spine on the right)
+        var redactedX = 1140, redactedY = 320;
+        box(redactedX, redactedY, 170, 64, 'Redacted', 'label-region masked', P.amber);
+        arrow(reviewX, topY + 35, redactedX, redactedY - 32, P.amber, 'redact()', -8);
+
+        // 2. reject-and-return → Returned (terminal off-spine).
+        // Arrow is drawn without an inline label so the label can sit clear
+        // of the Redacted box that the arrow's mid-point would otherwise hit.
+        var returnedX = 1140, returnedY = 470;
+        box(returnedX, returnedY, 170, 64, 'Returned to Source', 're-acquire required', P.muted, true);
+        arrow(reviewX + 60, topY + 35, returnedX + 30, returnedY - 32, P.muted, null, 0);
+        //  reject() label — placed near the start of the arrow, just above
+        //  the top edge of the Redacted box.
+        svg.append('text').attr('x', reviewX + 60).attr('y', topY + 60)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('reject()');
+
+        // NO branch — Auto-Processed (below the spine, centre)
+        var autoX = 660, autoY = 470;
+        box(autoX, autoY, 200, 64, 'Auto-Processed', 'header & metadata stripped', P.green);
+        arrow(dx, dy + 60, autoX, autoY - 32, P.green, 'no — auto()', 14);
+
+        // Validated — convergence point of redact and auto paths
+        var validatedX = 380, validatedY = 470;
+        box(validatedX, validatedY, 170, 64, 'Validated', 'check pass · provenance written', P.greenDk);
+        // From Auto-Processed (centre-bottom) ← left into Validated
+        arrow(autoX - 100, autoY, validatedX + 85 + 4, validatedY, P.green);
+        // From Redacted (right-middle) ↘ down-left into Validated
+        arrow(redactedX - 85, redactedY + 16, validatedX + 85, validatedY - 16, P.amber, 'commit()', -8);
+
+        // Published — terminal state on the left. Pushed further left so the
+        // publish() arrow label has room between Published and Validated.
+        var publishedX = 110, publishedY = 470;
+        box(publishedX, publishedY, 180, 64, 'Published', 'derivative envelope issued', P.greenDk);
+        arrow(validatedX - 85, validatedY, publishedX + 90 + 4, publishedY, P.greenDk, 'publish()', -8);
+
+        // Legend / annotation strip (top-left area, well below the new title bar)
+        var legX = 90, legY = 60;
+        svg.append('text').attr('x', legX).attr('y', legY)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', P.muted)
+            .attr('letter-spacing', '1.6px').text('READING THE MACHINE');
+        var legend = [
+            { c: P.green,    t: 'safe automated path — header redaction only' },
+            { c: P.crimson,  t: 'quarantine path — PHI burned into pixels (label / sticker / ink)' },
+            { c: P.amber,    t: 'human-redacted path — derivative tile masks the offending region' },
+            { c: P.muted,    t: 'rejected path — slide returned for re-acquisition' }
+        ];
+        legend.forEach(function (l, i) {
+            svg.append('rect').attr('x', legX).attr('y', legY + 14 + i * 18 - 8)
+                .attr('width', 16).attr('height', 6).attr('rx', 2).attr('fill', l.c);
+            svg.append('text').attr('x', legX + 22).attr('y', legY + 14 + i * 18)
+                .attr('font-size', '11px').attr('fill', P.ink).text(l.t);
+        });
+
+        // Footer
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Pattern aligned with the DSA-WSI-DeID workflow — published derivatives are themselves a state, with their own audit trail.');
+    }
+
+    // ─── 10. medicine-fsm-timeline ──────────────────────────────
+    //  Timeline showing each major diagnostic pillar of medicine
+    //  becoming digital and stateful, with pathology imaging as the
+    //  last to arrive.
+    function medicineFsmTimeline(container, config) {
+        //  Slimmer canvas — the slide-engine renders the large title + italic
+        //  subtitle above this SVG, so we drop the internal title and shrink
+        //  H to use the available space cleanly.
+        var W = 1280, H = 480;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        // Timeline ground line — centred at y=200 so the alternating
+        // above/below labels sit comfortably within the canvas.
+        var x0 = 110, x1 = W - 110;
+        var groundY = 200;
+        svg.append('line').attr('x1', x0).attr('x2', x1)
+            .attr('y1', groundY).attr('y2', groundY)
+            .attr('stroke', P.rule).attr('stroke-width', 1.2);
+
+        // Decade ticks
+        var decades = [1970, 1980, 1990, 2000, 2010, 2020, 2030];
+        var sx = d3.scaleLinear().domain([1970, 2030]).range([x0, x1]);
+        decades.forEach(function (d) {
+            var x = sx(d);
+            svg.append('line').attr('x1', x).attr('x2', x)
+                .attr('y1', groundY - 4).attr('y2', groundY + 4)
+                .attr('stroke', P.muted).attr('stroke-width', 1.0);
+            svg.append('text').attr('x', x).attr('y', groundY + 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('fill', P.muted).text(d + 's');
+        });
+
+        // Pillars: year, label, sub, color, alternation (above/below).
+        // Dates are placed at when each tradition entered routine clinical
+        // practice — not when its earliest research prototypes appeared.
+        // Digital pathology imaging is positioned in the 2010–2017 window
+        // (first commercial WSI scanners, validation studies, FDA primary-
+        // diagnosis approval for Philips IntelliSite in 2017). The
+        // emphasized final pillar is workflow orchestration — the era we
+        // are entering now, on top of every preceding pillar.
+        var pillars = [
+            { year: 1972, label: 'Laboratory Medicine',     sub: 'order / result FSMs · early LIS',                        color: P.slateDk, above: true,  emphasize: false },
+            { year: 1985, label: 'Pharmacy / CPOE',         sub: 'order entry, allergy & dose checking',                   color: P.teal,    above: false, emphasize: false },
+            { year: 1992, label: 'Scheduling · ADT',        sub: 'HL7 v2 · encounter FSMs',                                color: P.amber,   above: true,  emphasize: false },
+            { year: 1998, label: 'Radiology Imaging',       sub: 'PACS / RIS — FSM bundled inside DICOM',                  color: P.crimson, above: false, emphasize: false },
+            { year: 2005, label: 'EHR Documentation',       sub: 'MAR, care pathways, decision support',                   color: P.violet,  above: true,  emphasize: false },
+            { year: 2014, label: 'Digital Pathology',       sub: 'first WSI use cases · FDA primary 2017',                 color: P.greenDk, above: false, emphasize: false },
+            { year: 2025, label: 'Workflow Orchestration',  sub: 'the era we are entering — FHIR Task · AI in the loop',   color: P.copperDk, above: true,  emphasize: true }
+        ];
+
+        pillars.forEach(function (p) {
+            var x = sx(p.year);
+            var y = p.above ? groundY - 40 : groundY + 60;
+            // Stem
+            svg.append('line').attr('x1', x).attr('x2', x)
+                .attr('y1', groundY)
+                .attr('y2', p.above ? y + 18 : y - 18)
+                .attr('stroke', p.color).attr('stroke-width', p.emphasize ? 2.4 : 1.4);
+            // Dot
+            svg.append('circle').attr('cx', x).attr('cy', groundY).attr('r', p.emphasize ? 7 : 5)
+                .attr('fill', p.color).attr('stroke', P.bg).attr('stroke-width', 2);
+            // Label box — generous height so wrapped subtitle lines
+            // ("checking", "support", etc.) have room to sit cleanly inside
+            // the box rather than being clipped at the bottom edge.
+            var labelW = 200, labelH = 68;
+            var lbx = x - labelW / 2;
+            var lby = p.above ? y - labelH + 18 : y - 18;
+            svg.append('rect').attr('x', lbx).attr('y', lby)
+                .attr('width', labelW).attr('height', labelH)
+                .attr('rx', 8)
+                .attr('fill', '#fff')
+                .attr('stroke', p.color).attr('stroke-width', p.emphasize ? 2.0 : 1.2);
+            svg.append('text').attr('x', x).attr('y', lby + 22)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', p.emphasize ? '13.5px' : '12.5px')
+                .attr('font-weight', '700').attr('fill', p.color)
+                .text(p.label);
+            // sub line — wrap if needed using two-line fallback
+            var sub = svg.append('text').attr('x', x).attr('y', lby + 40)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(sub, p.sub, labelW - 18, 13);
+            //  Emphasis on the final pillar comes from the bigger dot, thicker
+            //  stem and thicker box border — no extra "★ pathology arrives"
+            //  text line (which crowded the label and competed with the
+            //  diagram's own emphasis cues).
+        });
+
+        // Footer interpretation
+        svg.append('text').attr('x', W / 2).attr('y', H - 56)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '13.5px').attr('fill', P.ink)
+            .text('Each pillar became digital in its own decade. Radiology bundled its FSM into DICOM and lives with the constraint.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 34)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.copperDk)
+            .text('Workflow orchestration is the era we are entering — pathology gets to adopt it without that compromise.');
+        //  Citation strip — note the ampersand is a literal character; SVG
+        //  text content does not decode HTML entities, so we use "&" directly.
+        svg.append('text').attr('x', W / 2).attr('y', H - 12)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Lincoln & Korpman 1980  ·  McDonald (RMRS)  ·  HL7 v2 (1987)  ·  DICOM (1993)  ·  FHIR Task (2014)  ·  Philips IntelliSite (FDA 2017)');
+    }
+
+    // ─── 11. integrity-state ────────────────────────────────────
+    //  Integrity threats and validation gates organised as a
+    //  state machine with quarantine path.
+    function integrityState(container, config) {
+        var W = 1280, H = 720;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        svg.append('text').attr('x', W / 2).attr('y', 38)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '18px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Integrity is a state — and the gates that maintain it are tile-granular and efficient');
+        svg.append('text').attr('x', W / 2).attr('y', 60)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Per-tile Merkle hashes · detached signatures · O(log n) verification per access · provenance written on every transition');
+
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-int-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', P.slateDk);
+
+        // ── TOP HALF: integrity FSM (states + arrows) ──
+        var fsmY = 230;
+        var states = [
+            { label: 'Ingested',          sub: 'pixels written',        x: 130, color: P.slateDk },
+            { label: 'Hashed',            sub: 'per-tile + Merkle',     x: 360, color: P.slate },
+            { label: 'Signed',            sub: 'detached root signature', x: 590, color: P.teal },
+            { label: 'Integrity-Validated', sub: 'verified on access',  x: 840, color: P.greenDk },
+            { label: 'Available',         sub: 'AI · research · teaching', x: 1110, color: P.greenDk }
+        ];
+        function box(s, color, dashed) {
+            var w = 170, h = 70;
+            var g = svg.append('g').attr('transform', 'translate(' + (s.x - w / 2) + ',' + (fsmY - h / 2) + ')');
+            var r = g.append('rect').attr('width', w).attr('height', h)
+                .attr('rx', 10).attr('fill', '#fff')
+                .attr('stroke', color).attr('stroke-width', 1.8);
+            if (dashed) r.attr('stroke-dasharray', '5,4');
+            g.append('text').attr('x', w / 2).attr('y', 28)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '13px').attr('font-weight', '700').attr('fill', color)
+                .text(s.label);
+            g.append('text').attr('x', w / 2).attr('y', 48)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(s.sub);
+        }
+        states.forEach(function (s) { box(s, s.color); });
+
+        // Spine arrows
+        for (var i = 0; i < states.length - 1; i++) {
+            var x1 = states[i].x + 85, x2 = states[i + 1].x - 85;
+            svg.append('line').attr('x1', x1).attr('x2', x2)
+                .attr('y1', fsmY).attr('y2', fsmY)
+                .attr('stroke', P.slateDk).attr('stroke-width', 1.4)
+                .attr('marker-end', 'url(#wsi-int-head)');
+            svg.append('text').attr('x', (x1 + x2) / 2).attr('y', fsmY - 12)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('fill', P.copperDk).attr('font-style', 'italic')
+                .text(['hash()', 'sign()', 'verify()', 'release()'][i]);
+        }
+
+        // Quarantined state (above, off the spine)
+        box({ label: 'Quarantined', sub: 'integrity check failed', x: 590, color: P.crimson }, P.crimson, true);
+        // dashed re-route arrows from each spine state
+        [360, 590, 840].forEach(function (sx) {
+            svg.append('path')
+                .attr('d', 'M ' + sx + ' ' + (fsmY - 35) + ' Q ' + sx + ' 130 ' + 590 + ' 130')
+                .attr('fill', 'none').attr('stroke', P.crimson).attr('stroke-width', 1.2)
+                .attr('stroke-dasharray', '4,3').attr('opacity', 0.7)
+                .attr('marker-end', 'url(#wsi-int-head)');
+        });
+        svg.append('text').attr('x', 760).attr('y', 145)
+            .attr('font-size', '10.5px').attr('fill', P.crimson).attr('font-style', 'italic')
+            .text('any failed verify() → quarantine');
+
+        // ── BOTTOM HALF: threats and where each is detected ──
+        var threatY = 480;
+        svg.append('text').attr('x', 110).attr('y', threatY - 20)
+            .attr('font-size', '11px').attr('font-weight', '700').attr('fill', P.muted)
+            .attr('letter-spacing', '1.6px')
+            .text('THREATS — AND THE GATE THAT CATCHES EACH');
+
+        var threats = [
+            { name: 'Adversarial perturbation',    desc: 'imperceptible pixel changes that flip an AI prediction (Goodfellow 2014)', detect: 'Integrity-Validated', x: 130 },
+            { name: 'Targeted tampering',          desc: 'pixel-level alteration to change a diagnostic appearance',                  detect: 'Hashed',               x: 380 },
+            { name: 'Silent corruption',           desc: 'storage drift, partial-write, codec bugs',                                  detect: 'Hashed',               x: 630 },
+            { name: 'Header / metadata tampering', desc: 'easier than pixel tampering; invalidates derivation chains',                detect: 'Signed',               x: 880 },
+            { name: 'Model gradient attacks',      desc: 'reconstruct training data from a foundation model',                         detect: 'Available (policy)',   x: 1130 }
+        ];
+        threats.forEach(function (t) {
+            var w = 200, h = 130, x = t.x - w / 2;
+            svg.append('rect').attr('x', x).attr('y', threatY).attr('width', w).attr('height', h)
+                .attr('rx', 8).attr('fill', '#fff').attr('stroke', P.crimson).attr('stroke-width', 1.0);
+            svg.append('rect').attr('x', x).attr('y', threatY).attr('width', 5).attr('height', h)
+                .attr('fill', P.crimson);
+            svg.append('text').attr('x', x + 14).attr('y', threatY + 22)
+                .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', P.crimson)
+                .text(t.name);
+            var d = svg.append('text').attr('x', x + 14).attr('y', threatY + 42)
+                .attr('font-size', '10.5px').attr('fill', P.ink);
+            wsiWrap(d, t.desc, w - 24, 13);
+            svg.append('text').attr('x', x + 14).attr('y', threatY + h - 28)
+                .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', P.muted)
+                .attr('letter-spacing', '1.4px').text('CAUGHT AT');
+            svg.append('text').attr('x', x + 14).attr('y', threatY + h - 12)
+                .attr('font-size', '11px').attr('font-weight', '700').attr('fill', P.greenDk)
+                .text(t.detect);
+        });
+
+        // Footer
+        svg.append('text').attr('x', W / 2).attr('y', H - 26)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Detached signatures + tile-level Merkle hashing make per-access verification feasible at WSI scale.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('NIST SP 800-53 SC-13 · C2PA provenance pattern · Gershkovich, JPI 2025');
+    }
+
+    // ─── 12. three-missions-substrate ───────────────────────────
+    //  Three mission-FSMs (clinical / educational / research) running
+    //  over one shared modular substrate.
+    function threeMissionsSubstrate(container, config) {
+        var W = 1280, H = 720;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        svg.append('text').attr('x', W / 2).attr('y', 36)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '19px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Three institutional missions — three state machines — one modular substrate');
+        svg.append('text').attr('x', W / 2).attr('y', 58)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Image-as-data is what you get when the substrate is modular, the modules are independently testable, and the missions compose over them.');
+
+        // ── TOP: three mission FSMs ──
+        var missions = [
+            {
+                name: 'Clinical Mission', color: P.crimson, x: 240,
+                states: ['accession', 'assign', 'review', 'sign-out', 'archive'],
+                strap: 'case FSM · sign-out, amend, distribute · full PHI · audited every transition'
+            },
+            {
+                name: 'Educational Mission', color: P.violet, x: 640,
+                states: ['curate', 'de-id', 'annotate', 'publish', 'assess'],
+                strap: 'teaching FSM · curated, de-identified, learning-objective-bound · derivative envelope'
+            },
+            {
+                name: 'Research Mission', color: P.greenDk, x: 1040,
+                states: ['define', 'extract', 'pin', 'analyze', 'publish'],
+                strap: 'cohort FSM · IRB-bound, version-pinned, derivation lineage tracked'
+            }
+        ];
+        missions.forEach(function (m) {
+            var headerY = 100, fsmY = 170;
+            svg.append('text').attr('x', m.x).attr('y', headerY)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '15px').attr('font-weight', '700').attr('fill', m.color)
+                .text(m.name);
+            // strapline
+            var strap = svg.append('text').attr('x', m.x).attr('y', headerY + 18)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(strap, m.strap, 360, 13);
+            // five-state mini chain
+            var sw = 60, sh = 28, gap = 10;
+            var totalW = m.states.length * sw + (m.states.length - 1) * gap;
+            var startX = m.x - totalW / 2;
+            m.states.forEach(function (s, i) {
+                var sx = startX + i * (sw + gap);
+                svg.append('rect').attr('x', sx).attr('y', fsmY)
+                    .attr('width', sw).attr('height', sh)
+                    .attr('rx', 5).attr('fill', '#fff')
+                    .attr('stroke', m.color).attr('stroke-width', 1.2);
+                svg.append('text').attr('x', sx + sw / 2).attr('y', fsmY + 18)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10px').attr('fill', P.ink).text(s);
+                if (i < m.states.length - 1) {
+                    svg.append('line')
+                        .attr('x1', sx + sw).attr('x2', sx + sw + gap)
+                        .attr('y1', fsmY + sh / 2).attr('y2', fsmY + sh / 2)
+                        .attr('stroke', m.color).attr('stroke-width', 1.0);
+                }
+            });
+        });
+
+        // ── MIDDLE: connecting downward arrows from each mission to substrate ──
+        var subY = 360;
+        missions.forEach(function (m) {
+            svg.append('line').attr('x1', m.x).attr('x2', m.x)
+                .attr('y1', 220).attr('y2', subY - 10)
+                .attr('stroke', m.color).attr('stroke-width', 1.2).attr('stroke-dasharray', '4,4').attr('opacity', 0.6);
+        });
+
+        // ── BOTTOM: substrate (5 modular layers as horizontal bars) ──
+        var subX = 110, subW = W - 220, layerH = 56, layerGap = 12;
+        var layers = [
+            { label: 'Communication', sub: 'REST · FHIR · event bus · postMessage', color: P.copperDk },
+            { label: 'Security Overlay', sub: 'NIST SP 800-53 · OIDC · per-tile integrity', color: P.greenDk },
+            { label: 'Annotations', sub: 'GeoJSON · SVG · queryable, signable, action-bearing', color: P.violet },
+            { label: 'Metadata', sub: 'HL7 FHIR · Task · Observation · Specimen', color: P.teal },
+            { label: 'Pixels', sub: 'Pelican · TIFF · OME-TIFF · Zarr · DZI tiles', color: P.slateDk }
+        ];
+        layers.forEach(function (l, i) {
+            var y = subY + i * (layerH + layerGap);
+            svg.append('rect').attr('x', subX).attr('y', y)
+                .attr('width', subW).attr('height', layerH)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', l.color).attr('stroke-width', 1.5);
+            svg.append('rect').attr('x', subX).attr('y', y)
+                .attr('width', 6).attr('height', layerH).attr('fill', l.color);
+            svg.append('text').attr('x', subX + 22).attr('y', y + 24)
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', l.color)
+                .text(l.label);
+            svg.append('text').attr('x', subX + 22).attr('y', y + 44)
+                .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(l.sub);
+        });
+
+        // Right-side tag for substrate
+        svg.append('text').attr('x', W - 124).attr('y', subY - 8)
+            .attr('text-anchor', 'end')
+            .attr('font-size', '11px').attr('font-weight', '700').attr('fill', P.muted)
+            .attr('letter-spacing', '1.6px').text('MODULAR SUBSTRATE — TEST-DRIVEN, INDEPENDENTLY EVOLVABLE');
+
+        // Footer line
+        svg.append('text').attr('x', W / 2).attr('y', H - 28)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Each mission is a state machine over the same substrate. The substrate carries integrity, annotations, and audit. The missions carry intent.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 10)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.copperDk)
+            .text('AI-assisted development is the cost-shift that brought building such a substrate within reach of a small applied team.');
+    }
+
+    // ─── 13. scan-failure-cascade ───────────────────────────────
+    //  Central concrete example: a single state-change (scan QC fail)
+    //  fans out to multiple subscribers across the orchestration layer.
+    //
+    //  This slide also carries a working metaphor: the diagram is small,
+    //  but underneath each labelled box there is real code — an event
+    //  schema, a bus contract, and a subscriber handler. A magnifying
+    //  glass follows the cursor and reveals that code in place. The
+    //  metaphor is intentional: you don't need to shrink the type to
+    //  cram more in — you put the full expressive power of a programming
+    //  language *under* the lens, where it belongs.
+    function scanFailureCascade(container, config) {
+        //  The JSON slide title (H2 above) carries the heading; the SVG no
+        //  longer duplicates it. Canvas shrunk so the bottom punchline lives
+        //  comfortably above the Takeaway component.
+        var W = 1280, H = 580;
+        var P = WSI_PAL;
+        var T = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', P.bg);
+
+        // Sub-caption tying the diagram to the lecture's narrative.
+        svg.append('text').attr('x', W / 2).attr('y', 40)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', T.muted)
+            .text('one state change · many reactions');
+        // Hover hint — small italic line under the caption
+        svg.append('text').attr('x', W / 2).attr('y', 58)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', T.muted)
+            .text('Hover the diagram — the lens magnifies what is under it, and shows the code beneath each label.');
+
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'wsi-cascade-head')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', T.copper);
+
+        // ─ Trigger (left) — typographic, no heavy box ─
+        var trigX = 200, trigY = H / 2;
+        svg.append('text').attr('x', trigX).attr('y', trigY - 36)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '1.8px')
+            .attr('fill', T.muted).text('STATE CHANGE');
+        svg.append('text').attr('x', trigX).attr('y', trigY - 8)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '17px').attr('font-weight', '700').attr('fill', T.crimson)
+            .text('adequate → partially-inadequate');
+        svg.append('text').attr('x', trigX).attr('y', trigY + 16)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '12.5px').attr('fill', T.ink)
+            .text('AI-QC detects an out-of-focus region');
+        svg.append('text').attr('x', trigX).attr('y', trigY + 40)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '10.5px').attr('fill', T.muted)
+            .text('event: SlideQCFailed{slide=A · region=…}');
+        // Thin rule that ties the trigger together — a single hairline
+        tufteRule(svg, trigX - 160, trigY + 56, trigX + 160, trigY + 56, 0.6);
+
+        // ─ Event bus (centre) — labels sit above the bus rule. The rule
+        //  extends to the right of the text band so the connector lines
+        //  emanating from its right end never clip the text — even when
+        //  fanning steeply up to subscriber #1. Trigger arrow enters at
+        //  the left end of the rule.
+        var busX = 580, busY = H / 2;
+        var busLeftX  = busX - 100;   // where trigger arrow lands
+        var busRightX = busX + 150;   // where subscriber lines emanate (well past text)
+        svg.append('text').attr('x', busX).attr('y', busY - 28)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', T.copper)
+            .text('event bus');
+        svg.append('text').attr('x', busX).attr('y', busY - 10)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '9.5px').attr('letter-spacing', '1.4px').attr('fill', T.muted)
+            .text('TYPED · AUDITED · IDEMPOTENT');
+        // The bus rule — the visual "wire" of the bus
+        tufteRule(svg, busLeftX, busY, busRightX, busY, 0.9);
+        // Small tick at the right end to mark the emanation point clearly
+        svg.append('circle').attr('cx', busRightX).attr('cy', busY).attr('r', 2.2)
+            .attr('fill', T.copper);
+
+        // ─ Single arrow from trigger onto the left end of the bus rule ─
+        svg.append('line').attr('x1', trigX + 160).attr('x2', busLeftX)
+            .attr('y1', trigY).attr('y2', busY)
+            .attr('stroke', T.ink).attr('stroke-width', 1.0)
+            .attr('marker-end', 'url(#wsi-cascade-head)');
+
+        // ─ Five subscribers fanning right — direct labels, no boxes ─
+        var subscribers = [
+            { label: 'Re-scan workflow',            desc: 'queues block for re-cut and re-scan',          y: 130 },
+            { label: 'Histology notification',      desc: 'tech learns the block needs attention',        y: 220 },
+            { label: 'QA metrics',                  desc: 'QC failure rate updated for this scanner',     y: 310 },
+            { label: 'Scanner calibration monitor', desc: 'drift detector receives event',                y: 400 },
+            { label: 'Pathologist worklist',        desc: 'case marked “awaiting re-scan”',               y: 490 }
+        ];
+        var subX = 770;
+        subscribers.forEach(function (s) {
+            // Label (serif bold) and description (serif italic) — no boxes
+            svg.append('text').attr('x', subX).attr('y', s.y - 4)
+                .attr('font-family', SERIF).attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', T.ink)
+                .text(s.label);
+            svg.append('text').attr('x', subX).attr('y', s.y + 14)
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', T.muted)
+                .text(s.desc);
+
+            // Thin line from the right end of the bus rule to each subscriber label.
+            // Exit point is comfortably past the "IDEMPOTENT" right edge so
+            // even the steeply-rising line to subscriber #1 never clips text.
+            svg.append('line').attr('x1', busRightX).attr('x2', subX - 10)
+                .attr('y1', busY).attr('y2', s.y - 4)
+                .attr('stroke', T.copper).attr('stroke-width', 0.7).attr('opacity', 0.65);
+        });
+
+        // ─ Footer punchline — single italic line, sits well above the Takeaway ─
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '14px').attr('fill', T.ink)
+            .text('Five reactions to one event — automatically, traceably, with no phone calls.');
+
+        // ═══════════════════════════════════════════════════════════
+        //  MAGNIFYING GLASS — the code under the diagram, enlarged
+        // ═══════════════════════════════════════════════════════════
+        //  The detail layer holds, at the SAME coordinates as each label on
+        //  the slide, an enriched version: label name + description + the
+        //  actual handler code. The layer is clipped to the lens circle AND
+        //  transformed `translate(cx*(1-s), cy*(1-s)) scale(s)`, so the
+        //  point under the cursor maps to itself and everything around it
+        //  is enlarged by `s`. The same construction the iceberg loupe uses.
+        var lensR = 130;        // display-space radius of the lens
+        var loupeScale = 1.85;  // magnification factor inside the lens
+        var MONO = 'Menlo, "DejaVu Sans Mono", Monaco, "Courier New", monospace';
+
+        var clipId = 'cascade-loupe-clip-' + Math.random().toString(36).slice(2, 8);
+        var lclip = defs.append('clipPath').attr('id', clipId).attr('clipPathUnits', 'userSpaceOnUse');
+        var lclipCircle = lclip.append('circle').attr('r', lensR - 8).attr('cx', -2000).attr('cy', -2000);
+
+        var detailLayer = svg.append('g')
+            .attr('class', 'cascade-loupe-content')
+            .attr('clip-path', 'url(#' + clipId + ')')
+            .style('display', 'none')
+            .style('pointer-events', 'none');
+
+        // Cream-paper backdrop inside the lens — masks the smaller labels and
+        // arrows underneath the lens so only the enlarged detail reads.
+        detailLayer.append('rect')
+            .attr('x', 0).attr('y', 0).attr('width', W).attr('height', H)
+            .attr('fill', '#fbf8f1').attr('fill-opacity', 0.985);
+
+        // Renders an "examine card" centred at (cx, cy) of the detail layer:
+        //   – the label (large, bold, accent color) — what's being examined
+        //   – a one-line italic description
+        //   – a thin rule
+        //   – several monospaced code lines (the handler / schema)
+        // All sized for BASE coords; the lens transform enlarges by loupeScale.
+        function examineCard(cx, cy, label, desc, codeLines, accent) {
+            var blockW = 220;
+            var leftX  = cx - blockW / 2;
+            // Label (the magnified version of what's underneath)
+            detailLayer.append('text').attr('x', cx).attr('y', cy - 56)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12px').attr('font-weight', '700')
+                .attr('fill', accent || T.copper)
+                .text(label);
+            // Description
+            detailLayer.append('text').attr('x', cx).attr('y', cy - 42)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-style', 'italic').attr('font-size', '10px')
+                .attr('fill', T.muted)
+                .text(desc);
+            // Thin rule (separator between label and code)
+            detailLayer.append('line')
+                .attr('x1', leftX + 8).attr('x2', leftX + blockW - 8)
+                .attr('y1', cy - 33).attr('y2', cy - 33)
+                .attr('stroke', accent || T.copper).attr('stroke-width', 0.4).attr('opacity', 0.55);
+            // Code lines — left-aligned, monospaced
+            var lineH = 11;
+            codeLines.forEach(function (ln, i) {
+                detailLayer.append('text')
+                    .attr('x', leftX + 12).attr('y', cy - 22 + i * lineH)
+                    .attr('font-family', MONO).attr('font-size', '9px')
+                    .attr('fill', T.ink).attr('xml:space', 'preserve')
+                    .text(ln);
+            });
+        }
+
+        // Each card is co-located with the label it explains. Hovering the
+        // label (or anywhere near it) magnifies that exact location.
+
+        // Trigger area — the emitted event schema
+        examineCard(trigX, trigY, 'STATE CHANGE · SlideQCFailed',
+            'adequate → partially-inadequate · emitted by AI-QC', [
+                'event SlideQCFailed {',
+                '  eventId    : UUID',
+                '  occurredAt : ISO-8601',
+                '  by         : ai-qc@2.3',
+                '  slideId    : SLD-2026-A-001',
+                '  blockId    : BLK-2026-A-007',
+                '  regions    : [(x,y,w,h),…]',
+                '  severity   : "partial"',
+                '  score      : 0.42',
+                '  idempKey   : slide:rescan:1',
+                '}'
+            ], T.crimson);
+
+        // Bus area — the bus contract as code
+        examineCard(busX, busY, 'EVENT BUS',
+            'typed · audited · idempotent — in code', [
+                'bus.publish(ev) {',
+                '  schema.validate(ev)',
+                '  log.append(ev)',
+                '  if dedupe(ev.idempKey)',
+                '    return // replay-safe',
+                '  fanout(subscribers, ev)',
+                '}'
+            ], T.copper);
+
+        // Handlers — one card centred on each subscriber row, x positioned
+        // in the middle of the label/description band so the cursor naturally
+        // falls over it when the user is examining a particular subscriber.
+        var handlerX = subX + 110;   // ≈ centre of label band (~770..980)
+        var handlers = [
+            { y: 130, label: 'Re-scan workflow',
+                       desc: 'queues block for re-cut and re-scan',
+                       accent: T.green, lines: [
+                'on(SlideQCFailed) {',
+                '  rescanQueue.add({',
+                '    block  : ev.blockId,',
+                '    cause  : ev.eventId,',
+                '    pri    : urg(ev.score)',
+                '  })',
+                '}'
+            ]},
+            { y: 220, label: 'Histology notification',
+                       desc: 'tech learns the block needs attention',
+                       accent: T.slate, lines: [
+                'on(SlideQCFailed) {',
+                '  notify(tech, {',
+                '    block : ev.blockId,',
+                '    msg   : "needs attn",',
+                '    due   : now()+15m',
+                '  })',
+                '}'
+            ]},
+            { y: 310, label: 'QA metrics',
+                       desc: 'QC failure rate updated for this scanner',
+                       accent: T.amber, lines: [
+                'on(SlideQCFailed) {',
+                '  qa.failures',
+                '    .by(ev.scannerId)',
+                '    .inc(ev.occurredAt)',
+                '  qa.trends.update()',
+                '}'
+            ]},
+            { y: 400, label: 'Scanner calibration monitor',
+                       desc: 'drift detector receives event',
+                       accent: T.violet, lines: [
+                'on(SlideQCFailed) {',
+                '  drift.observe(',
+                '    ev.scannerId, ev',
+                '  )',
+                '  if drift.exceedsTol()',
+                '    alert.calibration()',
+                '}'
+            ]},
+            { y: 490, label: 'Pathologist worklist',
+                       desc: 'case marked "awaiting re-scan"',
+                       accent: T.crimson, lines: [
+                'on(SlideQCFailed) {',
+                '  worklist',
+                '    .case(ev.caseId)',
+                '    .markAwaiting(',
+                '      "re-scan", ev',
+                '    )',
+                '}'
+            ]}
+        ];
+        handlers.forEach(function (h) {
+            examineCard(handlerX, h.y + 4, h.label, h.desc, h.lines, h.accent);
+        });
+
+        // ── Loupe frame — wood handle + brass-and-iron ring ──
+        var loupeFrame = svg.append('g')
+            .attr('class', 'cascade-loupe-frame')
+            .style('display', 'none')
+            .style('pointer-events', 'none');
+
+        // Wooden handle (drawn first so the ring overlaps the base)
+        loupeFrame.append('line').attr('x1', 86).attr('y1', 86).attr('x2', 160).attr('y2', 160)
+            .attr('stroke', '#3e2a11').attr('stroke-width', 14).attr('stroke-linecap', 'round');
+        loupeFrame.append('line').attr('x1', 86).attr('y1', 86).attr('x2', 160).attr('y2', 160)
+            .attr('stroke', '#8b5a2b').attr('stroke-width', 8).attr('stroke-linecap', 'round');
+        loupeFrame.append('line').attr('x1', 94).attr('y1', 90).attr('x2', 152).attr('y2', 152)
+            .attr('stroke', '#c48a52').attr('stroke-width', 1).attr('stroke-linecap', 'round').attr('opacity', 0.7);
+
+        // Outer iron ring + inner brass ring
+        loupeFrame.append('circle').attr('r', lensR).attr('cx', 0).attr('cy', 0)
+            .attr('fill', 'none').attr('stroke', '#2b1a08').attr('stroke-width', 5.5);
+        loupeFrame.append('circle').attr('r', lensR - 5).attr('cx', 0).attr('cy', 0)
+            .attr('fill', 'none').attr('stroke', '#b8865b').attr('stroke-width', 2.5);
+        // Glass tint + crescent highlight
+        loupeFrame.append('circle').attr('r', lensR - 8).attr('cx', 0).attr('cy', 0)
+            .attr('fill', 'rgba(255,253,247,0.05)').attr('stroke', 'none');
+        loupeFrame.append('ellipse').attr('cx', -48).attr('cy', -48).attr('rx', 34).attr('ry', 18)
+            .attr('fill', 'rgba(255,255,255,0.32)').attr('stroke', 'none')
+            .attr('transform', 'rotate(-30 -48 -48)');
+
+        // Hit region — the active area of the slide (skip the very top caption
+        // band and the very bottom punchline so the lens doesn't get in their way).
+        var hitRect = svg.append('rect')
+            .attr('x', 0).attr('y', 70).attr('width', W).attr('height', H - 110)
+            .attr('fill', 'transparent')
+            .style('cursor', 'none');
+
+        hitRect.on('mouseenter', function () {
+            loupeFrame.style('display', null);
+            detailLayer.style('display', null);
+        });
+        hitRect.on('mouseleave', function () {
+            loupeFrame.style('display', 'none');
+            detailLayer.style('display', 'none');
+        });
+        hitRect.on('mousemove', function (event) {
+            var p = d3.pointer(event, svg.node());
+            var cx = p[0], cy = p[1];
+            // Frame translates with the cursor (1:1).
+            loupeFrame.attr('transform', 'translate(' + cx + ',' + cy + ')');
+            // Clip moves with the cursor.
+            lclipCircle.attr('cx', cx).attr('cy', cy);
+            // Detail layer is scaled around the cursor so the point under it
+            // maps to itself and surroundings are enlarged by `loupeScale`.
+            var tx = cx * (1 - loupeScale);
+            var ty = cy * (1 - loupeScale);
+            detailLayer.attr('transform',
+                'translate(' + tx + ',' + ty + ') scale(' + loupeScale + ')');
+        });
+    }
+
+    // ─── 14. ihe-palm-vs-orchestration ──────────────────────────
+    //  Two stacks side by side: IHE PaLM / DICOM WG-26 actor model
+    //  (radiology-derived) versus an orchestration-layer model.
+    function ihePalmVsOrchestration(container, config) {
+        //  Shorter canvas (640) leaves vertical room above for the slide-engine
+        //  title strip, and below for the Takeaway component.
+        var W = 1280, H = 640;
+        var P = WSI_PAL;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '78vh')
+            .style('background', P.bg);
+
+        //  SVG title removed — the JSON H2 title above the SVG already names
+        //  the slide. The column headings provide the comparison framing,
+        //  positioned to leave clear room for the slide-engine title strip.
+
+        // Column headings — sit at y=78/100 with comfortable breathing room
+        svg.append('text').attr('x', W * 0.27).attr('y', 78)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '16px').attr('font-weight', '700').attr('fill', P.crimson)
+            .text('IHE PaLM + DICOM WG-26 actor model');
+        svg.append('text').attr('x', W * 0.27).attr('y', 100)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('vocabulary borrowed from radiology — image as the central object');
+
+        svg.append('text').attr('x', W * 0.73).attr('y', 78)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '16px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .text('Orchestration-layer model');
+        svg.append('text').attr('x', W * 0.73).attr('y', 100)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SERIF)
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('clinical workflow as the central object — image is one participant');
+
+        // Vertical separator
+        svg.append('line').attr('x1', W / 2).attr('x2', W / 2)
+            .attr('y1', 110).attr('y2', H - 80)
+            .attr('stroke', P.rule).attr('stroke-width', 0.8).attr('stroke-dasharray', '3,4');
+
+        // ── LEFT stack: IHE actor model ──
+        var leftActors = [
+            { label: 'Acquisition Modality', sub: 'scanner' },
+            { label: 'Image Manager / Archive', sub: 'PACS-shaped storage' },
+            { label: 'Order Filler', sub: 'LIS surrogate' },
+            { label: 'Evidence Creator', sub: 'AI / reporting output' },
+            { label: 'Viewer', sub: 'image rendering surface' },
+            { label: 'Reporting System', sub: 'structured report' }
+        ];
+        var lx = 100, lw = 460;
+        var topY = 130, rowH = 64, rowGap = 6;
+        leftActors.forEach(function (a, i) {
+            var y = topY + i * (rowH + rowGap);
+            svg.append('rect').attr('x', lx).attr('y', y).attr('width', lw).attr('height', rowH)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', P.crimson).attr('stroke-width', 1.4);
+            svg.append('text').attr('x', lx + 18).attr('y', y + 28)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.crimson)
+                .text(a.label);
+            svg.append('text').attr('x', lx + 18).attr('y', y + 50)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(a.sub);
+        });
+
+        // Bottom-left interpretation
+        svg.append('text').attr('x', lx).attr('y', H - 50)
+            .attr('font-size', '11px').attr('font-weight', '700').attr('fill', P.crimson)
+            .attr('letter-spacing', '1.4px').text('THE ARCHITECTURAL BIAS');
+        svg.append('text').attr('x', lx).attr('y', H - 30)
+            .attr('font-size', '11.5px').attr('fill', P.ink)
+            .text('Pathology gets mapped onto imaging-system transactions.');
+        svg.append('text').attr('x', lx).attr('y', H - 12)
+            .attr('font-size', '11.5px').attr('fill', P.ink)
+            .text('The image-manager/archive becomes the center of gravity.');
+
+        // ── RIGHT stack: orchestration model ──
+        var rightModules = [
+            { label: 'Workflow Orchestration Kernel', sub: 'state machines · transitions · guards · audit' },
+            { label: 'Event Bus', sub: 'typed · idempotent · replayable' },
+            { label: 'Tile Server', sub: 'pixels-as-a-service · format-agnostic' },
+            { label: 'Annotation Service', sub: 'GeoJSON / SVG · queryable · versioned' },
+            { label: 'AI Service', sub: 'transition proposer · model+version bound' },
+            { label: 'LIS / EHR Integration', sub: 'FHIR Task · request vs. execution state' }
+        ];
+        var rx = W - 100 - 460, rw = 460;
+        rightModules.forEach(function (m, i) {
+            var y = topY + i * (rowH + rowGap);
+            svg.append('rect').attr('x', rx).attr('y', y).attr('width', rw).attr('height', rowH)
+                .attr('rx', 8).attr('fill', '#fff')
+                .attr('stroke', P.greenDk).attr('stroke-width', 1.4);
+            svg.append('rect').attr('x', rx).attr('y', y).attr('width', 6).attr('height', rowH)
+                .attr('fill', P.greenDk);
+            svg.append('text').attr('x', rx + 18).attr('y', y + 28)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.greenDk)
+                .text(m.label);
+            svg.append('text').attr('x', rx + 18).attr('y', y + 50)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(m.sub);
+        });
+
+        // Bottom-right interpretation
+        svg.append('text').attr('x', rx).attr('y', H - 50)
+            .attr('font-size', '11px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .attr('letter-spacing', '1.4px').text('THE CENTER OF GRAVITY');
+        svg.append('text').attr('x', rx).attr('y', H - 30)
+            .attr('font-size', '11.5px').attr('fill', P.ink)
+            .text('The orchestration kernel coordinates clinical state.');
+        svg.append('text').attr('x', rx).attr('y', H - 12)
+            .attr('font-size', '11.5px').attr('fill', P.ink)
+            .text('Pixels, annotations, AI, LIS, and viewer are participants.');
+    }
+
+    // ============================================================
+    //  TUFTE-STYLE VISUALIZATIONS — orchestration lecture (35-min)
+    //  Common conventions:
+    //    – warm-cream background (#faf7f1)
+    //    – serif headings (Georgia / Iowan Old Style stack)
+    //    – no bullet markers; typography carries the structure
+    //    – fine 0.5–1px rules for separation
+    //    – at most one accent color per slide
+    //    – direct labels inline with marks (no legends)
+    // ============================================================
+
+    var TUFTE = {
+        bg:     '#faf7f1',
+        ink:    '#1f1a14',
+        muted:  '#6b5c48',
+        rule:   '#bcb1a0',
+        fine:   '#d8d2c5',
+        slate:  '#3d5b73',
+        copper: '#a36015',
+        crimson:'#7a1f1a',
+        green:  '#0e3f2c',
+        amber:  '#8a5a0c',
+        violet: '#5b2d71'
+    };
+    var SERIF = "Georgia, 'Iowan Old Style', 'Palatino Linotype', serif";
+    var SANS  = "'Inter', 'Helvetica Neue', sans-serif";
+
+    // Helper: thin rule
+    function tufteRule(svg, x1, y1, x2, y2, opacity) {
+        return svg.append('line').attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
+            .attr('stroke', TUFTE.rule).attr('stroke-width', 0.6).attr('opacity', opacity == null ? 1 : opacity);
+    }
+    // Helper: small caps section label
+    function tufteSmallCaps(svg, x, y, text, color) {
+        return svg.append('text').attr('x', x).attr('y', y)
+            .attr('font-family', SANS)
+            .attr('font-size', '10.5px').attr('font-weight', '700')
+            .attr('letter-spacing', '1.8px').attr('fill', color || TUFTE.muted)
+            .text(text);
+    }
+    // Helper: render a stack of statements (no bullets, just typography)
+    //   statements: [{lead: 'short bold lead', tail: 'rest of the statement'}]
+    function tufteStatements(svg, x, y, w, statements, leadColor) {
+        var cy = y;
+        statements.forEach(function (s, i) {
+            var t = svg.append('text').attr('x', x).attr('y', cy)
+                .attr('font-family', SERIF).attr('font-size', '14.5px').attr('fill', TUFTE.ink);
+            if (s.lead) {
+                t.append('tspan').attr('font-weight', '700').attr('fill', leadColor || TUFTE.ink).text(s.lead);
+                if (s.tail) t.append('tspan').attr('fill', TUFTE.ink).text(' — ' + s.tail);
+            } else {
+                t.text(s.tail || s);
+            }
+            // Wrap with simple measurement (fall back to one line if it fits)
+            var node = t.node();
+            if (node && node.getComputedTextLength && node.getComputedTextLength() > w) {
+                // Re-render wrapped
+                t.text(null);
+                var full = (s.lead ? s.lead + ' — ' : '') + (s.tail || '');
+                wsiWrap(t.attr('x', x).attr('y', cy)
+                            .attr('font-family', SERIF).attr('font-size', '14.5px').attr('fill', TUFTE.ink),
+                        full, w, 19);
+                // Approximate height
+                cy += 19 * Math.ceil(full.length / 60);
+            } else {
+                cy += 26;
+            }
+        });
+        return cy;
+    }
+    // Helper: title block (serif title, italic subtitle, hairline rule)
+    function tufteTitleBlock(svg, x, y, w, title, subtitle) {
+        svg.append('text').attr('x', x).attr('y', y)
+            .attr('font-family', SERIF).attr('font-size', '24px').attr('font-weight', '700').attr('fill', TUFTE.ink)
+            .text(title);
+        if (subtitle) {
+            svg.append('text').attr('x', x).attr('y', y + 26)
+                .attr('font-family', SERIF).attr('font-size', '14.5px').attr('font-style', 'italic').attr('fill', TUFTE.muted)
+                .text(subtitle);
+        }
+        tufteRule(svg, x, y + 38, x + w, y + 38, 0.7);
+    }
+
+    // ─── ORCH-1. orch-hook ──────────────────────────────────────
+    //  Opening: four validated adoption numbers from peer-reviewed
+    //  pathology surveys, each pinned to its citation. The point of
+    //  the slide is that even the *digitization* numbers are small —
+    //  and the orchestration layer above them is rarer still.
+    //
+    //  All four percentages on this slide are verified against the
+    //  primary source via web search; see the sources slide for full
+    //  citations. Do not edit a number without re-verifying.
+    function orchHook(container) {
+        var W = 1280, H = 660, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'Many laboratories can digitize. Few can orchestrate.',
+            'A decade after FDA clearance for WSI primary diagnosis (Philips IntelliSite, April 2017), adoption is still measured in single and double digits.');
+
+        // Four validated rows. `n` is the % the source actually reports;
+        // bars are scaled so the visual length matches that percentage.
+        var rows = [
+            {
+                n: 0.28,
+                label: 'US practices that digitize slides with WSI',
+                sub: 'up from 20% in 2022',
+                source: 'CAP 2024 Practice Characteristics Survey · n = 964 US pathologists'
+            },
+            {
+                n: 0.10,
+                label: 'US practices using remote digital sign-out for primary diagnosis',
+                sub: 'across academic, non-academic, and independent labs',
+                source: 'CAP 2024 Practice Characteristics Survey · n = 964 US pathologists'
+            },
+            {
+                n: 0.33,
+                label: 'US labs that have started or plan to implement digital pathology',
+                sub: 'two-thirds report no near-term plans; cost cited as primary barrier',
+                source: 'Labcorp “Pulse of the Lab Leader” 2024 · n = 115 lab leaders'
+            },
+            {
+                n: 0.236,
+                label: 'DP-enabled labs worldwide that are “fully digital” (most/all cases scanned)',
+                sub: 'of 72 DP-enabled labs surveyed; 29 used DP diagnostically, 43 non-diagnostically',
+                source: 'Rizzo et al., Lab Invest 2023 · 127 labs across Europe & Asia'
+            }
+        ];
+
+        var topY = 200, rowGap = 92, barX = 600, barW = 420, barH = 13;
+        rows.forEach(function (r, i) {
+            var y = topY + i * rowGap;
+            // The number — large serif, leftmost
+            svg.append('text').attr('x', 90).attr('y', y + 10)
+                .attr('font-family', SERIF).attr('font-size', '32px').attr('font-weight', '700').attr('fill', P.copper)
+                .text(Math.round(r.n * 100) + '%');
+            // The descriptive sentence — serif, normal weight
+            svg.append('text').attr('x', 200).attr('y', y - 4)
+                .attr('font-family', SERIF).attr('font-size', '15px').attr('fill', P.ink)
+                .text(r.label);
+            // The amplifying clause — serif italic, muted
+            svg.append('text').attr('x', 200).attr('y', y + 14)
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12.5px').attr('fill', P.muted)
+                .text(r.sub);
+            // Baseline bar (the universe — 100%)
+            svg.append('rect').attr('x', barX).attr('y', y + 24).attr('width', barW).attr('height', barH)
+                .attr('fill', P.fine);
+            // Filled portion (what's reported)
+            svg.append('rect').attr('x', barX).attr('y', y + 24).attr('width', barW * r.n).attr('height', barH)
+                .attr('fill', P.copper);
+            // Citation in small caps, anchored under the bar
+            svg.append('text').attr('x', barX).attr('y', y + 52)
+                .attr('font-family', SANS).attr('font-size', '10.5px')
+                .attr('letter-spacing', '1.0px').attr('fill', P.muted)
+                .text(r.source);
+        });
+
+        // Punchline + interpretive line, in the same Tufte style as the rest of the deck.
+        tufteRule(svg, 90, H - 80, W - 90, H - 80, 0.55);
+        svg.append('text').attr('x', 90).attr('y', H - 56)
+            .attr('font-family', SERIF).attr('font-size', '15px').attr('font-style', 'italic').attr('fill', P.ink)
+            .text('Even among labs that own scanners, fewer than half use them for diagnosis — the rest scan only for teaching, research, or tumor boards.');
+        svg.append('text').attr('x', 90).attr('y', H - 32)
+            .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('The image is not the system. The workflow is the system.');
+    }
+
+    // ─── ORCH-2. orch-image-not-endpoint ─────────────────────────
+    //  Two small symbolic graphs: line ending vs. node in a graph
+    function orchImageNotEndpoint(container) {
+        var W = 1280, H = 660, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'The image is not the endpoint. The image is a participant.',
+            'An evolving operational entity, not a file you store and retrieve.');
+
+        // LEFT: image as endpoint — straight line ending in a square
+        //  Header moved up to y=160 for horizontal alignment with the right
+        //  section header and to clear the diagram below.
+        svg.append('text').attr('x', 320).attr('y', 160)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '1.6px').attr('fill', P.muted)
+            .text('THE “IMAGE MANAGEMENT” MODEL');
+        //  Tufte marginalia — a single-word italic clarifier directly under the
+        //  section header that echoes the slide title's contrast ("endpoint"
+        //  vs "participant") and compresses the column's argument.
+        svg.append('text').attr('x', 320).attr('y', 178)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('endpoint.');
+        // long line in — chain centred at y=365 so its vertical centre aligns
+        // with the right-column hub centre; both columns share a focal axis.
+        svg.append('line').attr('x1', 100).attr('x2', 320)
+            .attr('y1', 365).attr('y2', 365)
+            .attr('stroke', P.ink).attr('stroke-width', 1.4);
+        // arrowhead
+        svg.append('path').attr('d', 'M 320 365 l -10 -5 l 0 10 z').attr('fill', P.ink);
+        // terminal box
+        svg.append('rect').attr('x', 360).attr('y', 335).attr('width', 110).attr('height', 60)
+            .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', 415).attr('y', 371)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '15px').attr('fill', P.ink)
+            .text('image.tif');
+        // caption beneath — aligned with right-column caption at y=545
+        svg.append('text').attr('x', 320).attr('y', 545)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '13px').attr('fill', P.muted)
+            .text('a file in a place — stored, secured, retrieved.');
+
+        // Vertical separator (shorter, sits between the two captions)
+        tufteRule(svg, W / 2, 180, W / 2, 560, 0.5);
+
+        // RIGHT: image as participant — central node with edges to other nodes
+        //  Header moved up to y=160 to clear the QC node at y≈215 and to
+        //  align horizontally with the left section header (Tufte: parallel layout).
+        svg.append('text').attr('x', 960).attr('y', 160)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '1.6px').attr('fill', P.copper)
+            .text('THE WORKFLOW-ORCHESTRATION MODEL');
+        //  Companion marginalia — same position and typography as the left
+        //  side, single word, copper to match the right column's accent.
+        svg.append('text').attr('x', 960).attr('y', 178)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', P.copper)
+            .text('participant.');
+
+        var cx = 960, cy = 365;
+        // Central node = image (slightly larger central word, italic for direct labeling)
+        svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 32)
+            .attr('fill', P.bg).attr('stroke', P.copper).attr('stroke-width', 1.8);
+        svg.append('text').attr('x', cx).attr('y', cy + 5)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '15px').attr('font-style', 'italic').attr('fill', P.copper)
+            .text('image');
+
+        // Surrounding action nodes — eight directions
+        //  Radius reduced from 160 → 145 so the rightmost labels
+        //  (“AI inference”, “urgent review”) stay safely inside the
+        //  slide container at every viewport width.
+        var actions = [
+            { label: 'QC',                 ang: -Math.PI / 2 },
+            { label: 're-scan',            ang: -Math.PI / 4 },
+            { label: 'AI inference',       ang: 0 },
+            { label: 'urgent review',      ang: Math.PI / 4 },
+            { label: 'additional stains',  ang: Math.PI / 2 },
+            { label: 'tumor board',        ang: 3 * Math.PI / 4 },
+            { label: 'education',          ang: Math.PI },
+            { label: 'escalation',         ang: -3 * Math.PI / 4 }
+        ];
+        var R = 145;
+        actions.forEach(function (a) {
+            var ax = cx + R * Math.cos(a.ang), ay = cy + R * Math.sin(a.ang);
+            // edge — start just outside central circle (r=32) and stop just before node dot
+            svg.append('line').attr('x1', cx + 32 * Math.cos(a.ang)).attr('y1', cy + 32 * Math.sin(a.ang))
+                .attr('x2', ax - 8 * Math.cos(a.ang)).attr('y2', ay - 8 * Math.sin(a.ang))
+                .attr('stroke', P.copper).attr('stroke-width', 0.8).attr('opacity', 0.7);
+            // node dot
+            svg.append('circle').attr('cx', ax).attr('cy', ay).attr('r', 4).attr('fill', P.copper);
+            // label — special-case the cardinals so the top label sits above its
+            // dot and the bottom label sits below, both centred (Tufte: direct,
+            // unambiguous labelling without forcing the eye to follow an offset).
+            var ta, ox, oy;
+            if (Math.abs(a.ang + Math.PI / 2) < 0.01) {            // top (12 o'clock)
+                ta = 'middle'; ox = 0; oy = -12;
+            } else if (Math.abs(a.ang - Math.PI / 2) < 0.01) {     // bottom (6 o'clock)
+                ta = 'middle'; ox = 0; oy = 18;
+            } else if (a.ang > -Math.PI / 2 && a.ang < Math.PI / 2) {  // east half
+                ta = 'start'; ox = 8; oy = 4;
+            } else {                                                // west half
+                ta = 'end'; ox = -8; oy = 4;
+            }
+            svg.append('text').attr('x', ax + ox).attr('y', ay + oy)
+                .attr('text-anchor', ta).attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink)
+                .text(a.label);
+        });
+        // caption beneath — moved 15px lower for clean separation from the
+        // bottom node (“additional stains”) label.
+        svg.append('text').attr('x', 960).attr('y', 545)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '13px').attr('fill', P.muted)
+            .text('a node in a graph of state transitions — every edge a transition the system can take.');
+
+        // (The slide engine renders the Takeaway component below the SVG with
+        //  the “digitally scanned slide …” line, so we deliberately do not
+        //  duplicate that text inside the SVG — the previous version did, and
+        //  it was hidden by the Takeaway overlay anyway.)
+    }
+
+    // ─── ORCH-3. orch-clinical-stateful ──────────────────────────
+    //  Small-multiples grid of mini state diagrams (one per entity)
+    function orchClinicalStateful(container) {
+        //  Reduced canvas height so the SVG fits within the slide-engine
+        //  viewport without overlapping the Takeaway component at the bottom.
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'Clinical systems are naturally stateful.',
+            'Every entity in pathology already has states — small multiples of what we rarely make explicit.');
+
+        var entities = [
+            { name: 'Slide',      states: ['scanned','QC-failed','re-scanned','diagnostic-ready'] },
+            { name: 'Case',       states: ['accessioned','grossed','in review','signed out','amended'] },
+            { name: 'Annotation', states: ['draft','preliminary','clinical','legally relevant'] },
+            { name: 'AI result',  states: ['preliminary','uncertain','confirmed','superseded'] },
+            { name: 'Encounter',  states: ['scheduled','urgent','delayed','imminent'] },
+            { name: 'Report',     states: ['drafted','reviewed','finalized','transmitted'] }
+        ];
+
+        // 3 cols × 2 rows — tightened panel height + row gap to fit in 640
+        var cols = 3, gap = 40, panelW = (W - 180 - (cols - 1) * gap) / cols, panelH = 175;
+        var topY = 150;
+        entities.forEach(function (e, i) {
+            var col = i % cols, row = Math.floor(i / cols);
+            var px = 90 + col * (panelW + gap);
+            var py = topY + row * (panelH + 25);
+
+            // Entity name (serif)
+            svg.append('text').attr('x', px).attr('y', py + 12)
+                .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(e.name);
+            // Hairline
+            tufteRule(svg, px, py + 22, px + panelW, py + 22, 0.7);
+
+            // State chain — small dots connected by lines, labels alternate
+            var stY = py + 85;
+            var stX0 = px + 20, stX1 = px + panelW - 20;
+            var step = (stX1 - stX0) / (e.states.length - 1);
+            // Connecting line
+            svg.append('line').attr('x1', stX0).attr('y1', stY).attr('x2', stX1).attr('y2', stY)
+                .attr('stroke', P.muted).attr('stroke-width', 0.7);
+            e.states.forEach(function (s, j) {
+                var sx = stX0 + j * step;
+                svg.append('circle').attr('cx', sx).attr('cy', stY).attr('r', 4)
+                    .attr('fill', P.bg).attr('stroke', P.ink).attr('stroke-width', 1.2);
+                // alternating label position above/below
+                var ly = (j % 2 === 0) ? stY - 14 : stY + 22;
+                svg.append('text').attr('x', sx).attr('y', ly)
+                    .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                    .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.ink)
+                    .text(s);
+            });
+        });
+
+        // Bottom punchline — clearly inside the canvas, well above the
+        // Takeaway component that the slide engine renders beneath the SVG.
+        svg.append('text').attr('x', W / 2).attr('y', H - 30)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14.5px').attr('fill', P.ink)
+            .text('Clinical workflows are not linear pipelines. They are branching, reactive, asynchronous, event-driven.');
+    }
+
+    // ─── ORCH-4. orch-annotation-contexts ────────────────────────
+    //  Same annotation glyph, five envelopes
+    function orchAnnotationContexts(container) {
+        var W = 1280, H = 660, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'The same mark — five different states.',
+            'Geometry alone is identical. Visibility, retention, legal protection, storage, and downstream action differ entirely.');
+
+        // Five panels in a row — same little annotation drawing, different "envelope" framing
+        var panels = [
+            { state: 'educational',          color: P.violet,  visibility: 'resident teaching',  retention: 'course-bound',     legal: 'low stakes' },
+            { state: 'QA',                   color: P.amber,   visibility: 'internal review',    retention: 'QC retention',     legal: 'peer review' },
+            { state: 'preliminary',          color: P.muted,   visibility: 'draft, attending',   retention: 'transient',        legal: 'not committed' },
+            { state: 'clinically actionable',color: P.crimson, visibility: 'case team',          retention: 'diagnostic record',legal: 'discoverable' },
+            { state: 'legally relevant',     color: P.ink,     visibility: 'subpoena scope',     retention: 'long-term',        legal: 'evidentiary' }
+        ];
+        var topY = 200, panelW = (W - 180) / 5, panelH = 360;
+        panels.forEach(function (p, i) {
+            var px = 90 + i * panelW;
+            // tiny "slide" rectangle
+            svg.append('rect').attr('x', px + 20).attr('y', topY).attr('width', panelW - 40).attr('height', 110)
+                .attr('fill', '#f0e7d8').attr('stroke', P.fine).attr('stroke-width', 0.6);
+            // The annotation glyph itself: a deliberately wobbly hand-drawn
+            // oval enclosing a single "?". Same path in every panel, only
+            // the colour changes — reinforcing the slide's argument that
+            // an ambiguous mark carries dramatically different consequences
+            // depending purely on the state envelope around it.
+            var cx = px + panelW / 2, cy = topY + 55;
+            // Hand-drawn oval — intentional asymmetry in control points so
+            // the line reads as freehand rather than geometric.
+            var ovalPath =
+                'M ' + (cx - 30) + ',' + (cy + 2) +
+                ' C ' + (cx - 33) + ',' + (cy - 16) + ' ' +
+                        (cx - 8)  + ',' + (cy - 30) + ' ' +
+                        (cx + 6)  + ',' + (cy - 27) +
+                ' C ' + (cx + 27) + ',' + (cy - 24) + ' ' +
+                        (cx + 33) + ',' + (cy - 4)  + ' ' +
+                        (cx + 30) + ',' + (cy + 9)  +
+                ' C ' + (cx + 25) + ',' + (cy + 26) + ' ' +
+                        (cx + 2)  + ',' + (cy + 29) + ' ' +
+                        (cx - 12) + ',' + (cy + 23) +
+                ' C ' + (cx - 30) + ',' + (cy + 17) + ' ' +
+                        (cx - 34) + ',' + (cy + 4)  + ' ' +
+                        (cx - 30) + ',' + (cy + 2)  + ' Z';
+            svg.append('path')
+                .attr('d', ovalPath)
+                .attr('fill', 'none')
+                .attr('stroke', p.color).attr('stroke-width', 2.0)
+                .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+            // The "?" inside the oval — the visual signal of ambiguity that
+            // every panel inherits.
+            svg.append('text')
+                .attr('x', cx).attr('y', cy + 8)
+                .attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', '22px').attr('font-weight', '700')
+                .attr('fill', p.color)
+                .text('?');
+
+            // State label as Tufte-style cap underline
+            tufteRule(svg, px + 20, topY + 138, px + panelW - 20, topY + 138, 0.7);
+            svg.append('text').attr('x', cx).attr('y', topY + 158)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '14.5px').attr('font-weight', '700')
+                .attr('fill', p.color).text(p.state);
+
+            // Three attribute lines, each as serif typography
+            var attrY = topY + 190;
+            [
+                { k: 'visibility', v: p.visibility },
+                { k: 'retention',  v: p.retention  },
+                { k: 'legal',      v: p.legal      }
+            ].forEach(function (a, j) {
+                var y = attrY + j * 38;
+                svg.append('text').attr('x', cx).attr('y', y)
+                    .attr('text-anchor', 'middle').attr('font-family', SANS)
+                    .attr('font-size', '9.5px').attr('font-weight', '700').attr('letter-spacing', '1.4px')
+                    .attr('fill', P.muted).text(a.k.toUpperCase());
+                svg.append('text').attr('x', cx).attr('y', y + 16)
+                    .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic')
+                    .attr('font-size', '12px').attr('fill', P.ink).text(a.v);
+            });
+        });
+
+        // Bottom italic line
+        svg.append('text').attr('x', W / 2).attr('y', H - 32)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('Embedding all annotations blindly into image structures collapses educational, legal, and operational context.');
+    }
+
+    // ─── ORCH-5. orch-ai-prioritization ──────────────────────────
+    //  A clock + timeline — the patient-appointment-tomorrow scenario
+    function orchAiPrioritization(container) {
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'AI-assisted prioritization needs orchestration, not file exchange.',
+            'A scenario any oncology service recognizes — and the cascade that should follow.');
+
+        // Horizontal timeline from "now" to "appointment tomorrow"
+        var x0 = 130, x1 = W - 130, ty = 280;
+        // axis
+        svg.append('line').attr('x1', x0).attr('y1', ty).attr('x2', x1).attr('y2', ty)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+        // ticks
+        var ticks = [
+            { x: x0,                                label: 'now',                     sub: 'AI inference complete · case not finalized' },
+            { x: x0 + (x1 - x0) * 0.30,             label: 'tonight',                 sub: 'pathologist receives prioritized worklist' },
+            { x: x0 + (x1 - x0) * 0.55,             label: 'overnight deadline',      sub: 'if untouched → operational alert escalates' },
+            { x: x0 + (x1 - x0) * 0.85,             label: 'clinic, 8:00 a.m.',       sub: 'patient walks in — clinician must know' },
+            { x: x1,                                label: 'too late',                sub: 'the silent failure mode of file-only systems' }
+        ];
+        ticks.forEach(function (t, i) {
+            svg.append('line').attr('x1', t.x).attr('x2', t.x).attr('y1', ty - 8).attr('y2', ty + 8)
+                .attr('stroke', P.ink).attr('stroke-width', 1);
+            svg.append('text').attr('x', t.x).attr('y', ty - 18)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(t.label);
+            // sub italic, alternating
+            var sy = (i % 2 === 0) ? ty + 32 : ty + 56;
+            var st = svg.append('text').attr('x', t.x).attr('y', sy)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(st, t.sub, 200, 14);
+        });
+
+        // Side block — the cascade triggered
+        var bx = 90, by = 440;
+        tufteSmallCaps(svg, bx, by, 'WHAT ORCHESTRATION TRIGGERS', P.copper);
+        var cascade = [
+            'Case priority elevated on the pathologist’s worklist.',
+            'Pathologist notified with context (AI finding + appointment time).',
+            'Preliminary review request queued.',
+            'If untouched by the deadline, an operational alert escalates.'
+        ];
+        cascade.forEach(function (c, i) {
+            svg.append('text').attr('x', bx).attr('y', by + 22 + i * 22)
+                .attr('font-family', SERIF).attr('font-size', '13.5px').attr('fill', P.ink)
+                .text('— ' + c);
+        });
+
+        // Right block — what file-only does
+        var fx = W / 2 + 80;
+        tufteSmallCaps(svg, fx, by, 'WHAT FILE EXCHANGE GIVES YOU', P.crimson);
+        var failure = [
+            'A file in a folder.',
+            'A clinician without context at 8 a.m.',
+            'A phone call. Maybe.'
+        ];
+        failure.forEach(function (c, i) {
+            svg.append('text').attr('x', fx).attr('y', by + 22 + i * 22)
+                .attr('font-family', SERIF).attr('font-size', '13.5px').attr('fill', P.ink)
+                .text('— ' + c);
+        });
+
+        // Bottom italic
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('This is impossible if systems only exchange files. It requires orchestration.');
+    }
+
+    // ─── ORCH-6. orch-tat-distribution ───────────────────────────
+    //  A skewed distribution showing the average is meaningless,
+    //  next to a small list of better state-transition metrics.
+    function orchTatDistribution(container) {
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'Average turnaround time is the average patient temperature.',
+            'Easy to measure. Easy to report. Disconnected from clinically meaningful transitions.');
+
+        // Small histogram on the left — heavily right-skewed
+        var hx = 130, hy = 230, hw = 540, hh = 240;
+        // axis
+        svg.append('line').attr('x1', hx).attr('x2', hx + hw).attr('y1', hy + hh).attr('y2', hy + hh)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+        // bars (lognormal-ish)
+        var bins = [12, 28, 44, 38, 26, 18, 12, 9, 7, 6, 5, 4, 3, 2.5, 2, 1.6, 1.3, 1.1, 1, 0.9];
+        var bw = hw / bins.length;
+        bins.forEach(function (b, i) {
+            var bh = (b / 50) * hh;
+            svg.append('rect').attr('x', hx + i * bw + 1).attr('y', hy + hh - bh)
+                .attr('width', bw - 2).attr('height', bh).attr('fill', P.ink).attr('opacity', 0.78);
+        });
+        // axis labels
+        svg.append('text').attr('x', hx).attr('y', hy + hh + 18)
+            .attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.muted).text('0');
+        svg.append('text').attr('x', hx + hw).attr('y', hy + hh + 18)
+            .attr('text-anchor', 'end').attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.muted)
+            .text('20+ days');
+        svg.append('text').attr('x', hx + hw / 2).attr('y', hy + hh + 38)
+            .attr('text-anchor', 'middle').attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.muted)
+            .text('case turnaround time');
+
+        // Mark the "average" with a dashed vertical
+        var avgX = hx + 5 * bw;
+        svg.append('line').attr('x1', avgX).attr('x2', avgX).attr('y1', hy).attr('y2', hy + hh)
+            .attr('stroke', P.crimson).attr('stroke-width', 1).attr('stroke-dasharray', '4,3');
+        svg.append('text').attr('x', avgX + 6).attr('y', hy + 14)
+            .attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.crimson)
+            .text('mean — meaningful for nobody');
+
+        // Caption
+        svg.append('text').attr('x', hx).attr('y', hy - 24)
+            .attr('font-family', SERIF).attr('font-size', '14px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('A real TAT distribution: heavy-tailed, multimodal, dominated by complexity, not by the system.');
+
+        // Right column: the better metrics
+        var rx = 760, ry = 220;
+        tufteSmallCaps(svg, rx, ry - 18, 'STATE-TRANSITION METRICS', P.copper);
+        var metrics = [
+            { from: 'scan',            to: 'AI review',                color: P.slate },
+            { from: 'AI review',       to: 'pathologist attention',    color: P.slate },
+            { from: 'critical finding',to: 'clinician notification',   color: P.crimson },
+            { from: 'inadequate slide',to: 'QC intervention',          color: P.amber },
+            { from: 're-cut order',    to: 're-scan availability',     color: P.copper }
+        ];
+        metrics.forEach(function (m, i) {
+            var y = ry + i * 38;
+            svg.append('text').attr('x', rx).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '14px').attr('fill', P.ink)
+                .text(m.from);
+            // arrow
+            svg.append('text').attr('x', rx + 170).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '14px').attr('fill', m.color).text('→');
+            svg.append('text').attr('x', rx + 195).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '14px').attr('font-style', 'italic').attr('fill', P.ink)
+                .text(m.to);
+            // hairline below
+            tufteRule(svg, rx, y + 8, rx + 380, y + 8, 0.5);
+        });
+
+        // Bottom
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('When the workflow has explicit states, the metrics that matter become available for free.');
+    }
+
+    // ─── ORCH-7. orch-compliant-inert ────────────────────────────
+    //  Compliant box vs. reactive system
+    function orchCompliantInert(container) {
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'A file can be perfectly compliant — and operationally useless.',
+            'Static standards optimize for representation. Production workflows demand reactivity.');
+
+        // LEFT: closed box with a checkmark and no outgoing edges
+        var bx = 240, by = 280, bw = 220, bh = 130;
+        svg.append('rect').attr('x', bx).attr('y', by).attr('width', bw).attr('height', bh)
+            .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', bx + bw / 2).attr('y', by + 56)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '17px').attr('fill', P.ink)
+            .text('image archive');
+        svg.append('text').attr('x', bx + bw / 2).attr('y', by + 80)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.muted)
+            .text('format-conformant');
+        // Tufte-style checkmark inscribed
+        svg.append('path').attr('d', 'M ' + (bx + 24) + ' ' + (by + 20) + ' l 8 8 l 16 -16')
+            .attr('fill', 'none').attr('stroke', P.green).attr('stroke-width', 1.6);
+        // Caption beneath
+        var stuff = [
+            'no APIs',
+            'no events',
+            'no notifications',
+            'no orchestration'
+        ];
+        stuff.forEach(function (s, i) {
+            svg.append('text').attr('x', bx + bw / 2).attr('y', by + bh + 30 + i * 20)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(s);
+        });
+        svg.append('text').attr('x', bx + bw / 2).attr('y', by + bh + 130)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('operationally inert');
+
+        // Vertical separator
+        tufteRule(svg, W / 2, 200, W / 2, H - 90, 0.5);
+
+        // RIGHT: reactive system — central event line with subscribers.
+        //
+        // The bus line is drawn 40 px past the source dot on the left, so the
+        // dot sits inset from the tip rather than at the very end — there is
+        // visible "bus" before the source, and the label below has clear room.
+        //
+        // The "state change" label is placed BELOW the line. The first
+        // subscriber tick (re-scan, i=0) goes UP from the line at x≈786,
+        // which sits inside the label's horizontal range; putting the label
+        // above the line would put that tick straight through the type.
+        var ex0 = 720, ex1 = 1180, ey = 350;
+        var ex0Line = ex0 - 40;
+        svg.append('line').attr('x1', ex0Line).attr('y1', ey).attr('x2', ex1).attr('y2', ey)
+            .attr('stroke', P.copper).attr('stroke-width', 1.4);
+        // Source: state change
+        svg.append('circle').attr('cx', ex0).attr('cy', ey).attr('r', 7).attr('fill', P.copper);
+        svg.append('text').attr('x', ex0).attr('y', ey + 22)
+            .attr('text-anchor', 'start').attr('font-family', SERIF).attr('font-size', '13px').attr('font-weight', '700').attr('fill', P.copper)
+            .text('state change');
+        // Six subscribers — alternating above/below the line
+        var subs = ['re-scan', 'histology', 'QA metrics', 'calibration', 'worklist', 'audit'];
+        var step = (ex1 - ex0) / (subs.length + 1);
+        subs.forEach(function (s, i) {
+            var x = ex0 + (i + 1) * step;
+            svg.append('line').attr('x1', x).attr('x2', x)
+                .attr('y1', ey).attr('y2', ey + (i % 2 === 0 ? -34 : 34))
+                .attr('stroke', P.copper).attr('stroke-width', 0.8);
+            svg.append('circle').attr('cx', x).attr('cy', ey + (i % 2 === 0 ? -34 : 34)).attr('r', 4).attr('fill', P.copper);
+            svg.append('text').attr('x', x).attr('y', ey + (i % 2 === 0 ? -44 : 50))
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.ink)
+                .text(s);
+        });
+        svg.append('text').attr('x', (ex0 + ex1) / 2).attr('y', H - 130)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('reactive — subscribers act on every change');
+
+        svg.append('text').attr('x', W / 2).attr('y', H - 30)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('A giant image archive can be compliant by every standard and still answer no clinical question by itself.');
+    }
+
+    // ─── ORCH-8. orch-msk-evidence ───────────────────────────────
+    //  Small architecture sketch: LIS → format-agnostic viewer → many sources
+    function orchMskEvidence(container) {
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'MSK as existence proof — file-format-agnostic operations at scale.',
+            'A leading high-volume digital pathology center has been operating this way for years.');
+
+        // Center: format-agnostic viewer
+        var vx = W / 2, vy = 350, vw = 240, vh = 90;
+        svg.append('rect').attr('x', vx - vw / 2).attr('y', vy - vh / 2)
+            .attr('width', vw).attr('height', vh)
+            .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', vx).attr('y', vy - 8)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('MSK Slide Viewer');
+        svg.append('text').attr('x', vx).attr('y', vy + 12)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.muted)
+            .text('web-based · file-format-agnostic');
+        svg.append('text').attr('x', vx).attr('y', vy + 30)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.muted)
+            .text('launched from the LIS');
+
+        // Above: LIS
+        var lx = vx, ly = 200;
+        svg.append('rect').attr('x', lx - 80).attr('y', ly - 30).attr('width', 160).attr('height', 60)
+            .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1.2);
+        svg.append('text').attr('x', lx).attr('y', ly + 5)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('LIS');
+        // Arrow LIS → viewer
+        svg.append('line').attr('x1', lx).attr('x2', lx).attr('y1', ly + 30).attr('y2', vy - vh / 2 - 4)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+        svg.append('text').attr('x', lx + 8).attr('y', (ly + 30 + vy - vh / 2) / 2)
+            .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.muted)
+            .text('launches with case context');
+
+        //  Below: format sources fanning out — the actual scanner-native
+        //  formats MSK runs in production (Leica AT2/GT450, 3DHistech P1000,
+        //  Philips UFS). DICOM-WSI is deliberately absent: MSK's production
+        //  digital-pathology stack does not use DICOM (confirmed at the 2025
+        //  MSK Pathology Informatics webinar; see citations below).
+        var formats = [
+            { name: 'SVS',     vendor: 'Leica AT2 / GT450' },
+            { name: 'MRXS',    vendor: '3DHistech P1000'   },
+            { name: 'iSyntax', vendor: 'Philips UFS'       }
+        ];
+        var fy = 510, fx0 = 320, fx1 = W - 320;
+        var step = (formats.length === 1) ? 0 : (fx1 - fx0) / (formats.length - 1);
+        formats.forEach(function (f, i) {
+            var fx = fx0 + i * step;
+            // Format name (serif)
+            svg.append('text').attr('x', fx).attr('y', fy + 16)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(f.name);
+            // Vendor / scanner (italic small)
+            svg.append('text').attr('x', fx).attr('y', fy + 32)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11.5px').attr('fill', P.muted)
+                .text(f.vendor);
+            // upward line into viewer base
+            svg.append('line').attr('x1', fx).attr('x2', vx + (fx - vx) * 0.2)
+                .attr('y1', fy).attr('y2', vy + vh / 2 + 4)
+                .attr('stroke', P.copper).attr('stroke-width', 0.8).attr('opacity', 0.7);
+        });
+        svg.append('text').attr('x', W / 2).attr('y', fy + 58)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.muted)
+            .text('scanner-native formats — coexisting in production, integrated through one viewer.');
+
+        // Explicit "no DICOM" annotation as small crimson marginalia under
+        // the format row — the slide's load-bearing fact.
+        svg.append('text').attr('x', W / 2).attr('y', fy + 78)
+            .attr('text-anchor', 'middle').attr('font-family', SANS).attr('font-size', '10.5px').attr('font-weight', '700')
+            .attr('letter-spacing', '1.6px').attr('fill', P.crimson)
+            .text('NO DICOM-WSI IN THE PRODUCTION STACK');
+
+        // Side note: HoBBiT (kept; deid honest-broker for secondary use)
+        svg.append('text').attr('x', W - 110).attr('y', 240)
+            .attr('text-anchor', 'end').attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink)
+            .text('HoBBiT — honest-broker for de-id and transfer');
+        svg.append('text').attr('x', W - 110).attr('y', 258)
+            .attr('text-anchor', 'end').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11.5px').attr('fill', P.muted)
+            .text('separates clinical custody from research / education');
+
+        // Citation strip — small, italic, the published record behind the claim
+        svg.append('text').attr('x', W / 2).attr('y', H - 36)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '10.5px').attr('fill', P.muted)
+            .text('Hanna et al., JAMIA 2021;28(9):1874 · Ardon et al., J Pathol Inform 2023 · Ardon et al., Lab Invest 2023 · Warren Alpert Center for Digital and Computational Pathology, MSKCC.');
+
+        // Bottom italic (closing line)
+        svg.append('text').attr('x', W / 2).attr('y', H - 16)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('The standard that matters most is not the container — it is the operational contract around the container.');
+    }
+
+    // ─── ORCH-9. orch-orchestration-layer ────────────────────────
+    //  Three-tier architecture: LIS / Orchestration / IMS — orchestration in the middle
+    function orchOrchestrationLayer(container) {
+        var W = 1280, H = 660, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'The missing layer — neither LIS nor IMS is sufficient.',
+            'What’s missing is an orchestration layer that coordinates them — and the AI and de-id pipelines too.');
+
+        // Three rectangles arranged vertically
+        var rx = 200, rw = W - 400, rh = 100, gap = 30;
+        var top1 = 200;
+        var rows = [
+            { label: 'LIS', sub: 'orders · case identifiers · sign-out milestones — necessary, not sufficient', color: P.slate },
+            { label: 'Orchestration Layer', sub: 'explicit events · states · transitions · idempotent · replayable', color: P.copper, emphasize: true },
+            { label: 'IMS / Tile Server', sub: 'tile access · viewer surfaces — necessary, not sufficient', color: P.slate }
+        ];
+        rows.forEach(function (r, i) {
+            var y = top1 + i * (rh + gap);
+            svg.append('rect').attr('x', rx).attr('y', y).attr('width', rw).attr('height', rh)
+                .attr('fill', 'none').attr('stroke', r.color).attr('stroke-width', r.emphasize ? 1.8 : 1.2);
+            svg.append('text').attr('x', rx + 22).attr('y', y + 36)
+                .attr('font-family', SERIF).attr('font-size', r.emphasize ? '20px' : '17px').attr('font-weight', '700').attr('fill', r.color)
+                .text(r.label);
+            svg.append('text').attr('x', rx + 22).attr('y', y + 64)
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '13.5px').attr('fill', P.muted)
+                .text(r.sub);
+            // event/state arrow on the right
+            if (i < rows.length - 1) {
+                var ay = y + rh + gap / 2;
+                svg.append('line').attr('x1', rx + rw / 2).attr('x2', rx + rw / 2)
+                    .attr('y1', y + rh + 4).attr('y2', y + rh + gap - 4)
+                    .attr('stroke', P.muted).attr('stroke-width', 0.8);
+                svg.append('text').attr('x', rx + rw / 2 + 12).attr('y', ay + 4)
+                    .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11.5px').attr('fill', P.muted)
+                    .text(i === 0 ? 'facts → events' : 'events → tile + render');
+            }
+        });
+
+        // Right side: what the orchestration layer does
+        var nx = rx + rw - 320, ny = top1 + rh + gap + 12;
+        svg.append('rect').attr('x', nx - 12).attr('y', ny - 18).attr('width', 326).attr('height', 76)
+            .attr('fill', P.bg).attr('stroke', 'none');
+        var notes = [
+            'OpenAPI-first services',
+            'composable microservices',
+            'NOT a monolithic data-format mandate'
+        ];
+        notes.forEach(function (n, i) {
+            svg.append('text').attr('x', nx).attr('y', ny + i * 18)
+                .attr('font-family', SERIF).attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', P.copper)
+                .text('— ' + n);
+        });
+
+        // Bottom italic
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('Treat the orchestration layer as a first-class system — not an extension of the LIS or the IMS.');
+    }
+
+    // ─── ORCH-10. orch-ai-as-participant ─────────────────────────
+    //  Side-by-side: AI bolted-on (disconnected) vs AI participant (typed events)
+    function orchAiAsParticipant(container) {
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'AI as a workflow participant — not a side car.',
+            'Same model. Two architectures. Only one is auditable.');
+
+        // LEFT: disconnected AI box
+        var lx = 90, ly = 200, lw = 460, lh = 360;
+        // workflow rail
+        svg.append('line').attr('x1', lx + 30).attr('x2', lx + lw - 30)
+            .attr('y1', ly + 200).attr('y2', ly + 200)
+            .attr('stroke', P.ink).attr('stroke-width', 1.4);
+        // workflow nodes
+        ['scan', 'sign-out', 'report'].forEach(function (n, i) {
+            var nx = lx + 30 + (i + 0.5) * (lw - 60) / 3;
+            svg.append('circle').attr('cx', nx).attr('cy', ly + 200).attr('r', 6).attr('fill', P.ink);
+            svg.append('text').attr('x', nx).attr('y', ly + 220)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '12px').attr('fill', P.ink)
+                .text(n);
+        });
+        // disconnected AI bubble above, dashed line out (going nowhere) —
+        // width matched to the wider "typed proposal …" text on the right
+        // panel so both AI inference boxes are visually parallel.
+        svg.append('rect').attr('x', lx + lw / 2 - 145).attr('y', ly + 30)
+            .attr('width', 290).attr('height', 70)
+            .attr('fill', 'none').attr('stroke', P.crimson).attr('stroke-width', 1.2).attr('stroke-dasharray', '4,3');
+        svg.append('text').attr('x', lx + lw / 2).attr('y', ly + 60)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.crimson)
+            .text('AI inference');
+        svg.append('text').attr('x', lx + lw / 2).attr('y', ly + 80)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11.5px').attr('fill', P.muted)
+            .text('on a copy · off the bus');
+        // dashed arrow that trails into nothing
+        svg.append('path').attr('d', 'M ' + (lx + lw / 2) + ' ' + (ly + 100) + ' L ' + (lx + lw / 2 + 60) + ' ' + (ly + 160))
+            .attr('fill', 'none').attr('stroke', P.crimson).attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
+        svg.append('text').attr('x', lx + lw / 2 + 80).attr('y', ly + 168)
+            .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11.5px').attr('fill', P.crimson)
+            .text('result emailed');
+        // Caption beneath
+        svg.append('text').attr('x', lx + lw / 2).attr('y', ly + lh - 30)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.crimson)
+            .text('AI bolted on');
+        svg.append('text').attr('x', lx + lw / 2).attr('y', ly + lh - 10)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12.5px').attr('fill', P.muted)
+            .text('no model+version binding · no audit · no replay');
+
+        // Vertical separator
+        tufteRule(svg, W / 2, 200, W / 2, H - 90, 0.5);
+
+        // RIGHT: AI as a participant
+        var rx = W / 2 + 30, rw = W - 90 - rx, rl = ly;
+        // workflow rail
+        svg.append('line').attr('x1', rx + 30).attr('x2', rx + rw - 30)
+            .attr('y1', ly + 200).attr('y2', ly + 200)
+            .attr('stroke', P.ink).attr('stroke-width', 1.4);
+        ['scan', 'sign-out', 'report'].forEach(function (n, i) {
+            var nx = rx + 30 + (i + 0.5) * (rw - 60) / 3;
+            svg.append('circle').attr('cx', nx).attr('cy', ly + 200).attr('r', 6).attr('fill', P.ink);
+            svg.append('text').attr('x', nx).attr('y', ly + 220)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '12px').attr('fill', P.ink)
+                .text(n);
+        });
+        // AI participant — solid box on the rail; widened so the
+        // "typed proposal · model+version · audited" subtitle fits comfortably.
+        svg.append('rect').attr('x', rx + rw / 2 - 145).attr('y', ly + 30)
+            .attr('width', 290).attr('height', 70)
+            .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 1.6);
+        svg.append('text').attr('x', rx + rw / 2).attr('y', ly + 60)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.copper)
+            .text('AI inference');
+        svg.append('text').attr('x', rx + rw / 2).attr('y', ly + 80)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11.5px').attr('fill', P.muted)
+            .text('typed proposal · model+version · audited');
+        // solid arrow into the rail
+        svg.append('line').attr('x1', rx + rw / 2).attr('y1', ly + 100).attr('x2', rx + rw / 2).attr('y2', ly + 196)
+            .attr('stroke', P.copper).attr('stroke-width', 1.4);
+        svg.append('path').attr('d', 'M ' + (rx + rw / 2) + ' ' + (ly + 196) + ' l -5 -8 l 10 0 z').attr('fill', P.copper);
+        svg.append('text').attr('x', rx + rw / 2 + 8).attr('y', ly + 145)
+            .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.copper)
+            .text('proposes transition');
+        svg.append('text').attr('x', rx + rw / 2).attr('y', ly + lh - 30)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.copper)
+            .text('AI on the bus');
+        svg.append('text').attr('x', rx + rw / 2).attr('y', ly + lh - 10)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12.5px').attr('fill', P.muted)
+            .text('FSM refuses moves not on the diagram');
+
+        // Bottom italic
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('Same model. Two architectures. Only the second is safe to deploy in a regulated lab.');
+    }
+
+    // ─── ORCH-11. orch-fast-slow ─────────────────────────────────
+    //  Two-layer architecture: deterministic kernel below, LLM above
+    function orchFastSlow(container) {
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'Fast and slow thinking — in the same system.',
+            'Deterministic engineering owns safety-critical transitions. LLM reasoning owns ambiguity and adaptation.');
+
+        // Two horizontal layers
+        var lx = 130, lw = W - 260;
+        var topY = 200;
+        // SLOW layer (top)
+        svg.append('rect').attr('x', lx).attr('y', topY).attr('width', lw).attr('height', 130)
+            .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', lx + 22).attr('y', topY + 32)
+            .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.copper)
+            .text('Slow layer — LLM reasoning');
+        var slowItems = ['ambiguity detection', 'contextual interpretation', 'adaptation', 'proposes transitions'];
+        slowItems.forEach(function (s, i) {
+            svg.append('text').attr('x', lx + 22 + i * (lw - 44) / 4).attr('y', topY + 80)
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '13px').attr('fill', P.ink)
+                .text(s);
+            tufteRule(svg, lx + 22 + i * (lw - 44) / 4, topY + 96, lx + 22 + i * (lw - 44) / 4 + 200, topY + 96, 0.5);
+        });
+
+        // FAST layer (bottom)
+        var fy = topY + 240;
+        svg.append('rect').attr('x', lx).attr('y', fy).attr('width', lw).attr('height', 130)
+            .attr('fill', 'none').attr('stroke', P.slate).attr('stroke-width', 1.4);
+        svg.append('text').attr('x', lx + 22).attr('y', fy + 32)
+            .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.slate)
+            .text('Fast layer — deterministic kernel');
+        var fastItems = ['typed transitions', 'guards & invariants', 'audit log', 'refuses moves not on the diagram'];
+        fastItems.forEach(function (s, i) {
+            svg.append('text').attr('x', lx + 22 + i * (lw - 44) / 4).attr('y', fy + 80)
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '13px').attr('fill', P.ink)
+                .text(s);
+            tufteRule(svg, lx + 22 + i * (lw - 44) / 4, fy + 96, lx + 22 + i * (lw - 44) / 4 + 200, fy + 96, 0.5);
+        });
+
+        // Vertical bidirectional arrow between layers
+        var ax = W / 2;
+        svg.append('line').attr('x1', ax).attr('x2', ax).attr('y1', topY + 130).attr('y2', fy)
+            .attr('stroke', P.muted).attr('stroke-width', 1.2);
+        svg.append('path').attr('d', 'M ' + ax + ' ' + (topY + 130 + 4) + ' l -5 8 l 10 0 z').attr('fill', P.muted);
+        svg.append('path').attr('d', 'M ' + ax + ' ' + (fy - 4) + ' l -5 -8 l 10 0 z').attr('fill', P.muted);
+        svg.append('text').attr('x', ax + 14).attr('y', (topY + 130 + fy) / 2 + 4)
+            .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12.5px').attr('fill', P.muted)
+            .text('proposals down, refusals up');
+
+        // Bottom italic
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('AI does not replace orchestration. It enhances it — by detecting when the deterministic workflow has to adapt.');
+    }
+
+    // ─── ORCH-12. orch-starling-architecture ─────────────────────
+    //  A clean architecture sketch of the worked example
+    function orchStarlingArchitecture(container) {
+        //  Hub-and-spoke layout reworked: smaller radius and shorter canvas
+        //  so the top module (Auth System) clears the title block and the
+        //  bottom module (FDP) sits well above the Takeaway component.
+        var W = 1280, H = 620, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'Orchestration in practice — one open-source instantiation.',
+            'Starling (orchestrator) · Pelican (tile server) · Willet (report) — connected by typed contracts, independently testable.');
+
+        // Center: Starling
+        var sx = W / 2, sy = 380, sw = 210, sh = 76;
+        svg.append('rect').attr('x', sx - sw / 2).attr('y', sy - sh / 2)
+            .attr('width', sw).attr('height', sh)
+            .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 1.8);
+        svg.append('text').attr('x', sx).attr('y', sy - 4)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-size', '18px').attr('font-weight', '700').attr('fill', P.copper)
+            .text('Starling');
+        svg.append('text').attr('x', sx).attr('y', sy + 18)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.muted)
+            .text('orchestration kernel · worklist · audit');
+
+        // Surrounding modules
+        var mods = [
+            { name: 'Pelican',   sub: 'tile server\nformat-agnostic',     ang: -Math.PI },
+            { name: 'Willet',    sub: 'report authoring\nFSM',            ang: 0 },
+            { name: 'Auth System',sub: 'identity · OIDC\nFHIR boundary',  ang: -Math.PI / 2 },
+            { name: 'FDP',       sub: 'attention protocol\nWebSocket',    ang: Math.PI / 2 }
+        ];
+        var R = 200;
+        mods.forEach(function (m) {
+            var mx = sx + R * Math.cos(m.ang), my = sy + R * Math.sin(m.ang);
+            var mw = 170, mh = 60;
+            svg.append('rect').attr('x', mx - mw / 2).attr('y', my - mh / 2)
+                .attr('width', mw).attr('height', mh)
+                .attr('fill', 'none').attr('stroke', P.slate).attr('stroke-width', 1.2);
+            svg.append('text').attr('x', mx).attr('y', my - 4)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', P.slate)
+                .text(m.name);
+            // sub line wrap
+            var lines = m.sub.split('\n');
+            lines.forEach(function (l, i) {
+                svg.append('text').attr('x', mx).attr('y', my + 12 + i * 13)
+                    .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                    .attr('font-style', 'italic').attr('font-size', '11px').attr('fill', P.muted).text(l);
+            });
+            // labeled connector — trim points outside both boxes
+            var dx = sx - mx, dy = sy - my, mag = Math.sqrt(dx * dx + dy * dy);
+            var ux = dx / mag, uy = dy / mag;
+            var sx0 = mx + ux * 86, sy0 = my + uy * 32;
+            var sx1 = sx - ux * 107, sy1 = sy - uy * 40;
+            svg.append('line').attr('x1', sx0).attr('y1', sy0).attr('x2', sx1).attr('y2', sy1)
+                .attr('stroke', P.muted).attr('stroke-width', 0.8);
+            // Contract labels — only on vertical connectors (Auth System,
+            // FDP) where there is clear space to the right of the line.
+            // The horizontal connectors (Pelican / Willet) are too short and
+            // the gaps between boxes too narrow for inline labels — those
+            // contracts are described in the speaker notes and below.
+            if (Math.abs(uy) > 0.5) {
+                var midX = (sx0 + sx1) / 2, midY = (sy0 + sy1) / 2;
+                var contract = (m.name === 'Auth System') ? 'JWT · FHIR' : 'WebSocket events';
+                svg.append('text').attr('x', midX + 14).attr('y', midY + 4)
+                    .attr('text-anchor', 'start')
+                    .attr('font-family', SERIF)
+                    .attr('font-style', 'italic').attr('font-size', '11px').attr('fill', P.copper)
+                    .text(contract);
+            }
+        });
+
+        //  Bottom italic removed — the Takeaway component below the SVG
+        //  carries the closing message, and the diagram itself is the slide.
+        //  Bottom legend / contract list intentionally omitted — the
+        //  subtitle ("connected by typed contracts") tells the audience the
+        //  contracts exist; the speaker covers tile API / postMessage bridge
+        //  verbally. Adding more text inside the SVG started colliding with
+        //  the FDP box; Tufte preference: less ink, not more labels.
+    }
+
+    // ─── ORCH-13. orch-pattern ───────────────────────────────────
+    //  Command → Guard → Transition → Event → Subscribers, plus anti-patterns
+    function orchPattern(container) {
+        var W = 1280, H = 660, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'The pattern that holds up.',
+            'Command → Guard → Transition → Event → Subscribers. Bounded, composable FSMs per clinical object.');
+
+        // Horizontal flow of five stages
+        var stages = ['Command', 'Guard', 'Transition', 'Event', 'Subscribers'];
+        var sy = 260;
+        var sx0 = 130, sx1 = W - 130;
+        var step = (sx1 - sx0) / (stages.length - 1);
+        stages.forEach(function (s, i) {
+            var sx = sx0 + i * step;
+            // marker dot
+            svg.append('circle').attr('cx', sx).attr('cy', sy).attr('r', 7)
+                .attr('fill', P.bg).attr('stroke', P.ink).attr('stroke-width', 1.4);
+            // label below
+            svg.append('text').attr('x', sx).attr('y', sy - 18)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '16px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(s);
+            // arrow to next
+            if (i < stages.length - 1) {
+                svg.append('line').attr('x1', sx + 10).attr('x2', sx + step - 10)
+                    .attr('y1', sy).attr('y2', sy)
+                    .attr('stroke', P.ink).attr('stroke-width', 1);
+            }
+        });
+        // arrowhead at the last step
+        svg.append('path').attr('d', 'M ' + (sx1 - 4) + ' ' + sy + ' l -8 -4 l 0 8 z').attr('fill', P.ink);
+
+        // Per-stage one-line italic explanation
+        var explain = [
+            'a named request',
+            'preconditions checked',
+            'state changes atomically',
+            'typed, audited, idempotent',
+            'each acts independently'
+        ];
+        stages.forEach(function (s, i) {
+            var sx = sx0 + i * step;
+            svg.append('text').attr('x', sx).attr('y', sy + 32)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-style', 'italic').attr('font-size', '12.5px').attr('fill', P.muted)
+                .text(explain[i]);
+        });
+
+        // ANTI-PATTERNS — small list below
+        var ay = 460;
+        tufteSmallCaps(svg, 130, ay, 'ANTI-PATTERNS TO RECOGNIZE', P.crimson);
+        var anti = [
+            'state explosion — every nuance becomes a top-level state',
+            'status confused with state — UI labels leak into the lifecycle',
+            'one global FSM — every module reads every other module’s status',
+            'hidden parallelism — flat “in progress” ignores concurrent work',
+            'direct mutation — UPDATE case SET status = ‘SIGNED_OUT’',
+            'over-rigid workflow — blocks legitimate clinical variance'
+        ];
+        anti.forEach(function (a, i) {
+            var col = Math.floor(i / 3), row = i % 3;
+            var ax = 130 + col * (W - 260) / 2, ar = ay + 22 + row * 22;
+            svg.append('text').attr('x', ax).attr('y', ar)
+                .attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink)
+                .text('— ' + a);
+        });
+
+        // Bottom italic
+        svg.append('text').attr('x', W / 2).attr('y', H - 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('Model the lifecycle of clinical objects, not the screens of the application.');
+    }
+
+    // ─── ORCH-15. orch-frozen-multi ──────────────────────────────
+    //  Six operational realities as small-multiples grid — Tufte-clean
+    //  serif typography on warm-cream paper, replaces the original dark-navy
+    //  infographic card layout that clashed with the rest of the deck.
+    function orchFrozenMulti(container) {
+        var W = 1280, H = 640, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'Examples 4 & 5 — frozen sections and multiple representations of the same slide.',
+            'Operational states that recur across labs and that the LIS alone cannot encode.');
+
+        var cards = [
+            { kicker: 'FROZEN SECTION — TIME-CRITICAL',  lead: 'intraoperative priority',     body: 'Scanning and availability under the surgical clock; provisional distribution distinct from finalized sign-out.', color: P.slate },
+            { kicker: 'FROZEN ↔ PERMANENT LINKAGE',     lead: 'multi-modality',              body: 'Frozen and subsequent permanent sections of the same tissue must be linked as related representations.',         color: P.violet },
+            { kicker: 'RE-SCAN AFTER QC FAILURE',        lead: 'workflow loop',               body: 'Not an exception — a named transition with lineage to the failed scan and to the originating block.',             color: P.amber },
+            { kicker: 'TARGETED HIGH-RES RE-SCAN',       lead: 'alternate profile',           body: 'Conference, consult, or research may demand a different scan profile of the same slide; both must coexist.',      color: P.green },
+            { kicker: 'ACTIVE REPRESENTATION',           lead: 'source of truth',             body: 'Among multiple digital representations, exactly one is the active diagnostic representation; the orchestration layer must say which.', color: P.copper },
+            { kicker: 'HISTOLOGY READINESS',             lead: 'diagnostic-ready vs. needs more work', body: 'Stain readiness, coverslip readiness, control slides (positive and negative) — typically not encoded machine-actionably in the LIS.', color: P.crimson }
+        ];
+
+        // 3 cols × 2 rows
+        var cols = 3, gap = 36, panelW = (W - 180 - (cols - 1) * gap) / cols, panelH = 200;
+        var topY = 160;
+        cards.forEach(function (c, i) {
+            var col = i % cols, row = Math.floor(i / cols);
+            var px = 90 + col * (panelW + gap);
+            var py = topY + row * (panelH + 20);
+
+            // Kicker (small caps in the panel's accent colour)
+            svg.append('text').attr('x', px).attr('y', py + 14)
+                .attr('font-family', SANS).attr('font-size', '10.5px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', c.color)
+                .text(c.kicker);
+            // Lead (bold serif statement)
+            svg.append('text').attr('x', px).attr('y', py + 42)
+                .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(c.lead);
+            // Thin hairline below lead
+            tufteRule(svg, px, py + 52, px + panelW - 20, py + 52, 0.6);
+            // Body (serif italic, wrapped)
+            var body = svg.append('text').attr('x', px).attr('y', py + 76)
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '13px').attr('fill', P.muted);
+            wsiWrap(body, c.body, panelW - 20, 17);
+        });
+
+        // Bottom punchline
+        svg.append('text').attr('x', W / 2).attr('y', H - 30)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '14.5px').attr('fill', P.ink)
+            .text('Real lab operations live in workflow loops, time-critical paths, and multi-representation states the LIS does not encode.');
+    }
+
+    // ─── ORCH-14. orch-takeaways ─────────────────────────────────
+    //  Closing — clean typographic statements, no bullets
+    function orchTakeaways(container) {
+        var W = 1280, H = 720, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '92vh').style('background', P.bg);
+
+        tufteTitleBlock(svg, 90, 80, W - 180,
+            'Takeaways.',
+            'A 35-minute talk, in seven sentences.');
+
+        // Seven closing sentences. Each one lands a specific argument from
+        // the lecture and is meant to be quotable on its own — the kind of
+        // line a listener could repeat at lunch the next day without losing
+        // the meaning. The word "clinical" qualifies the objects being
+        // modelled (case, slide, annotation, report), not the state-machine
+        // formalism itself — a state machine is a state machine.
+        var lines = [
+            'Many labs can digitize. Few can orchestrate.',
+            'Medicine has been programming state machines for forty years. Workflow orchestration is the era we are entering now.',
+            'Failed scans, frozen sections, alternate representations — real lab work is workflow loops, not exceptions.',
+            'Average turnaround time is the average patient temperature.',
+            'A file can be perfectly compliant — and operationally inert.',
+            'Model the lifecycle of clinical objects, not the screens of the application.',
+            'The image is not the system. The workflow is the system.'
+        ];
+        var topY = 200;
+        lines.forEach(function (line, i) {
+            var y = topY + i * 56;
+            // running number in the margin (Tufte gives marginal annotations dignity)
+            svg.append('text').attr('x', 110).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '14px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text((i + 1).toString().padStart(2, '0'));
+            // statement
+            svg.append('text').attr('x', 170).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '17.5px').attr('fill', P.ink)
+                .text(line);
+            // hairline below
+            tufteRule(svg, 170, y + 12, W - 130, y + 12, 0.55);
+        });
+
+        // Closing CTA — italic
+        svg.append('text').attr('x', W / 2).attr('y', H - 64)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '15px').attr('fill', P.ink)
+            .text('Pick one workflow from your program. Draw its state machine on a single page.');
+        svg.append('text').attr('x', W / 2).attr('y', H - 40)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '15px').attr('fill', P.ink)
+            .text('That one page is the brief for the next module worth building.');
+    }
+
+    // ─── ORCH-16. orch-image-as-data ─────────────────────────────
+    //  The image as a pyramid of addressable tiles: a tile mosaic with
+    //  four labelled consumers, each reading only the tiles it needs.
+    //  Lands the slide's argument: image-as-data, not image-as-monolith.
+    function orchImageAsData(container) {
+        //  Trapezoidal WSI tile pyramid — five levels (0 = full resolution at
+        //  the base, 4 = lowest-resolution overview at the apex) with
+        //  downsample factors labelled. Each layer is a trapezoid containing
+        //  a tile grid clipped to the trapezoid shape. The same deterministic
+        //  tissueAt(u, v) function is used at every level, so each layer
+        //  reads as the SAME image at the appropriate resolution.
+        var W = 1280, H = 680, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        // Title in the SVG itself (the JSON slide title was removed because
+        // the slide-engine's title area gets covered by the SVG's cream
+        // background; rendering the title inside the SVG is the reliable
+        // way to keep it visible on this slide).
+        tufteTitleBlock(svg, 90, 60, W - 180,
+            'The image is data.',
+            'A pyramid of addressable tiles. It does not move. It exposes what is there.');
+
+        var defs = svg.append('defs');
+        // Tissue-tone palette so the tiles read as "image."
+        var palette = ['#e8d8c0', '#dec4a8', '#d2b594', '#c6a578', '#b8915c'];
+
+        // Deterministic tissue map — shared across all levels so every layer
+        // samples the same underlying image at its native resolution.
+        function tissueAt(u, v) {
+            var pattern =
+                0.50
+              + 0.34 * Math.sin(u * 5.3 + 1.1) * Math.cos(v * 3.7 + 0.4)
+              + 0.24 * Math.sin((u + v * 0.6) * 9.1)
+              + 0.18 * Math.cos((u * 1.4 - v) * 7.3);
+            var t = Math.max(0, Math.min(0.999, pattern));
+            return Math.floor(t * palette.length);
+        }
+
+        // Pyramid geometry — centred slightly left so consumer callouts have
+        // room on the right. Top sits below the SVG title block at y=98.
+        var pyrCx = 460;
+        var pyrTop = 150;
+        var pyrBot = 540;
+        var apexW = 80;
+        var baseW = 540;
+        var nLevels = 5;
+        var pyrH = pyrBot - pyrTop;
+        var levelH = pyrH / nLevels;
+
+        // Levels — top of array is the apex (Level 4 / 16× downsample),
+        // bottom is the base (Level 0 / 1× full resolution).
+        var levelMeta = [
+            { num: 4, ds: '16×', tilesU: 4,  tilesV: 3  },
+            { num: 3, ds: '8×',  tilesU: 8,  tilesV: 5  },
+            { num: 2, ds: '4×',  tilesU: 14, tilesV: 8  },
+            { num: 1, ds: '2×',  tilesU: 22, tilesV: 12 },
+            { num: 0, ds: '1×',  tilesU: 32, tilesV: 18 }
+        ];
+
+        var levels = [];
+        for (var i = 0; i < nLevels; i++) {
+            var topY = pyrTop + i * levelH;
+            var botY = topY + levelH;
+            var topW = apexW + (baseW - apexW) * i / nLevels;
+            var botW = apexW + (baseW - apexW) * (i + 1) / nLevels;
+            levels.push({
+                meta: levelMeta[i],
+                topY: topY, botY: botY,
+                topL: pyrCx - topW / 2, topR: pyrCx + topW / 2,
+                botL: pyrCx - botW / 2, botR: pyrCx + botW / 2,
+                topW: topW, botW: botW
+            });
+        }
+
+        // Draw each trapezoidal level with its tile grid (clipped to the trapezoid)
+        levels.forEach(function (l, i) {
+            var trapPath =
+                'M ' + l.topL + ',' + l.topY +
+                ' L ' + l.topR + ',' + l.topY +
+                ' L ' + l.botR + ',' + l.botY +
+                ' L ' + l.botL + ',' + l.botY + ' Z';
+            // Clip path for tiles
+            var clipId = 'pyr-clip-' + i;
+            defs.append('clipPath').attr('id', clipId)
+                .append('path').attr('d', trapPath);
+
+            // Tile grid clipped to trapezoid. Tile width derived from the base
+            // of the trapezoid so the grid covers the whole trapezoid extent.
+            var g = svg.append('g').attr('clip-path', 'url(#' + clipId + ')');
+            var tileW = l.botW / l.meta.tilesU;
+            var tileH = levelH / l.meta.tilesV;
+            for (var r = 0; r < l.meta.tilesV; r++) {
+                for (var c = 0; c < l.meta.tilesU; c++) {
+                    var u = (c + 0.5) / l.meta.tilesU;
+                    var v = (r + 0.5) / l.meta.tilesV;
+                    var ci = tissueAt(u, v);
+                    g.append('rect')
+                        .attr('x', l.botL + c * tileW)
+                        .attr('y', l.topY + r * tileH)
+                        .attr('width', tileW + 0.4)   // slight overlap so anti-aliasing edges don't show
+                        .attr('height', tileH + 0.4)
+                        .attr('fill', palette[ci])
+                        .attr('opacity', 0.95);
+                }
+            }
+
+            // Trapezoid outline
+            svg.append('path').attr('d', trapPath)
+                .attr('fill', 'none')
+                .attr('stroke', P.ink).attr('stroke-width', 0.7);
+
+            // Level label on the LEFT of the trapezoid
+            svg.append('text')
+                .attr('x', l.botL - 14)
+                .attr('y', (l.topY + l.botY) / 2 - 3)
+                .attr('text-anchor', 'end')
+                .attr('font-family', SERIF).attr('font-size', '12.5px').attr('font-weight', '700')
+                .attr('fill', P.ink)
+                .text('Level ' + l.meta.num);
+            // Downsample factor below the level label
+            svg.append('text')
+                .attr('x', l.botL - 14)
+                .attr('y', (l.topY + l.botY) / 2 + 12)
+                .attr('text-anchor', 'end')
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11px')
+                .attr('fill', P.muted)
+                .text(l.meta.ds + ' downsample');
+        });
+
+        // Apex marker — the absolute top of the pyramid (Level 4, smallest
+        // representation, thumbnail). Tiny outline highlight to anchor the eye.
+        svg.append('text')
+            .attr('x', pyrCx).attr('y', pyrTop - 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700').attr('letter-spacing', '1.4px')
+            .attr('fill', P.muted)
+            .text('THUMBNAIL');
+        // Base marker
+        svg.append('text')
+            .attr('x', pyrCx).attr('y', pyrBot + 18)
+            .attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700').attr('letter-spacing', '1.4px')
+            .attr('fill', P.muted)
+            .text('FULL RESOLUTION');
+
+        // Helper: compute the (x, y) position inside a level's trapezoid at
+        // normalized (u, v) coordinates (u along width, v along height).
+        function pointInLevel(l, u, v) {
+            var widthAtV = l.topW + (l.botW - l.topW) * v;
+            var x = pyrCx - widthAtV / 2 + widthAtV * u;
+            var y = l.topY + v * levelH;
+            return { x: x, y: y };
+        }
+
+        // Consumer callouts — each annotates a specific ROI at a specific level.
+        // The visual point: every consumer reads only the tiles it needs.
+        var consumers = [
+            {
+                label: 'Education set',
+                sub: 'cites specific coordinates',
+                color: P.violet,
+                levelIdx: 0,                // top (Level 4 / overview)
+                u: 0.6, v: 0.5,
+                roiW: 18, roiH: 14,
+                anchor: 'start'             // label appears on the right
+            },
+            {
+                label: 'Pathologist navigation',
+                sub: 'zooms through mid-level',
+                color: P.slate,
+                levelIdx: 2,                // Level 2 / mid-zoom
+                u: 0.5, v: 0.5,
+                roiW: 40, roiH: 30,
+                anchor: 'start'
+            },
+            {
+                label: 'AI inference',
+                sub: 'samples ROI tiles at full resolution',
+                color: P.copper,
+                levelIdx: 4,                // Level 0 / full res
+                u: 0.74, v: 0.4,
+                roiW: 60, roiH: 50,
+                anchor: 'start'
+            },
+            {
+                label: 'Research extract',
+                sub: 'features at Level 1 resolution',
+                color: P.green,
+                levelIdx: 3,                // Level 1 — separates label vertically from AI inference
+                u: 0.30, v: 0.55,
+                roiW: 44, roiH: 32,
+                anchor: 'start'
+            }
+        ];
+
+        consumers.forEach(function (cz) {
+            var l = levels[cz.levelIdx];
+            var p = pointInLevel(l, cz.u, cz.v);
+            var rx = p.x - cz.roiW / 2;
+            var ry = p.y - cz.roiH / 2;
+
+            // ROI highlight rectangle
+            svg.append('rect')
+                .attr('x', rx).attr('y', ry)
+                .attr('width', cz.roiW).attr('height', cz.roiH)
+                .attr('fill', 'none')
+                .attr('stroke', cz.color)
+                .attr('stroke-width', 2.4);
+
+            // Label positions — all consumer labels live on the RIGHT side of
+            // the pyramid (since the pyramid is now slightly left of centre).
+            var labelX = pyrCx + baseW / 2 + 80;
+            var labelY = ry + cz.roiH / 2;
+
+            // Hairline connector from the ROI's right edge to the label
+            svg.append('line')
+                .attr('x1', rx + cz.roiW + 2).attr('y1', labelY)
+                .attr('x2', labelX - 4).attr('y2', labelY)
+                .attr('stroke', cz.color).attr('stroke-width', 0.7).attr('opacity', 0.55);
+
+            // Label + sub
+            svg.append('text').attr('x', labelX).attr('y', labelY - 4)
+                .attr('text-anchor', 'start')
+                .attr('font-family', SERIF).attr('font-size', '14px').attr('font-weight', '700')
+                .attr('fill', cz.color)
+                .text(cz.label);
+            svg.append('text').attr('x', labelX).attr('y', labelY + 13)
+                .attr('text-anchor', 'start')
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '11.5px')
+                .attr('fill', P.muted)
+                .text(cz.sub);
+        });
+
+        // Properties row — names what "image as data" actually means
+        var propY = pyrBot + 60;
+        svg.append('text').attr('x', W / 2).attr('y', propY)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('letter-spacing', '1.6px')
+            .attr('fill', P.muted)
+            .text('IMAGE AS DATA');
+        svg.append('text').attr('x', W / 2).attr('y', propY + 22)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('examinable  ·  shareable  ·  computationally addressable  ·  with integrity, provenance, attribution');
+
+        // Bottom punchline
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '14.5px').attr('fill', P.ink)
+            .text('Pathologists do not look at every tile. AI should not either.');
+    }
+
+    // ─── ORCH-17. orch-three-paths ───────────────────────────────
+    //  Three institutional paths to digital pathology, with the
+    //  Open Pathology Foundation as the third — the one that does not
+    //  require being MSK or Michigan.
+    function orchThreePaths(container) {
+        //  Slimmer canvas; SVG internal title removed (JSON H2 above renders
+        //  the slide title). Content pushed up to use the freed space and
+        //  keep the closing two-line italic visible above the Takeaway.
+        var W = 1280, H = 580, P = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
+
+        var paths = [
+            {
+                name: "Sloan-Kettering's way",
+                tagline: "vendor-agnostic internal stack",
+                bullets: [
+                    "internal vendor-agnostic Slide Viewer",
+                    "multi-format storage (SVS, MRXS, iSyntax)",
+                    "HoBBiT honest-broker for de-id",
+                    "dedicated digital-pathology team since 2017",
+                    "Warren Alpert Center funding"
+                ],
+                cost: "successful — but rare.",
+                color: P.slate
+            },
+            {
+                name: "Michigan's way",
+                tagline: "DICOM-WSI via radiology PACS",
+                bullets: [
+                    "leverages the existing radiology PACS",
+                    "DICOM-WSI as the unifying container",
+                    "radiology-department partnership",
+                    "≈ $10 M cited investment",
+                    "imaging-archive route into pathology"
+                ],
+                cost: "successful — but rarer.",
+                color: P.crimson
+            },
+            {
+                name: "Yale's way · Open Pathology Foundation",
+                tagline: "open-source modular ecosystem",
+                bullets: [
+                    "modular open-source services (Starling · Pelican · Willet)",
+                    "AI-amplified small applied-informatics team",
+                    "bespoke, governable, auditable, supportable",
+                    "REALM as nineteen-year institutional evidence",
+                    "shared substrate any institution can join"
+                ],
+                cost: "joinable from any institution.   openpathology.org",
+                color: P.copper,
+                emphasize: true
+            }
+        ];
+
+        var contentL = 110, contentR = W - 110;
+        var colW = (contentR - contentL) / 3;
+        paths.forEach(function (p, i) {
+            var px = contentL + i * colW + 20;
+            var availW = colW - 40;
+
+            // Header
+            svg.append('text').attr('x', px).attr('y', 80)
+                .attr('font-family', SERIF).attr('font-size', '15.5px').attr('font-weight', '700').attr('fill', p.color)
+                .text(p.name);
+            // Tagline
+            svg.append('text').attr('x', px).attr('y', 102)
+                .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12.5px').attr('fill', P.muted)
+                .text(p.tagline);
+            // Hairline
+            tufteRule(svg, px, 114, px + availW, 114, p.emphasize ? 1.0 : 0.6);
+
+            // Bullets — serif, no markers, with em-dash leader
+            var by = 142;
+            p.bullets.forEach(function (b) {
+                var t = svg.append('text').attr('x', px).attr('y', by)
+                    .attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink);
+                wsiWrap(t, '— ' + b, availW, 16);
+                by += 38;
+            });
+
+            // Cost note — fixed position so all three line up
+            svg.append('text').attr('x', px).attr('y', H - 100)
+                .attr('font-family', SERIF).attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', p.color)
+                .text(p.cost);
+        });
+
+        // Vertical separators between columns
+        tufteRule(svg, contentL + colW, 70, contentL + colW, H - 80, 0.5);
+        tufteRule(svg, contentL + 2 * colW, 70, contentL + 2 * colW, H - 80, 0.5);
+
+        // Bottom italic — the rhetorical close
+        svg.append('text').attr('x', W / 2).attr('y', H - 38)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('Most pathology departments are cost centres. The third path is the one that scales — the rebirth of applied');
+        svg.append('text').attr('x', W / 2).attr('y', H - 18)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '14px').attr('fill', P.ink)
+            .text('informatics, with AI as the cost-shift that finally makes it affordable.');
+    }
+
+    // Register the orchestration-lecture Tufte visualizations.
+    registry['orch-hook']                  = orchHook;
+    registry['orch-image-not-endpoint']    = orchImageNotEndpoint;
+    registry['orch-clinical-stateful']     = orchClinicalStateful;
+    registry['orch-annotation-contexts']   = orchAnnotationContexts;
+    registry['orch-ai-prioritization']     = orchAiPrioritization;
+    registry['orch-tat-distribution']      = orchTatDistribution;
+    registry['orch-compliant-inert']       = orchCompliantInert;
+    registry['orch-msk-evidence']          = orchMskEvidence;
+    registry['orch-orchestration-layer']   = orchOrchestrationLayer;
+    registry['orch-ai-as-participant']     = orchAiAsParticipant;
+    registry['orch-fast-slow']             = orchFastSlow;
+    registry['orch-starling-architecture'] = orchStarlingArchitecture;
+    registry['orch-pattern']               = orchPattern;
+    registry['orch-takeaways']             = orchTakeaways;
+    registry['orch-frozen-multi']          = orchFrozenMulti;
+    registry['orch-image-as-data']         = orchImageAsData;
+    registry['orch-three-paths']           = orchThreePaths;
+
+    // Register the prior batches of new visualizations.
+    registry['modular-stack-pathology']    = modularStackPathology;
+    registry['geospatial-parallel']        = geospatialParallel;
+    registry['case-fsm']                   = caseFsm;
+    registry['slide-fsm']                  = slideFsm;
+    registry['nested-fsm']                 = nestedFsm;
+    registry['context-flow-traversal']     = contextFlowTraversal;
+    registry['state-machine-primer']       = stateMachinePrimer;
+    registry['tile-state-gate']            = tileStateGate;
+    registry['deid-fsm']                   = deidFsm;
+    registry['medicine-fsm-timeline']      = medicineFsmTimeline;
+    registry['integrity-state']            = integrityState;
+    registry['three-missions-substrate']   = threeMissionsSubstrate;
+    registry['scan-failure-cascade']       = scanFailureCascade;
+    registry['ihe-palm-vs-orchestration']  = ihePalmVsOrchestration;
+
     function render(name, container, config) {
         var fn = registry[name];
         if (fn) fn(container, config || {});

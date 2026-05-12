@@ -98,6 +98,20 @@ var Glossary = (function () {
             var replaced = false;
             var html = text;
 
+            // Two-phase replacement to prevent cross-term contamination.
+            //
+            // PHASE 1 — scan the original text for each term and replace the
+            // match with an opaque sentinel "\x01<index>\x02". We never inject
+            // HTML during this phase, so later terms can only match against
+            // the original text. Without this, a term's injected title="..."
+            // attribute (which contains the definition, which mentions other
+            // glossary terms) would itself match later regexes, producing
+            // nested spans and corrupted tooltips on the rendered slide.
+            //
+            // PHASE 2 — expand each sentinel into the real <span class="gl-term">
+            // markup in a single final pass.
+            var slots = [];
+
             _terms.forEach(function (item) {
                 // Only wrap first occurrence of each term per slide
                 if (section._glWrapped[item.term]) return;
@@ -111,20 +125,35 @@ var Glossary = (function () {
                         done = true;
                         replaced = true;
                         section._glWrapped[item.term] = true;
-                        // Native title attr is a guaranteed-working fallback
-                        // that the browser renders even if our JS tooltip is
-                        // suppressed by an overlay or transform issue.
-                        var nativeTip = (item.term + ' — ' + item.definition)
-                            .replace(/"/g, '&quot;');
-                        return '<span class="gl-term" data-gl="' +
-                            item.term.replace(/"/g, '&quot;') + '"' +
-                            ' title="' + nativeTip + '">' +
-                            match + '</span>';
+                        var i = slots.length;
+                        slots.push({ item: item, match: match });
+                        return '\x01' + i + '\x02';
                     });
                 }
             });
 
             if (replaced) {
+                // Phase 2 — expand sentinels into real HTML in one pass.
+                // The match content is HTML-escaped because it may include
+                // characters like & < > that came from the original text.
+                // We deliberately do NOT set a native title="..." attribute:
+                // the browser's built-in tooltip would render simultaneously
+                // with our custom .gl-tooltip, producing a duplicate hover
+                // experience. The custom tooltip is the single source of truth.
+                html = html.replace(/\x01(\d+)\x02/g, function (_, idxStr) {
+                    var slot = slots[+idxStr];
+                    var item = slot.item;
+                    var safeTerm = item.term
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;');
+                    var safeMatch = slot.match
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    return '<span class="gl-term" data-gl="' + safeTerm + '">' +
+                        safeMatch + '</span>';
+                });
+
                 var span = document.createElement('span');
                 span.innerHTML = html;
                 textNode.parentNode.replaceChild(span, textNode);
