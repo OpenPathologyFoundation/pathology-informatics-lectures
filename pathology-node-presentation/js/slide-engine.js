@@ -734,6 +734,31 @@ var SlideEngine = (function () {
             s.appendChild(repoLink);
         }
 
+        // Optional QR code (bottom-right) — generic helper read from the
+        // slide JSON. Lets a lecture point to a follow-on URL the audience
+        // can scan from their phones.
+        //   slide.qrCode = { src: "/assets/qr/foo.svg", url, caption, label }
+        // The SVG file lives in /assets/qr/ in the served tree; the JSON
+        // carries only its URL, the caption shown beneath it, and the
+        // human-readable URL that prints above it.
+        if (slide.qrCode && slide.qrCode.src) {
+            var qrLink = el('a', 'qa-qr');
+            qrLink.href = slide.qrCode.url || '#';
+            qrLink.target = '_blank';
+            qrLink.setAttribute('aria-label', slide.qrCode.caption || 'Scan QR code');
+            var qrHtml = '';
+            if (slide.qrCode.label) {
+                qrHtml += '<div class="qa-qr-label">' + slide.qrCode.label + '</div>';
+            }
+            qrHtml += '<div class="qa-qr-frame"><img src="' + slide.qrCode.src +
+                      '" alt="' + (slide.qrCode.caption || 'QR code') + '"></div>';
+            if (slide.qrCode.caption) {
+                qrHtml += '<div class="qa-qr-caption">' + slide.qrCode.caption + '</div>';
+            }
+            qrLink.innerHTML = qrHtml;
+            s.appendChild(qrLink);
+        }
+
         s.appendChild(container);
         return s;
     }

@@ -31,7 +31,7 @@ test-results/
 playwright-report/
 .playwright/
 blob-report/
-.dev-notes/
+.dev-notes/*
 
 # package-lock (root level — each sub-project manages its own)
 /package-lock.json

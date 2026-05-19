@@ -1822,6 +1822,73 @@ a.poll-qr, a.poll-qr:hover {
     fill: currentColor;
 }
 
+/* ─── QA QR CODE (left side of QA slide) ─────────────────────
+   Reveal.js sets `.reveal a { position: relative }`, which has
+   specificity (0,1,1) and beats `.qa-qr` (0,1,0). The leading
+   `.reveal` here lifts our selectors to (0,2,1+) so absolute
+   positioning actually applies. Same trick used for .repo-link
+   below — the existing bottom-left source link was breaking out
+   of its corner for the same reason. */
+.reveal .qa-qr {
+    position: absolute;
+    top: 50%;
+    left: 48px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 18px 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.85);
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    transition: background 0.2s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.reveal .qa-qr:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-50%) scale(1.03);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+.qa-qr-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+}
+.qa-qr-frame {
+    width: 170px;
+    height: 170px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qa-qr-frame img {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.qa-qr-caption {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.78);
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+}
+
+/* Same specificity fix for the GitHub Source link, which was
+   also being overridden into position: relative and ending up
+   stuck near the top of the slide. */
+.reveal .repo-link {
+    position: absolute;
+}
+
 /* ─── RESPONSIVE ──────────────────────────────────────────── */
 @media (max-width: 900px) {
     .comparison-grid, .checklist-grid, .content-columns { grid-template-columns: 1fr; }

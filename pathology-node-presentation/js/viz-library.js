@@ -11498,7 +11498,7 @@ const VizLibrary = (function () {
             .attr('text-anchor', 'middle')
             .attr('font-family', SERIF)
             .attr('font-size', '13.5px').attr('fill', P.ink)
-            .text('Each pillar became digital in its own decade. Radiology bundled its FSM into DICOM and lives with the constraint.');
+            .text('Each pillar became digital in its own decade. Radiology bundled its workflow inside the DICOM container — a file is a poor substrate for queries, permissions, audit, and notifications.');
         svg.append('text').attr('x', W / 2).attr('y', H - 34)
             .attr('text-anchor', 'middle')
             .attr('font-family', SERIF)
@@ -12105,9 +12105,12 @@ const VizLibrary = (function () {
     //  Two stacks side by side: IHE PaLM / DICOM WG-26 actor model
     //  (radiology-derived) versus an orchestration-layer model.
     function ihePalmVsOrchestration(container, config) {
-        //  Shorter canvas (640) leaves vertical room above for the slide-engine
-        //  title strip, and below for the Takeaway component.
-        var W = 1280, H = 640;
+        //  Shorter canvas (620 — was 640) so the bottom interpretation
+        //  lines (THE ARCHITECTURAL BIAS, "Pathology gets mapped...",
+        //  "The image-manager/archive becomes the center of gravity")
+        //  ride about 20 px higher and aren't overlapped by the slide-
+        //  engine's Takeaway widget below the SVG.
+        var W = 1280, H = 620;
         var P = WSI_PAL;
         var svg = d3.select(container).append('svg')
             .attr('viewBox', '0 0 ' + W + ' ' + H)
@@ -12142,9 +12145,10 @@ const VizLibrary = (function () {
             .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted)
             .text('clinical workflow as the central object — image is one participant');
 
-        // Vertical separator
+        // Vertical separator — fixed bottom y so it stays aligned with
+        // the actor stacks (which are not H-relative).
         svg.append('line').attr('x1', W / 2).attr('x2', W / 2)
-            .attr('y1', 110).attr('y2', H - 80)
+            .attr('y1', 110).attr('y2', 552)
             .attr('stroke', P.rule).attr('stroke-width', 0.8).attr('stroke-dasharray', '3,4');
 
         // ── LEFT stack: IHE actor model ──
@@ -12386,7 +12390,7 @@ const VizLibrary = (function () {
             .text('Even among labs that own scanners, fewer than half use them for diagnosis — the rest scan only for teaching, research, or tumor boards.');
         svg.append('text').attr('x', 90).attr('y', H - 32)
             .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.ink)
-            .text('The image is not the system. The workflow is the system.');
+            .text('The image should serve the workflow, not define it.');
     }
 
     // ─── ORCH-2. orch-image-not-endpoint ─────────────────────────
@@ -12602,15 +12606,54 @@ const VizLibrary = (function () {
         var topY = 200, panelW = (W - 180) / 5, panelH = 360;
         panels.forEach(function (p, i) {
             var px = 90 + i * panelW;
-            // tiny "slide" rectangle
+            // tiny "slide" rectangle — cream like a glass slide on a light box
             svg.append('rect').attr('x', px + 20).attr('y', topY).attr('width', panelW - 40).attr('height', 110)
-                .attr('fill', '#f0e7d8').attr('stroke', P.fine).attr('stroke-width', 0.6);
-            // The annotation glyph itself: a deliberately wobbly hand-drawn
-            // oval enclosing a single "?". Same path in every panel, only
-            // the colour changes — reinforcing the slide's argument that
-            // an ambiguous mark carries dramatically different consequences
-            // depending purely on the state envelope around it.
-            var cx = px + panelW / 2, cy = topY + 55;
+                .attr('fill', '#fbf5e6').attr('stroke', P.fine).attr('stroke-width', 0.6);
+
+            //  ── Tissue blobs inside the slide ──
+            //  A handful of overlapping irregular ellipses suggesting an
+            //  H&E-stained tissue section. Subtle on purpose — the eye
+            //  should still go to the hand-drawn annotation, not the
+            //  background. Same deterministic geometry in every panel so
+            //  the slide reads as the *same* underlying slide framed in
+            //  five different states (which is the slide's argument).
+            var slideL = px + 20, slideR = px + panelW - 20;
+            var slideCx = (slideL + slideR) / 2;
+            var slideCy = topY + 55;
+            // Wash of pale tissue across most of the slide
+            svg.append('ellipse')
+                .attr('cx', slideCx - 4).attr('cy', slideCy + 2)
+                .attr('rx', 62).attr('ry', 34)
+                .attr('fill', '#eccfcf').attr('fill-opacity', 0.55).attr('stroke', 'none');
+            // Slightly darker stromal area
+            svg.append('ellipse')
+                .attr('cx', slideCx - 14).attr('cy', slideCy + 10)
+                .attr('rx', 36).attr('ry', 18)
+                .attr('fill', '#d3a8ad').attr('fill-opacity', 0.50).attr('stroke', 'none')
+                .attr('transform', 'rotate(-14 ' + (slideCx-14) + ' ' + (slideCy+10) + ')');
+            // The dense focus of interest — what the pathologist circles
+            svg.append('ellipse')
+                .attr('cx', slideCx + 10).attr('cy', slideCy - 6)
+                .attr('rx', 16).attr('ry', 9)
+                .attr('fill', '#a87a8a').attr('fill-opacity', 0.62).attr('stroke', 'none')
+                .attr('transform', 'rotate(22 ' + (slideCx+10) + ' ' + (slideCy-6) + ')');
+            // Small satellite focus on the lower-left
+            svg.append('ellipse')
+                .attr('cx', slideCx - 28).attr('cy', slideCy + 16)
+                .attr('rx', 8).attr('ry', 5)
+                .attr('fill', '#8a5a72').attr('fill-opacity', 0.55).attr('stroke', 'none')
+                .attr('transform', 'rotate(34 ' + (slideCx-28) + ' ' + (slideCy+16) + ')');
+
+            //  ── The hand-drawn annotation ──
+            //  A wobbly oval circling the dense focus of interest, and a
+            //  hand-drawn "?" written in the margin next to it — the way
+            //  a pathologist annotates a slide. Same geometry in every
+            //  panel; only the ink colour changes. That is the visual
+            //  argument: identical mark, dramatically different meaning,
+            //  depending only on the state envelope around it.
+            //  Centre the oval slightly right-of-centre so it lands on
+            //  the dense focus blob created above.
+            var cx = slideCx + 4, cy = slideCy - 4;
             // Hand-drawn oval — intentional asymmetry in control points so
             // the line reads as freehand rather than geometric.
             var ovalPath =
@@ -12632,13 +12675,17 @@ const VizLibrary = (function () {
                 .attr('fill', 'none')
                 .attr('stroke', p.color).attr('stroke-width', 2.0)
                 .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
-            // The "?" inside the oval — the visual signal of ambiguity that
-            // every panel inherits.
+            //  The "?" — drawn outside the oval, to the right, like a
+            //  pathologist's hand-written margin note. Slight rotation
+            //  gives it the casual, freehand feel of an annotation in
+            //  pen on glass, not a typeset glyph in the centre of a box.
+            var qx = cx + 46, qy = cy + 5;
             svg.append('text')
-                .attr('x', cx).attr('y', cy + 8)
+                .attr('x', qx).attr('y', qy)
                 .attr('text-anchor', 'middle')
-                .attr('font-family', SERIF).attr('font-size', '22px').attr('font-weight', '700')
+                .attr('font-family', SERIF).attr('font-size', '26px').attr('font-weight', '700')
                 .attr('fill', p.color)
+                .attr('transform', 'rotate(-9 ' + qx + ' ' + qy + ')')
                 .text('?');
 
             // State label as Tufte-style cap underline
@@ -12757,9 +12804,16 @@ const VizLibrary = (function () {
             .attr('preserveAspectRatio', 'xMidYMid meet')
             .style('max-width', '100%').style('max-height', '88vh').style('background', P.bg);
 
-        tufteTitleBlock(svg, 90, 80, W - 180,
-            'Average turnaround time is the average patient temperature.',
-            'Easy to measure. Easy to report. Disconnected from clinically meaningful transitions.');
+        // Custom title block — the elaborated sentence needs ~20px to fit
+        // the 1100-px rule budget, so we bypass the standard tufteTitleBlock
+        // (24px) for this slide only. Subtitle keeps the standard size.
+        svg.append('text').attr('x', 90).attr('y', 80)
+            .attr('font-family', SERIF).attr('font-size', '20px').attr('font-weight', '700').attr('fill', P.ink)
+            .text('Average turnaround time at a pathology department is the average patient temperature at a hospital.');
+        svg.append('text').attr('x', 90).attr('y', 104)
+            .attr('font-family', SERIF).attr('font-size', '14.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text('Easy to measure. Easy to report. Disconnected from clinically meaningful transitions.');
+        tufteRule(svg, 90, 116, 90 + (W - 180), 116, 0.7);
 
         // Small histogram on the left — heavily right-skewed
         var hx = 130, hy = 230, hw = 540, hh = 240;
@@ -12960,15 +13014,18 @@ const VizLibrary = (function () {
             .attr('font-family', SERIF).attr('font-style', 'italic').attr('font-size', '12px').attr('fill', P.muted)
             .text('launches with case context');
 
-        //  Below: format sources fanning out — the actual scanner-native
-        //  formats MSK runs in production (Leica AT2/GT450, 3DHistech P1000,
-        //  Philips UFS). DICOM-WSI is deliberately absent: MSK's production
-        //  digital-pathology stack does not use DICOM (confirmed at the 2025
-        //  MSK Pathology Informatics webinar; see citations below).
+        //  Below: format sources fanning out — three scanner-native
+        //  formats MSK runs alongside one another in production. All
+        //  three vendors appear in the Ardon 2025 J Pathol Inform
+        //  scanner-comparison study at MSK; MSK's fleet also includes
+        //  Philips UFS, Hologic, Huron, and Pramana, but three is the
+        //  right number for the visual argument. DICOM-WSI is
+        //  deliberately absent — MSK's production digital-pathology
+        //  stack does not use DICOM (see citations below).
         var formats = [
-            { name: 'SVS',     vendor: 'Leica AT2 / GT450' },
-            { name: 'MRXS',    vendor: '3DHistech P1000'   },
-            { name: 'iSyntax', vendor: 'Philips UFS'       }
+            { name: 'SVS',  vendor: 'Leica AT2 / GT450'         },
+            { name: 'MRXS', vendor: '3DHistech P1000'           },
+            { name: 'NDPI', vendor: 'Hamamatsu NanoZoomer S360' }
         ];
         var fy = 510, fx0 = 320, fx1 = W - 320;
         var step = (formats.length === 1) ? 0 : (fx1 - fx0) / (formats.length - 1);
@@ -13485,10 +13542,10 @@ const VizLibrary = (function () {
             'Many labs can digitize. Few can orchestrate.',
             'Medicine has been programming state machines for forty years. Workflow orchestration is the era we are entering now.',
             'Failed scans, frozen sections, alternate representations — real lab work is workflow loops, not exceptions.',
-            'Average turnaround time is the average patient temperature.',
+            'Make the state machine explicit. The workflow shows what averages hide — process, risks, opportunities.',
             'A file can be perfectly compliant — and operationally inert.',
             'Model the lifecycle of clinical objects, not the screens of the application.',
-            'The image is not the system. The workflow is the system.'
+            'The image should serve the workflow, not define it.'
         ];
         var topY = 200;
         lines.forEach(function (line, i) {
@@ -13875,8 +13932,668 @@ const VizLibrary = (function () {
             .text('informatics, with AI as the cost-shift that finally makes it affordable.');
     }
 
+    // ─── process-not-image ─────────────────────────────────────
+    //  The philosophical bookend slide. Two contrasting pipelines
+    //  (radiology's short imaging chain vs pathology's long
+    //  laboratory-mediated chain) followed by a clean six-row
+    //  comparison table, in the deck's Tufte cream aesthetic.
+    //
+    //  On hover, the pipeline area animates: a dot traces each chain
+    //  forward, and three labelled loop-backs appear under the
+    //  pathology chain — re-stain after QC, AI-requested re-scan, and
+    //  diagnose → re-cut. The argument is visual: radiology is a
+    //  line, pathology is a graph.
+    function processNotImage(container) {
+        var W = 1280, H = 760;
+        var P = WSI_PAL;
+        var T = TUFTE;
+        var svg = d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '92vh')
+            .style('background', P.bg);
+
+        // ── Arrow marker for the loop-back arcs ──
+        var defs = svg.append('defs');
+        defs.append('marker').attr('id', 'proc-loop-arrow')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto')
+            .append('path').attr('d', 'M 0,-4 L 8,0 L 0,4 Z').attr('fill', T.copper);
+
+        // ── Title rendered inside the SVG ──
+        // The SVG's cream background covers the slide-engine's H2/subtitle
+        // (this is a recurring pattern in the deck); the reliable fix is to
+        // draw the title inside the SVG using tufteTitleBlock so it always
+        // shows. The JSON keeps only a dockTitle so the dock label still
+        // reads correctly.
+        tufteTitleBlock(svg, 90, 50, W - 180,
+            'Pathology is not radiology with bigger images.',
+            'Radiology digitized an imaging event. Pathology digitizes a laboratory-mediated diagnostic process.');
+
+        // ── Two-pipeline contrast ──
+        // Radiology: 5 short boxes — a compact imaging chain.
+        // Pathology: 11 short boxes — a much longer process chain.
+        // The visual length difference IS the argument.
+        var pipeTop = 130;
+        var laneL = 'RADIOLOGY';
+        var laneR = 'PATHOLOGY';
+        var radPositions = []; // {x, y, label} per step — used by animation
+        var pathPositions = [];
+
+        function pipeline(label, items, y, color, store) {
+            // Lane label (small caps, copper) on the left
+            svg.append('text').attr('x', 90).attr('y', y + 4)
+                .attr('font-family', SANS).attr('font-size', '10.5px')
+                .attr('font-weight', '700').attr('letter-spacing', '1.6px')
+                .attr('fill', color)
+                .text(label);
+            // Boxes — even spacing across the available track
+            var trackL = 220, trackR = W - 90;
+            var n = items.length;
+            var slot = (trackR - trackL) / n;
+            items.forEach(function (txt, i) {
+                var cx = trackL + slot * (i + 0.5);
+                // The connector to the next box (chevron arrow)
+                if (i < n - 1) {
+                    svg.append('text').attr('x', cx + slot / 2 - 6).attr('y', y + 5)
+                        .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                        .attr('font-size', '14px').attr('fill', color)
+                        .attr('opacity', 0.55)
+                        .text('▸');
+                }
+                // The label itself — centred within its slot, serif
+                var stepText = svg.append('text')
+                    .attr('x', cx).attr('y', y + 5)
+                    .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                    .attr('font-size', '11.5px').attr('fill', T.ink)
+                    .text(txt);
+                store.push({ x: cx, y: y + 5, label: txt, node: stepText });
+            });
+        }
+
+        pipeline(laneL, ['acquire', 'store', 'retrieve', 'view', 'report'],
+                 pipeTop, T.slate, radPositions);
+        pipeline(laneR, ['receive', 'process', 'slide', 'stain', 'scan',
+                          'QC', 'route', 'AI', 'annotate', 'diagnose', 'communicate'],
+                 pipeTop + 32, T.copper, pathPositions);
+
+        // ── Animation layer (hidden until hover) ──
+        var animLayer = svg.append('g').attr('class', 'proc-anim').style('opacity', 0);
+
+        // Two tracer dots, one per chain.
+        var radDot = animLayer.append('circle')
+            .attr('r', 5.5).attr('fill', T.slate)
+            .attr('cx', radPositions[0].x).attr('cy', radPositions[0].y - 12);
+        var pathDot = animLayer.append('circle')
+            .attr('r', 5.5).attr('fill', T.copper)
+            .attr('cx', pathPositions[0].x).attr('cy', pathPositions[0].y - 12);
+
+        // Three loop-back arcs under the pathology chain. Each arc is
+        // drawn at its final position but starts at zero opacity; it
+        // fades in when the tracer dot reaches its trigger step.
+        // Loop indexing into pathPositions:
+        //   receive=0, process=1, slide=2, stain=3, scan=4, QC=5,
+        //   route=6, AI=7, annotate=8, diagnose=9, communicate=10.
+        var pathY = pathPositions[0].y;
+        var loops = [
+            { from: 5, to: 3, label: 'QC fail → re-stain',          drop: 18 },
+            { from: 7, to: 4, label: 'AI requests higher-res scan', drop: 30 },
+            { from: 9, to: 2, label: 'diagnose → re-cut sections',  drop: 42 }
+        ];
+        var loopVisuals = loops.map(function (lp) {
+            var src = pathPositions[lp.from];
+            var dst = pathPositions[lp.to];
+            // Quadratic Bezier dropping below the chain.
+            var midX = (src.x + dst.x) / 2;
+            // Dot at y+5 so the arc starts a few px below the text baseline.
+            var startY = src.y + 6;
+            var endY   = dst.y + 6;
+            var cpY = pathY + 6 + lp.drop;
+            var d = 'M ' + src.x + ',' + startY +
+                    ' Q ' + midX + ',' + cpY +
+                    ' '  + dst.x + ',' + endY;
+            var arc = animLayer.append('path')
+                .attr('d', d)
+                .attr('fill', 'none')
+                .attr('stroke', T.copper)
+                .attr('stroke-width', 1.1)
+                .attr('stroke-dasharray', '4 3')
+                .attr('opacity', 0)
+                .attr('marker-end', 'url(#proc-loop-arrow)');
+            // Italic label, sits just below the arc midpoint.
+            var label = animLayer.append('text')
+                .attr('x', midX).attr('y', cpY + 14)
+                .attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-style', 'italic')
+                .attr('font-size', '10.5px').attr('fill', T.copper)
+                .attr('opacity', 0)
+                .text(lp.label);
+            return { arc: arc, label: label, triggerAt: lp.from };
+        });
+
+        // ── Hover hint ──
+        var hint = svg.append('text')
+            .attr('x', W / 2).attr('y', pipeTop - 22)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '11px')
+            .attr('fill', T.muted)
+            .attr('opacity', 0.85)
+            .text('↓ hover the chains — watch the dot trace each one and the pathology loop-backs appear');
+
+        // ── Hit area covering both chains ──
+        var hitRect = svg.append('rect')
+            .attr('x', 80).attr('y', pipeTop - 18)
+            .attr('width', W - 160)
+            .attr('height', 88)
+            .attr('fill', 'transparent')
+            .style('cursor', 'pointer');
+
+        var animating = false;
+        // Per-step durations chosen so the radiology chain finishes in
+        // ~2 seconds and the pathology chain finishes in ~4 seconds —
+        // the speed difference is the felt argument.
+        var STEP_MS = 380;
+
+        function moveDot(dot, positions) {
+            // Set initial position then chain a transition per step.
+            dot.attr('cx', positions[0].x).attr('cy', positions[0].y - 12);
+            var tr = dot.transition();
+            for (var i = 1; i < positions.length; i++) {
+                tr = tr.duration(STEP_MS).ease(d3.easeQuadInOut)
+                    .attr('cx', positions[i].x).attr('cy', positions[i].y - 12);
+                if (i < positions.length - 1) tr = tr.transition();
+            }
+            return tr;
+        }
+
+        function highlightStep(positions, i, color) {
+            // Brief colour-pulse on the visited step, so the dot's motion
+            // is reinforced by the label briefly lighting up.
+            var node = positions[i].node;
+            var orig = node.attr('fill');
+            node.transition().duration(140).attr('fill', color)
+                .attr('font-weight', '700')
+                .transition().duration(360).attr('fill', orig)
+                .attr('font-weight', '400');
+        }
+
+        function scheduleHighlights(positions, color) {
+            // Pulse each step roughly when the dot arrives there.
+            positions.forEach(function (_, i) {
+                setTimeout(function () { highlightStep(positions, i, color); },
+                           i * STEP_MS);
+            });
+        }
+
+        function scheduleLoops() {
+            // For each loop, fade in arc + label as the dot reaches the
+            // trigger step; fade them out near the end of the animation
+            // so the residual graph is left visible briefly.
+            loopVisuals.forEach(function (lv) {
+                var inAt  = lv.triggerAt * STEP_MS + 40;
+                var outAt = (pathPositions.length + 2) * STEP_MS;
+                setTimeout(function () {
+                    lv.arc.transition().duration(400).attr('opacity', 0.85);
+                    lv.label.transition().duration(400).attr('opacity', 0.95);
+                }, inAt);
+                setTimeout(function () {
+                    lv.arc.transition().duration(600).attr('opacity', 0);
+                    lv.label.transition().duration(600).attr('opacity', 0);
+                }, outAt);
+            });
+        }
+
+        function play() {
+            if (animating) return;
+            animating = true;
+            // Reset loop visuals.
+            loopVisuals.forEach(function (lv) {
+                lv.arc.interrupt().attr('opacity', 0);
+                lv.label.interrupt().attr('opacity', 0);
+            });
+            animLayer.interrupt().style('opacity', 1);
+            // Trigger all three things in lock-step.
+            moveDot(radDot,  radPositions);
+            moveDot(pathDot, pathPositions);
+            scheduleHighlights(radPositions,  T.slate);
+            scheduleHighlights(pathPositions, T.copper);
+            scheduleLoops();
+            // Total run-time = pathology length + small tail for loop fadeout.
+            var totalMs = (pathPositions.length + 3) * STEP_MS;
+            setTimeout(function () {
+                animLayer.transition().duration(700).style('opacity', 0)
+                    .on('end', function () { animating = false; });
+            }, totalMs);
+        }
+
+        hitRect.on('mouseenter', play);
+        // Touch / keyboard fallback: clicking the area also plays.
+        hitRect.on('click', play);
+
+        // A hairline rule under the two pipelines
+        // Pushed down a few px so loop-back arcs and labels have room.
+        var ruleY = pipeTop + 110;
+        tufteRule(svg, 90, ruleY, W - 90, ruleY, 0.7);
+        // Compressed italic gloss naming what the contrast shows
+        svg.append('text').attr('x', W / 2).attr('y', ruleY + 20)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-style', 'italic').attr('font-size', '13px')
+            .attr('fill', T.muted)
+            .text('Image management vs. process management. The visual length difference is the argument — and the loop-backs are why.');
+
+        // ── Six-row comparison table ──
+        //   col 1: dimension name (small caps, muted)
+        //   col 2: radiology cell (slate)
+        //   col 3: pathology cell (copper, slightly bolder)
+        var rows = [
+            { dim: 'PRIMARY OBJECT',  rad: 'Imaging study',
+              path: 'Specimen → case → slide hierarchy' },
+            { dim: 'IMAGE ROLE',      rad: 'Primary diagnostic artifact',
+              path: 'One artifact in a tissue-derived evidence chain' },
+            { dim: 'STATE CHANGES',   rad: 'Relatively bounded after acquisition',
+              path: 'Constantly evolving — before and after image creation' },
+            { dim: 'AI CONTEXT',      rad: 'Pixel- and study-based',
+              path: 'Workflow-, specimen-, stain-, and report-context dependent' },
+            { dim: 'ANNOTATION',      rad: 'Finding / measurement',
+              path: 'Clinical, QA, educational, research, AI, workflow object' },
+            { dim: 'BEST ABSTRACTION', rad: 'Image study',
+              path: 'Stateful diagnostic process' }
+        ];
+
+        // Pushed below the new rule (pipeTop + 110) + gloss line (ruleY + 20)
+        // so the loop-back arcs and their labels have vertical room above
+        // the table without overlapping the column headers.
+        var tableTop = pipeTop + 156;
+        var rowH = 62;
+        var colDimX = 90,    colDimW = 230;
+        var colRadX = 350,   colRadW = 380;
+        var colPathX = 760;
+        // Header rule
+        tufteRule(svg, colDimX, tableTop - 4, W - 90, tableTop - 4, 0.9);
+        // Column headers
+        svg.append('text').attr('x', colDimX).attr('y', tableTop + 16)
+            .attr('font-family', SANS).attr('font-size', '10.5px')
+            .attr('font-weight', '700').attr('letter-spacing', '1.6px')
+            .attr('fill', T.muted).text('DIMENSION');
+        svg.append('text').attr('x', colRadX).attr('y', tableTop + 16)
+            .attr('font-family', SANS).attr('font-size', '10.5px')
+            .attr('font-weight', '700').attr('letter-spacing', '1.6px')
+            .attr('fill', T.slate).text('RADIOLOGY');
+        svg.append('text').attr('x', colPathX).attr('y', tableTop + 16)
+            .attr('font-family', SANS).attr('font-size', '10.5px')
+            .attr('font-weight', '700').attr('letter-spacing', '1.6px')
+            .attr('fill', T.copper).text('PATHOLOGY');
+        tufteRule(svg, colDimX, tableTop + 28, W - 90, tableTop + 28, 0.6);
+
+        rows.forEach(function (r, i) {
+            var y = tableTop + 56 + i * rowH;
+            // Dimension label
+            svg.append('text').attr('x', colDimX).attr('y', y)
+                .attr('font-family', SANS).attr('font-size', '10.5px')
+                .attr('font-weight', '700').attr('letter-spacing', '1.4px')
+                .attr('fill', T.muted).text(r.dim);
+            // Radiology cell — serif, slate, regular weight
+            var rad = svg.append('text').attr('x', colRadX).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '14.5px')
+                .attr('fill', T.slate);
+            wsiWrap(rad, r.rad, colRadW - 16, 18);
+            // Pathology cell — serif, copper, semi-bold
+            var path = svg.append('text').attr('x', colPathX).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '14.5px')
+                .attr('font-weight', '600').attr('fill', T.copper);
+            wsiWrap(path, r.path, W - 90 - colPathX, 18);
+            // Hairline below the row (except the last)
+            if (i < rows.length - 1) {
+                tufteRule(svg, colDimX, y + 26, W - 90, y + 26, 0.4);
+            }
+        });
+
+        // ── Closing punchline ──
+        var foot = tableTop + 56 + rows.length * rowH + 16;
+        tufteRule(svg, 90, foot, W - 90, foot, 0.7);
+        svg.append('text').attr('x', W / 2).attr('y', foot + 24)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '17px').attr('font-style', 'italic')
+            .attr('fill', T.ink)
+            .text('Treat the case as a state machine. The image is one governed artifact within it.');
+    }
+
+    // ─── tat-2006-2026 ──────────────────────────────────────────
+    //  Real April 2006 vs April 2026 TAT data from our sign-out
+    //  database (pathologist names xenonymised, same synthetic name
+    //  per person across both years).
+    //
+    //  The slide itself shows a Tufte-style KPI summary in the deck's
+    //  cream paper aesthetic — four headline numbers that land the
+    //  argument before any chart loads. A discreet "open the live
+    //  dashboard" affordance launches the full self-contained
+    //  /prototypes/tat_2006_vs_2026.html in a full-window modal
+    //  overlay, where it has the vertical room it needs and can be
+    //  scrolled through all five panels without fighting the slide
+    //  geometry. ESC, the close button, and a click on the backdrop
+    //  all dismiss the modal; the modal also auto-closes when the
+    //  user navigates to another slide.
+    function tat2006vs2026(container) {
+        var TUFTE_BG = '#faf7f1';
+        var INK      = '#1f1a14';
+        var MUTED    = '#6b5c48';
+        var RULE     = '#bcb1a0';
+        var COPPER   = '#a36015';
+        var CRIMSON  = '#7a1f1a';
+        var SLATE    = '#3d5b73';
+        var SERIF    = 'Georgia, "Iowan Old Style", "Hoefler Text", serif';
+        var SANS     = '"Inter", "Helvetica Neue", system-ui, sans-serif';
+
+        // ── On-slide summary (cream Tufte) ─────────────────────────
+        var wrap = document.createElement('div');
+        wrap.style.cssText = [
+            'max-width: 1180px',
+            'margin: 0 auto',
+            'padding: 6px 32px 0',
+            'font-family: ' + SERIF,
+            'color: ' + INK,
+            'background: ' + TUFTE_BG
+        ].join(';');
+
+        // Italic sub-caption pinning the data provenance.
+        var prov = document.createElement('div');
+        prov.style.cssText = [
+            'font-family: ' + SERIF,
+            'font-style: italic',
+            'font-size: 13px',
+            'color: ' + MUTED,
+            'text-align: center',
+            'margin: 0 0 22px 0'
+        ].join(';');
+        prov.textContent = 'Sign-out database, April 2006 and April 2026 snapshots — pathologist identifiers de-identified via xenonym.';
+        wrap.appendChild(prov);
+
+        // Four KPI columns. Each one shows the 2006 and 2026 value
+        // with a small italic delta describing the change in the
+        // direction that matters to a clinician (so a TAT increase
+        // reads as "slower," not as "+5%").
+        var kpis = [
+            { label: 'CASES SIGNED OUT',  v2006: '10,789', v2026: '13,277', delta: '+23% volume',   deltaColor: SLATE },
+            { label: 'MEAN TAT  (HOURS)', v2006: '101',    v2026: '106',    delta: 'slower by 5%',  deltaColor: CRIMSON },
+            { label: 'MEDIAN TAT (HOURS)', v2006: '89',    v2026: '89',     delta: 'unchanged',     deltaColor: MUTED },
+            { label: '% WITHIN 2 DAYS',   v2006: '48.6%',  v2026: '47.0%',  delta: '−1.6 pp',       deltaColor: CRIMSON }
+        ];
+
+        var grid = document.createElement('div');
+        grid.style.cssText = [
+            'display: grid',
+            'grid-template-columns: repeat(4, 1fr)',
+            'gap: 0',
+            'border-top: 1px solid ' + RULE,
+            'border-bottom: 1px solid ' + RULE,
+            'padding: 18px 0',
+            'margin-bottom: 18px'
+        ].join(';');
+
+        kpis.forEach(function (k, i) {
+            var cell = document.createElement('div');
+            cell.style.cssText = [
+                'padding: 4px 22px',
+                'text-align: left',
+                i > 0 ? 'border-left: 1px solid ' + RULE : ''
+            ].join(';');
+
+            var lab = document.createElement('div');
+            lab.style.cssText = [
+                'font-family: ' + SANS,
+                'font-size: 10.5px',
+                'font-weight: 700',
+                'letter-spacing: 1.6px',
+                'color: ' + MUTED,
+                'margin-bottom: 12px'
+            ].join(';');
+            lab.textContent = k.label;
+            cell.appendChild(lab);
+
+            // 2006 value (small, muted)
+            var row06 = document.createElement('div');
+            row06.style.cssText = 'display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;';
+            var n06 = document.createElement('span');
+            n06.style.cssText = 'font-family: ' + SERIF + '; font-size: 22px; font-weight: 400; color: ' + MUTED + ';';
+            n06.textContent = k.v2006;
+            var y06 = document.createElement('span');
+            y06.style.cssText = 'font-family: ' + SANS + '; font-size: 11px; color: ' + MUTED + '; letter-spacing: 0.8px;';
+            y06.textContent = '2006';
+            row06.appendChild(n06);
+            row06.appendChild(y06);
+            cell.appendChild(row06);
+
+            // 2026 value (large, ink)
+            var row26 = document.createElement('div');
+            row26.style.cssText = 'display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;';
+            var n26 = document.createElement('span');
+            n26.style.cssText = 'font-family: ' + SERIF + '; font-size: 38px; font-weight: 700; color: ' + INK + ';';
+            n26.textContent = k.v2026;
+            var y26 = document.createElement('span');
+            y26.style.cssText = 'font-family: ' + SANS + '; font-size: 11px; color: ' + MUTED + '; letter-spacing: 0.8px;';
+            y26.textContent = '2026';
+            row26.appendChild(n26);
+            row26.appendChild(y26);
+            cell.appendChild(row26);
+
+            // Delta line (italic, color-coded)
+            var d = document.createElement('div');
+            d.style.cssText = [
+                'font-family: ' + SERIF,
+                'font-style: italic',
+                'font-size: 13px',
+                'color: ' + k.deltaColor,
+                'margin-top: 2px'
+            ].join(';');
+            d.textContent = k.delta;
+            cell.appendChild(d);
+
+            grid.appendChild(cell);
+        });
+        wrap.appendChild(grid);
+
+        // "What changed" line — names the practice revolution the metric
+        // cannot see. This is the bridge between the KPI grid (which shows
+        // TAT didn't move) and the interpretive sentence (which states the
+        // operational claim). It is the load-bearing sentence on the slide.
+        var changed = document.createElement('div');
+        changed.style.cssText = [
+            'font-family: ' + SERIF,
+            'font-style: italic',
+            'font-size: 14px',
+            'line-height: 1.5',
+            'color: ' + MUTED,
+            'text-align: center',
+            'margin: 0 60px 16px 60px'
+        ].join(';');
+        changed.innerHTML =
+            'What <em>did</em> change: reflex IHC, molecular panels, NGS workups &mdash; ' +
+            'none of which existed in 2006. ' +
+            '<span style="color:' + INK + ';">' +
+            'The metric did not change because it cannot see them.' +
+            '</span>';
+        wrap.appendChild(changed);
+
+        // Interpretive sentence — the one-liner that lands the slide.
+        var interp = document.createElement('div');
+        interp.style.cssText = [
+            'font-family: ' + SERIF,
+            'font-size: 17px',
+            'line-height: 1.45',
+            'color: ' + INK,
+            'text-align: center',
+            'margin: 0 36px 14px 36px'
+        ].join(';');
+        interp.innerHTML = 'More cases. More subspecialty services. Same median TAT. ' +
+            '<span style="color:' + CRIMSON + '; font-style: italic;">' +
+            'The cycle time did not move.</span>';
+        wrap.appendChild(interp);
+
+        // Call-to-action — opens the live dashboard modal on click.
+        var cta = document.createElement('button');
+        cta.type = 'button';
+        cta.style.cssText = [
+            'display: block',
+            'margin: 4px auto 0',
+            'font-family: ' + SERIF,
+            'font-size: 14px',
+            'font-style: italic',
+            'color: ' + COPPER,
+            'background: transparent',
+            'border: 1px solid ' + COPPER,
+            'border-radius: 999px',
+            'padding: 8px 22px',
+            'cursor: pointer',
+            'letter-spacing: 0.2px',
+            'transition: background 0.15s ease, color 0.15s ease'
+        ].join(';');
+        cta.textContent = '⤢   Open the live April-2006 vs April-2026 dashboard';
+        cta.addEventListener('mouseenter', function () {
+            cta.style.background = COPPER;
+            cta.style.color = '#fff';
+        });
+        cta.addEventListener('mouseleave', function () {
+            cta.style.background = 'transparent';
+            cta.style.color = COPPER;
+        });
+        wrap.appendChild(cta);
+
+        // Tiny shortcut hint under the button.
+        var kbd = document.createElement('div');
+        kbd.style.cssText = [
+            'font-family: ' + SANS,
+            'font-size: 10.5px',
+            'color: ' + MUTED,
+            'text-align: center',
+            'margin-top: 8px',
+            'letter-spacing: 0.4px'
+        ].join(';');
+        kbd.innerHTML = 'or press <strong>D</strong> · ESC to close';
+        wrap.appendChild(kbd);
+
+        container.appendChild(wrap);
+
+        // ── Full-window modal with the live dashboard ─────────────
+        // Appended to the documentElement (not to the slide) so it
+        // escapes Reveal's transforms and overlays everything.
+        var overlay = document.createElement('div');
+        overlay.className = 'tat-modal-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Pathology TAT 2006 vs 2026 dashboard');
+        overlay.style.cssText = [
+            'position: fixed',
+            'top: 0', 'left: 0', 'right: 0', 'bottom: 0',
+            'background: rgba(15, 18, 24, 0.82)',
+            'backdrop-filter: blur(3px)',
+            '-webkit-backdrop-filter: blur(3px)',
+            'z-index: 99998',
+            'display: none',
+            'align-items: center',
+            'justify-content: center',
+            'padding: 28px'
+        ].join(';');
+
+        var panel = document.createElement('div');
+        panel.style.cssText = [
+            'position: relative',
+            'width: min(1320px, 96vw)',
+            'height: min(900px, 92vh)',
+            'background: #0f1218',
+            'border-radius: 10px',
+            'box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55)',
+            'overflow: hidden'
+        ].join(';');
+
+        // Close button (top-right of the panel).
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', 'Close dashboard');
+        closeBtn.textContent = '×';
+        closeBtn.style.cssText = [
+            'position: absolute',
+            'top: 10px',
+            'right: 14px',
+            'width: 36px',
+            'height: 36px',
+            'font-size: 26px',
+            'line-height: 1',
+            'color: #f5e9d6',
+            'background: rgba(255, 255, 255, 0.06)',
+            'border: 1px solid rgba(245, 233, 214, 0.2)',
+            'border-radius: 50%',
+            'cursor: pointer',
+            'z-index: 2',
+            'transition: background 0.15s ease, color 0.15s ease'
+        ].join(';');
+        closeBtn.addEventListener('mouseenter', function () {
+            closeBtn.style.background = 'rgba(255, 255, 255, 0.15)';
+        });
+        closeBtn.addEventListener('mouseleave', function () {
+            closeBtn.style.background = 'rgba(255, 255, 255, 0.06)';
+        });
+        panel.appendChild(closeBtn);
+
+        // The iframe carrying the live dashboard. src is set on first
+        // open so the heavy D3 page is not loaded until the user asks.
+        var iframe = document.createElement('iframe');
+        iframe.title = 'Pathology TAT — 2006 vs 2026 dashboard';
+        iframe.loading = 'lazy';
+        iframe.style.cssText = [
+            'width: 100%',
+            'height: 100%',
+            'border: 0',
+            'display: block',
+            'background: #0f1218'
+        ].join(';');
+        panel.appendChild(iframe);
+
+        overlay.appendChild(panel);
+        document.documentElement.appendChild(overlay);
+
+        var iframeLoaded = false;
+        function openModal() {
+            if (!iframeLoaded) {
+                iframe.src = '/prototypes/tat_2006_vs_2026.html';
+                iframeLoaded = true;
+            }
+            overlay.style.display = 'flex';
+        }
+        function closeModal() {
+            overlay.style.display = 'none';
+        }
+
+        cta.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeModal();
+            else if ((e.key === 'd' || e.key === 'D') &&
+                     !e.ctrlKey && !e.metaKey && !e.altKey) {
+                var tag = (e.target.tagName || '').toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+                // Only open if the slide is currently active.
+                var sec = document.querySelector('.reveal .present');
+                if (sec && sec.id === 'tat-real-data') {
+                    e.preventDefault();
+                    openModal();
+                }
+            }
+        });
+        // Close automatically when the user navigates to another slide
+        // so the modal doesn't haunt the rest of the deck.
+        if (typeof Reveal !== 'undefined' && Reveal.on) {
+            Reveal.on('slidechanged', function () {
+                closeModal();
+            });
+        }
+    }
+
     // Register the orchestration-lecture Tufte visualizations.
     registry['orch-hook']                  = orchHook;
+    registry['tat-2006-2026']              = tat2006vs2026;
     registry['orch-image-not-endpoint']    = orchImageNotEndpoint;
     registry['orch-clinical-stateful']     = orchClinicalStateful;
     registry['orch-annotation-contexts']   = orchAnnotationContexts;
@@ -13893,6 +14610,7 @@ const VizLibrary = (function () {
     registry['orch-frozen-multi']          = orchFrozenMulti;
     registry['orch-image-as-data']         = orchImageAsData;
     registry['orch-three-paths']           = orchThreePaths;
+    registry['process-not-image']          = processNotImage;
 
     // Register the prior batches of new visualizations.
     registry['modular-stack-pathology']    = modularStackPathology;
