@@ -14267,7 +14267,7 @@ const VizLibrary = (function () {
     //  cream paper aesthetic — four headline numbers that land the
     //  argument before any chart loads. A discreet "open the live
     //  dashboard" affordance launches the full self-contained
-    //  /prototypes/tat_2006_vs_2026.html in a full-window modal
+    //  /assets/dashboards/tat_2006_vs_2026.html in a full-window modal
     //  overlay, where it has the vertical room it needs and can be
     //  scrolled through all five panels without fighting the slide
     //  geometry. ESC, the close button, and a click on the backdrop
@@ -14554,7 +14554,7 @@ const VizLibrary = (function () {
         var iframeLoaded = false;
         function openModal() {
             if (!iframeLoaded) {
-                iframe.src = '/prototypes/tat_2006_vs_2026.html';
+                iframe.src = '/assets/dashboards/tat_2006_vs_2026.html';
                 iframeLoaded = true;
             }
             overlay.style.display = 'flex';
