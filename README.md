@@ -12,6 +12,7 @@ Grand rounds, leadership, and conference audiences.
 
 | Title | Slides | Route | Docs |
 | ----- | ------ | ----- | ---- |
+| **AI Is Rewriting the Operating System of Pathology** | 37 | `/lecture/ai_operating_system` | [Plan](docs/ai_operating_system/PLAN.md) · [References](docs/ai_operating_system/REFERENCES.md) · [Viz specs](docs/ai_operating_system/VIZ_SPECS.md) |
 | **From Image Management to Workflow Orchestration** — WSI as a State Machine *(35-min conference version)* | 30 | `/lecture/wsi_orchestration` | — |
 | **From "Image Management" to Workflow Orchestration** — The WSI Stack as a State Machine *(full-length version)* | 41 | `/lecture/wsi_state_machine` | — |
 | **Build as You Speak** — Modern AI and the Transformation of Research Infrastructure in Medicine | 39 | `/lecture/dom-grand-rounds` | — |
@@ -90,6 +91,19 @@ A slide's `type` must match a renderer in `slide-engine.js` (`title`, `content`,
 `viz-library.js` registry.
 
 To create a new lecture, add a JSON file to `data/lectures/` and access it at `/lecture/<name>`.
+**[`pathology-node-presentation/docs/ENGINE.md`](pathology-node-presentation/docs/ENGINE.md) is the
+full contract**: slide types, the visualization API and its palettes, badges, polls, the test
+harness, and the traps worth knowing before you write a visualization.
+
+### Tests
+
+```bash
+cd pathology-node-presentation
+npm test            # Playwright suite (chromium-1280)
+npm run test:viz    # static analysis of every lecture's visualizations
+npm run test:links  # validate every URL in every lecture
+npm run shots       # screenshot a deck slide by slide, flag overflow
+```
 
 ## Deployment
 

@@ -112,6 +112,14 @@ var SlideEngine = (function () {
         if (slide.backgroundGradient) {
             section.setAttribute('data-background-gradient', slide.backgroundGradient);
         }
+        // speakerNotes has been authored in every deck for a while but was
+        // never emitted, so pressing S opened an empty window. Reveal's notes
+        // plugin reads <aside class="notes">; give it one.
+        if (slide.speakerNotes) {
+            var notes = el('aside', 'notes');
+            notes.textContent = slide.speakerNotes;
+            section.appendChild(notes);
+        }
         return section;
     }
 

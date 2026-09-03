@@ -116,6 +116,42 @@ const LINKS = [
     }
 ];
 
+// ── Harvest every URL the lecture JSONs actually reference ───────────
+//  The hand-maintained list above predates eight of the nine decks. Rather
+//  than transcribing another fifty citations by hand, walk the JSON: every
+//  href in a bullet or subtitle, and every `url` field in a vizConfig.
+function harvestLectureLinks() {
+    const dir = path.join(__dirname, '..', 'data', 'lectures');
+    const seen = new Set(LINKS.map(l => l.url));
+    const found = [];
+
+    function walk(node, lecture) {
+        if (node == null) return;
+        if (typeof node === 'string') {
+            const re = /https?:\/\/[^\s"'<>)]+/g;
+            let m;
+            while ((m = re.exec(node)) !== null) {
+                const url = m[0].replace(/[.,;]+$/, '');
+                if (!seen.has(url)) { seen.add(url); found.push({ url, label: url, source: lecture, expect: null }); }
+            }
+            return;
+        }
+        if (Array.isArray(node)) { node.forEach(n => walk(n, lecture)); return; }
+        if (typeof node === 'object') { Object.values(node).forEach(v => walk(v, lecture)); }
+    }
+
+    fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort().forEach(f => {
+        walk(JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')), f);
+    });
+    return found;
+}
+
+if (process.argv.includes('--all-lectures')) {
+    const harvested = harvestLectureLinks();
+    console.log(`Harvested ${harvested.length} additional URLs from data/lectures/*.json\n`);
+    LINKS.push(...harvested);
+}
+
 // ── HTTP fetch with redirect following ───────────────────────────────
 function fetchUrl(url, maxRedirects) {
     if (maxRedirects === undefined) maxRedirects = 5;

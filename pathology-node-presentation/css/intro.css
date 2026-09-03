@@ -1109,6 +1109,10 @@ a.poll-qr, a.poll-qr:hover {
     gap: 12px;
     margin: 12px 0;
 }
+/* Four cards in a three-column grid left one orphan on its own row. */
+.infographic-cards:has(> :nth-child(4):last-child) {
+    grid-template-columns: repeat(4, 1fr);
+}
 .infographic-card {
     background: rgba(30,41,59,0.8);
     border: 1px solid rgba(71,85,105,0.4);
@@ -1139,8 +1143,13 @@ a.poll-qr, a.poll-qr:hover {
     display: block;
     line-height: 1.15;
 }
-.infographic-card-desc {
-    font-size: 12px; color: #94a3b8;
+/* `.reveal .intro-slide p` (22px, #3a4a5c) out-specifies a bare class
+   selector, so every infographic description was rendering at body-title
+   size in near-invisible slate on the dark card — and overflowing the grid.
+   Match that specificity so the card rule actually applies. */
+.infographic-card-desc,
+.reveal .intro-slide .infographic-card-desc {
+    font-size: 12px; color: #cbd5e1;
     margin: 4px 0 0 0;
     line-height: 1.35;
 }
@@ -1179,7 +1188,10 @@ a.poll-qr, a.poll-qr:hover {
 .infographic-slide.light-theme .infographic-card-value {
     color: #1B3A5C !important;
 }
-.infographic-slide.light-theme .infographic-card-desc {
+.infographic-slide.light-theme .infographic-card-desc,
+.reveal .intro-slide.light-theme .infographic-card-desc {
+    font-size: 12px;
+    line-height: 1.35;
     color: #3a3024 !important;
 }
 

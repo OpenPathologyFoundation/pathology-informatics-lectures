@@ -1,4 +1,13 @@
-/* Beautiful backgrounds for the presentation */
+/* Beautiful backgrounds for the presentation.
+
+   NOTE: the positional `section:nth-of-type(N)` rules below belong to the
+   legacy index.html deck, where slide N really is the HIPAA slide, the CLIA
+   slide and so on. lecture.html loads this file too, and there slide N is
+   whatever the JSON happens to put in that position — so those rules were
+   painting arbitrary grey/blue/green/red washes over slides 3-13 of every
+   JSON-driven lecture, including dark infographics that then rendered on a
+   light ground. Each positional rule is now scoped away from the JSON engine
+   with :not(.intro-slide). */
 
 /* Global background for all slides */
 .reveal {
@@ -19,12 +28,12 @@
 }
 
 /* Learning objectives slide */
-section:nth-of-type(3) {
+section:nth-of-type(3):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(236,240,241,0.9) 0%, rgba(189,195,199,0.9) 100%);
 }
 
 /* Why it matters slide */
-section:nth-of-type(4) {
+section:nth-of-type(4):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(52,152,219,0.1) 0%, rgba(52,152,219,0.2) 100%);
 }
 
@@ -34,47 +43,47 @@ section:nth-of-type(4) {
 }
 
 /* HIPAA slide */
-section:nth-of-type(6) {
+section:nth-of-type(6):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(52,152,219,0.1) 0%, rgba(52,152,219,0.2) 100%);
 }
 
 /* CLIA slide */
-section:nth-of-type(7) {
+section:nth-of-type(7):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(46,204,113,0.1) 0%, rgba(46,204,113,0.2) 100%);
 }
 
 /* FDA slide */
-section:nth-of-type(8) {
+section:nth-of-type(8):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(231,76,60,0.1) 0%, rgba(231,76,60,0.2) 100%);
 }
 
 /* Internal Validation slide */
-section:nth-of-type(9) {
+section:nth-of-type(9):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(155,89,182,0.1) 0%, rgba(155,89,182,0.2) 100%);
 }
 
 /* Digital Pathology slide */
-section:nth-of-type(10) {
+section:nth-of-type(10):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(52,152,219,0.1) 0%, rgba(26,188,156,0.2) 100%);
 }
 
 /* AI slide */
-section:nth-of-type(11) {
+section:nth-of-type(11):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(155,89,182,0.1) 0%, rgba(142,68,173,0.2) 100%);
 }
 
 /* Key Takeaways slide */
-section:nth-of-type(12) {
+section:nth-of-type(12):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(44,62,80,0.1) 0%, rgba(44,62,80,0.2) 100%);
 }
 
 /* Q&A slide */
-section:nth-of-type(13) {
+section:nth-of-type(13):not(.intro-slide) {
   background: linear-gradient(135deg, rgba(52,152,219,0.9) 0%, rgba(44,62,80,0.9) 100%);
   color: white !important;
 }
 
-section:nth-of-type(13) h2 {
+section:nth-of-type(13):not(.intro-slide) h2 {
   color: white !important;
   border-bottom-color: white;
 }
