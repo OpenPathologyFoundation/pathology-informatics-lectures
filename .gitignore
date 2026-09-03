@@ -33,6 +33,17 @@ playwright-report/
 blob-report/
 .dev-notes/*
 
+# Lecture working notes — raw verification transcripts and agent task lists.
+# These are superseded by the curated docs that ship alongside each lecture
+# (docs/<lecture>/{README,PLAN,REFERENCES,VIZ_SPECS}.md), and they would drift
+# from the code without anyone maintaining them.
+docs/*/research/
+docs/*/TASKS.md
+
+# Unedited AI-assisted dialogue kept as working material. Names vendors
+# directly; publish only after an editing pass.
+docs/ai_and_applied_informatics.md
+
 # package-lock (root level — each sub-project manages its own)
 /package-lock.json
 

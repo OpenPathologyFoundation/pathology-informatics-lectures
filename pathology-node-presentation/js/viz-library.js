@@ -14628,6 +14628,2014 @@ const VizLibrary = (function () {
     registry['scan-failure-cascade']       = scanFailureCascade;
     registry['ihe-palm-vs-orchestration']  = ihePalmVsOrchestration;
 
+
+    // ============================================================
+    //  AI OPERATING SYSTEM  —  visualizations for
+    //  data/lectures/ai_operating_system.json
+    //
+    //  House rules for this block (see docs/ai_operating_system/VIZ_SPECS.md):
+    //    · cream Tufte palette (TUFTE) + one accent per slide
+    //    · every number arrives through vizConfig; nothing numeric is
+    //      hard-coded here, so the JSON deck is the single place a value
+    //      can be wrong. tests/ai-os-numbers.js diffs the deck against
+    //      assets/data/ai-os/verified-numbers.json.
+    //    · viewBox + preserveAspectRatio, fonts >= 10px, staggered delays
+    //    · no emoji in SVG text (the glossary scanner skips SVG subtrees)
+    // ============================================================
+
+    var IRON = '#4a4a48';          // the railroad
+    var REDUCED_MOTION = !!(window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    // Standard cream stage. Returns the svg selection.
+    function aiosStage(container, W, H) {
+        return d3.select(container).append('svg')
+            .attr('viewBox', '0 0 ' + W + ' ' + H)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('max-width', '100%').style('max-height', '88vh')
+            .style('background', TUFTE.bg);
+    }
+
+    // Italic serif footnote, wrapped to `w`.
+    function aiosNote(svg, x, y, w, text, color, size) {
+        var t = svg.append('text').attr('x', x).attr('y', y)
+            .attr('font-family', SERIF).attr('font-size', (size || 12.5) + 'px')
+            .attr('font-style', 'italic').attr('fill', color || TUFTE.muted);
+        wsiWrap(t, text, w, (size || 12.5) + 5);
+        return t;
+    }
+
+    // Stagger a selection in. Respects prefers-reduced-motion.
+    function aiosReveal(sel, i, base, step) {
+        if (REDUCED_MOTION) return sel;
+        return sel.style('opacity', 0).transition()
+            .delay((base == null ? 500 : base) + i * (step == null ? 150 : step))
+            .duration(420).style('opacity', 1);
+    }
+
+    // Source line, bottom-left, small caps.
+    function aiosSource(svg, x, y, text) {
+        return svg.append('text').attr('x', x).attr('y', y)
+            .attr('font-family', SANS).attr('font-size', '10px')
+            .attr('letter-spacing', '0.6px').attr('fill', TUFTE.muted)
+            .text(text);
+    }
+
+    // A short arrowhead marker def, reused across this block.
+    function aiosArrowDef(svg, id, color) {
+        svg.append('defs').append('marker')
+            .attr('id', id).attr('viewBox', '0 0 10 10')
+            .attr('refX', 8).attr('refY', 5)
+            .attr('markerWidth', 6).attr('markerHeight', 6)
+            .attr('orient', 'auto-start-reverse')
+            .append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z').attr('fill', color);
+        return 'url(#' + id + ')';
+    }
+
+    // ─── V15. learning-objectives-config ─────────────────────────
+    //  Config-driven twin of `learning-objectives` (which is hard-wired
+    //  to the pathology_informatics_ai deck). Cream palette, five-stage
+    //  wave, objectives supplied by the lecture JSON.
+    //    config.objectives = [{ verb, text }]
+    function learningObjectivesConfig(container, config) {
+        var W = 1280, H = 620, P = TUFTE;
+        var svg = aiosStage(container, W, H);
+        var objs = (config && config.objectives) || [];
+
+        tufteTitleBlock(svg, 90, 78, W - 180,
+            (config && config.title) || 'Learning objectives',
+            (config && config.subtitle) || 'Five claims you should be able to make, and defend, by the end of the hour.');
+
+        if (!objs.length) {
+            aiosNote(svg, 90, 160, 900, 'No objectives supplied in vizConfig.objectives.', P.crimson, 14);
+            return;
+        }
+
+        var mL = 130, mR = 130;
+        var spacing = (W - mL - mR) / (objs.length - 1);
+        var baseY = 292, amp = 44;
+
+        objs.forEach(function (o, i) {
+            o.cx = mL + i * spacing;
+            o.cy = baseY + (i % 2 === 0 ? -amp : amp);
+        });
+
+        // The connecting trail — drawn first, behind the nodes.
+        var lineGen = d3.line()
+            .x(function (d) { return d.cx; })
+            .y(function (d) { return d.cy; })
+            .curve(d3.curveCatmullRom.alpha(0.5));
+        var path = svg.append('path')
+            .attr('d', lineGen(objs)).attr('fill', 'none')
+            .attr('stroke', P.rule).attr('stroke-width', 1.2);
+        if (!REDUCED_MOTION) {
+            var L = path.node().getTotalLength();
+            path.attr('stroke-dasharray', L).attr('stroke-dashoffset', L)
+                .transition().duration(1400).ease(d3.easeCubicInOut)
+                .attr('stroke-dashoffset', 0);
+        }
+
+        objs.forEach(function (o, i) {
+            var g = svg.append('g');
+            var up = (i % 2 === 0);
+
+            g.append('circle').attr('cx', o.cx).attr('cy', o.cy).attr('r', 21)
+                .attr('fill', P.bg).attr('stroke', i === objs.length - 1 ? P.copper : P.ink)
+                .attr('stroke-width', i === objs.length - 1 ? 1.8 : 1.1);
+            g.append('text').attr('x', o.cx).attr('y', o.cy + 6)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '17px').attr('fill', P.ink).text(String(i + 1));
+
+            // Verb above the statement in both directions — reading order
+            // should not flip depending on which way the wave went.
+            var t = svg.append('text').attr('x', o.cx).attr('y', 0)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '13px').attr('fill', P.ink);
+            wsiWrap(t, o.text || '', 215, 18);
+            var lines = t.selectAll('tspan').size() || 1;
+
+            var textTop = up ? (o.cy - 40 - (lines - 1) * 18) : (o.cy + 74);
+            t.attr('y', textTop);
+            wsiWrap(t, o.text || '', 215, 18);
+
+            g.append('text').attr('x', o.cx).attr('y', textTop - 20)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '11px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', P.copper)
+                .text(String(o.verb || '').toUpperCase());
+
+            aiosReveal(g, i, 600, 160);
+            aiosReveal(t, i, 600, 160);
+        });
+
+        aiosNote(svg, 90, H - 46, W - 180,
+            (config && config.footnote) ||
+            'The progression is deliberate: each objective is only reachable once the one before it is settled.',
+            P.muted, 13);
+    }
+
+    // ─── V1. eagle-routing-pipeline ──────────────────────────────
+    //  EAGLE's contribution is not the AUROC. It is the routing:
+    //  a cheap frozen model decides where an expensive model looks.
+    //  The tile field is drawn at 2 MPP granularity (~1,100 tiles per
+    //  slide) precisely so that the 25 selected tiles can be shown at
+    //  their true proportion — 2% — instead of an exaggerated one.
+    //    config.field       = { cols, rows, label }
+    //    config.selected    = 25
+    //    config.stations[]  = { label, sub, seconds, tip }
+    //    config.total, config.hardware, config.notIncluded[], config.footnote
+    function eagleRoutingPipeline(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'Route the expensive model. Do not brute-force the slide.',
+            c.subtitle || 'Every stage is an off-the-shelf component. The contribution is the order they run in.');
+
+        // ── The tile field, at 2 MPP granularity ──────────────────
+        var fx = 90, fy = 148, cols = (c.field && c.field.cols) || 51,
+            rows = (c.field && c.field.rows) || 22, pitch = 8, mark = 6;
+        var total = cols * rows;
+        var nSel = c.selected || 25;
+
+        // Deterministic pseudo-random selection so the picture is stable
+        // across reloads (a different picture every render would read as noise).
+        var chosen = {};
+        var seed = 7;
+        while (Object.keys(chosen).length < nSel) {
+            seed = (seed * 1103515245 + 12345) % 2147483648;
+            chosen[seed % total] = true;
+        }
+
+        var field = svg.append('g');
+        for (var r = 0; r < rows; r++) {
+            for (var k = 0; k < cols; k++) {
+                var idx = r * cols + k;
+                field.append('rect')
+                    .attr('x', fx + k * pitch).attr('y', fy + r * pitch)
+                    .attr('width', mark).attr('height', mark)
+                    .attr('fill', P.ink).attr('opacity', 0.16)
+                    .attr('data-sel', chosen[idx] ? '1' : '0');
+            }
+        }
+        var fieldW = cols * pitch - (pitch - mark), fieldH = rows * pitch - (pitch - mark);
+
+        tufteSmallCaps(svg, fx, fy - 14, (c.field && c.field.label) || 'EVERY TILE, AT 2 MPP', P.muted);
+
+        // The 25 survivors light up after the field has settled.
+        var lit = field.selectAll('rect[data-sel="1"]');
+        if (REDUCED_MOTION) {
+            lit.attr('fill', P.copper).attr('opacity', 1);
+        } else {
+            lit.transition().delay(function (d, i) { return 900 + i * 26; }).duration(300)
+                .attr('fill', P.copper).attr('opacity', 1);
+        }
+
+        aiosNote(svg, fx, fy + fieldH + 24, fieldW + 30,
+            c.fieldNote || '', P.ink, 13);
+
+        // ── Magnified inset: what actually reaches Virchow2 ───────
+        var ix = fx + fieldW + 128, iy = fy + 6, ip = 26, im = 22;
+        svg.append('line')
+            .attr('x1', fx + fieldW + 8).attr('y1', fy + fieldH / 2)
+            .attr('x2', ix - 16).attr('y2', iy + 60)
+            .attr('stroke', P.copper).attr('stroke-width', 0.8).attr('stroke-dasharray', '3,3');
+        for (var a = 0; a < 5; a++) {
+            for (var b = 0; b < 5; b++) {
+                svg.append('rect')
+                    .attr('x', ix + b * ip).attr('y', iy + a * ip)
+                    .attr('width', im).attr('height', im)
+                    .attr('fill', P.copper).attr('opacity', 0.82)
+                    .attr('stroke', P.bg).attr('stroke-width', 1);
+            }
+        }
+        svg.append('text').attr('x', ix).attr('y', iy - 14)
+            .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700')
+            .attr('letter-spacing', '1.6px').attr('fill', P.copper)
+            .text(String(nSel) + ' TILES');
+        aiosNote(svg, ix, iy + 5 * ip + 12, 250,
+            c.insetNote || '', P.muted, 12.5);
+
+        // ── Right-hand statement stack ───────────────────────────
+        var sx = ix + 300;
+        var statements = c.statements || [];
+        var sy = fy + 12;
+        if (c.total != null) {
+            svg.append('text').attr('x', sx).attr('y', sy + 8)
+                .attr('font-family', SERIF).attr('font-size', '34px')
+                .attr('font-weight', '700').attr('fill', P.ink)
+                .text(c.total + ' s');
+            svg.append('text').attr('x', sx).attr('y', sy + 28)
+                .attr('font-family', SERIF).attr('font-size', '12px')
+                .attr('font-style', 'italic').attr('fill', P.muted)
+                .text(c.hardware || '');
+            tufteRule(svg, sx, sy + 42, sx + 240, sy + 42, 0.8);
+            sy += 74;
+        }
+        statements.forEach(function (s, i) {
+            svg.append('text').attr('x', sx).attr('y', sy)
+                .attr('font-family', SERIF).attr('font-size', '20px')
+                .attr('font-weight', '700').attr('fill', P.ink).text(s.value);
+            var t = svg.append('text').attr('x', sx).attr('y', sy + 20)
+                .attr('font-family', SERIF).attr('font-size', '12.5px')
+                .attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(t, s.label, 240, 16);
+            var lines = t.selectAll('tspan').size() || 1;
+            var bottom = sy + 20 + (lines - 1) * 16 + 12;
+            tufteRule(svg, sx, bottom, sx + 240, bottom, 0.6);
+            sy = bottom + 26;
+        });
+
+        // ── The rail ─────────────────────────────────────────────
+        var stations = c.stations || [];
+        var railY = 430, x0 = 96, x1 = W - 96;
+        svg.append('line').attr('x1', x0).attr('y1', railY).attr('x2', x1).attr('y2', railY)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+
+        var span = (x1 - x0) / Math.max(stations.length - 1, 1);
+        var kBar = 106;   // sqrt(seconds) -> px
+
+        stations.forEach(function (st, i) {
+            var cx = x0 + i * span;
+            var g = svg.append('g').style('cursor', st.tip ? 'pointer' : 'default');
+
+            g.append('circle').attr('cx', cx).attr('cy', railY).attr('r', 5)
+                .attr('fill', st.seconds ? P.copper : P.bg)
+                .attr('stroke', P.ink).attr('stroke-width', 1.1);
+
+            var lab = g.append('text').attr('x', cx).attr('y', railY - 22)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.ink);
+            wsiWrap(lab, st.label, 168, 17);
+            var nLines = lab.selectAll('tspan').size();
+            lab.attr('y', railY - 22 - (nLines - 1) * 17);
+            wsiWrap(lab, st.label, 168, 17);
+
+            var sub = g.append('text').attr('x', cx).attr('y', railY + 22)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(sub, st.sub || '', 168, 15);
+
+            // Time bar — sqrt scale, so 0.36 ms is still a visible sliver.
+            if (st.seconds != null) {
+                var bw = Math.max(Math.sqrt(st.seconds) * kBar, 2);
+                var bar = svg.append('rect')
+                    .attr('x', cx - bw / 2).attr('y', railY + 56)
+                    .attr('width', bw).attr('height', 9).attr('fill', P.copper).attr('opacity', 0.85);
+                aiosReveal(bar, i, 700, 130);
+                svg.append('text').attr('x', cx).attr('y', railY + 82)
+                    .attr('text-anchor', 'middle').attr('font-family', SANS)
+                    .attr('font-size', '11px').attr('fill', P.ink)
+                    .text(st.secondsLabel || (st.seconds + ' s'));
+            }
+
+            if (st.tip) {
+                g.on('mousemove', function (event) {
+                    var pt = d3.pointer(event, container);
+                    _showTooltip(tip, st.tip, pt[0] + 16, pt[1] - 10);
+                }).on('mouseleave', function () { _hideTooltip(tip); });
+            }
+        });
+
+        // ── The lower track: what the 2.27 s does not include ────
+        var ly = 548;
+        svg.append('line').attr('x1', x0).attr('y1', ly).attr('x2', x1).attr('y2', ly)
+            .attr('stroke', P.muted).attr('stroke-width', 1).attr('stroke-dasharray', '5,4').attr('opacity', 0.6);
+        tufteSmallCaps(svg, x0, ly - 12, (c.notIncludedLabel || 'WHAT THAT NUMBER DOES NOT INCLUDE'), P.muted);
+
+        var items = c.notIncluded || [];
+        var iw = (x1 - x0) / Math.max(items.length, 1);
+        items.forEach(function (it, i) {
+            var cx = x0 + i * iw + iw / 2;
+            svg.append('line').attr('x1', cx).attr('y1', ly).attr('x2', cx).attr('y2', ly + 10)
+                .attr('stroke', P.muted).attr('stroke-width', 0.8).attr('opacity', 0.6);
+            var t = svg.append('text').attr('x', cx).attr('y', ly + 26)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(t, it, iw - 14, 14);
+            aiosReveal(t, i, 1500, 110);
+        });
+
+        // Every slide in this deck carries a takeaway bar that covers the
+        // bottom ~9% of the canvas, so the colophon stops at 0.90H, not at
+        // the edge. Same rule in every viz below.
+        if (c.footnote) aiosNote(svg, x0, H * 0.895, W - 200, c.footnote, P.ink, 12.5);
+        if (c.source) aiosSource(svg, W - 90, 74, '').attr('text-anchor', 'end').text(c.source);
+    }
+
+    // ─── V2. auroc-vs-compute ────────────────────────────────────
+    //  The two-thousandths. Drawn on the honest axis first (0.50-1.00),
+    //  where the four models are visually identical, then on the axis
+    //  the abstract lives on (an inset). The compute axis is the one
+    //  that actually separates them.
+    //    config.points[]  = { model, auroc, seconds, color, note }
+    //    config.deltas[]  = { from, to, label, kind: 'auroc'|'compute' }
+    function aurocVsCompute(container, config) {
+        var W = 1280, H = 680, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+        var pts = (c.points || []);
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'The interesting number is on the other axis.',
+            c.subtitle || 'Mean AUROC across 31 external tasks, against seconds of model inference per slide.');
+
+        // ── Main panel: the honest AUROC axis ────────────────────
+        var mx = 120, my = 170, mw = 640, mh = 340;
+        var x = d3.scaleLog().domain([1, 2000]).range([mx, mx + mw]);
+        var y = d3.scaleLinear().domain([0.50, 1.00]).range([my + mh, my]);
+
+        // Axes as thin rules with direct labels — no boxes.
+        svg.append('line').attr('x1', mx).attr('y1', my + mh).attr('x2', mx + mw).attr('y2', my + mh)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+        svg.append('line').attr('x1', mx).attr('y1', my).attr('x2', mx).attr('y2', my + mh)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+
+        [1, 10, 100, 1000].forEach(function (v) {
+            svg.append('line').attr('x1', x(v)).attr('y1', my + mh).attr('x2', x(v)).attr('y2', my + mh + 5)
+                .attr('stroke', P.ink).attr('stroke-width', 0.8);
+            svg.append('text').attr('x', x(v)).attr('y', my + mh + 20)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '11px').attr('fill', P.muted)
+                .text(v.toLocaleString() + ' s');
+        });
+        [0.5, 0.6, 0.7, 0.8, 0.9, 1.0].forEach(function (v) {
+            svg.append('line').attr('x1', mx - 5).attr('y1', y(v)).attr('x2', mx).attr('y2', y(v))
+                .attr('stroke', P.ink).attr('stroke-width', 0.8);
+            svg.append('text').attr('x', mx - 10).attr('y', y(v) + 4)
+                .attr('text-anchor', 'end').attr('font-family', SANS)
+                .attr('font-size', '11px').attr('fill', P.muted).text(v.toFixed(2));
+        });
+        svg.append('text').attr('x', mx + mw / 2).attr('y', my + mh + 44)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '11.5px').attr('letter-spacing', '1.4px').attr('fill', P.muted)
+            .text('SECONDS OF MODEL INFERENCE PER SLIDE  (log)');
+        svg.append('text').attr('x', mx - 58).attr('y', my + mh / 2)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '11.5px').attr('letter-spacing', '1.4px').attr('fill', P.muted)
+            .attr('transform', 'rotate(-90 ' + (mx - 58) + ' ' + (my + mh / 2) + ')')
+            .text('MEAN AUROC, 31 EXTERNAL TASKS');
+
+        // Points on the honest axis
+        pts.forEach(function (p, i) {
+            if (p.auroc == null || p.seconds == null) return;
+            var g = svg.append('g').style('cursor', 'pointer');
+            g.append('circle').attr('cx', x(p.seconds)).attr('cy', y(p.auroc)).attr('r', 5.5)
+                .attr('fill', p.color === 'copper' ? P.copper : (p.color === 'slate' ? P.slate : P.ink));
+            var lift = (i % 2 === 0) ? -13 : 26;
+            g.append('text').attr('x', x(p.seconds)).attr('y', y(p.auroc) + lift)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12.5px').attr('fill', P.ink).text(p.model);
+            aiosReveal(g, i, 600, 150);
+            g.on('mousemove', function (event) {
+                var pt = d3.pointer(event, container);
+                _showTooltip(tip, '<strong>' + p.model + '</strong><br>' +
+                    'mean AUROC ' + p.auroc.toFixed(3) + '<br>' +
+                    p.seconds + ' s / slide' + (p.note ? '<br><em>' + p.note + '</em>' : ''),
+                    pt[0] + 16, pt[1] - 10);
+            }).on('mouseleave', function () { _hideTooltip(tip); });
+        });
+
+        // Models we can place on only one axis are drawn as marginal ticks,
+        // never as invented coordinates.
+        (c.marginal || []).forEach(function (m, i) {
+            if (m.axis === 'x') {
+                svg.append('line').attr('x1', x(m.seconds)).attr('y1', my).attr('x2', x(m.seconds)).attr('y2', my + mh)
+                    .attr('stroke', P.muted).attr('stroke-width', 1).attr('stroke-dasharray', '4,4');
+                var t = svg.append('text').attr('x', x(m.seconds) - 8).attr('y', my + 18)
+                    .attr('text-anchor', 'end').attr('font-family', SERIF)
+                    .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted);
+                wsiWrap(t, m.label, 150, 14);
+            } else {
+                svg.append('line').attr('x1', mx).attr('y1', y(m.auroc)).attr('x2', mx + 26).attr('y2', y(m.auroc))
+                    .attr('stroke', P.muted).attr('stroke-width', 1).attr('stroke-dasharray', '4,4');
+                svg.append('text').attr('x', mx + 32).attr('y', y(m.auroc) - 7)
+                    .attr('font-family', SERIF).attr('font-size', '11.5px')
+                    .attr('font-style', 'italic').attr('fill', P.muted).text(m.label);
+            }
+        });
+
+        // Compute brackets along the bottom of the main panel.
+        (c.computeBrackets || []).forEach(function (b, i) {
+            var xa = x(b.from), xb = x(b.to), by = my + mh - 26 - i * 30;
+            svg.append('path')
+                .attr('d', 'M ' + xa + ' ' + (by - 6) + ' L ' + xa + ' ' + by + ' L ' + xb + ' ' + by + ' L ' + xb + ' ' + (by - 6))
+                .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 1);
+            svg.append('text').attr('x', (xa + xb) / 2).attr('y', by + 15)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '12px').attr('font-weight', '700').attr('fill', P.copper)
+                .text(b.label);
+        });
+
+        // ── Inset: the axis the abstract lives on ────────────────
+        var nx = 880, ny = 200, nw = 300, nh = 250;
+        svg.append('rect').attr('x', nx - 46).attr('y', ny - 46).attr('width', nw + 76).attr('height', nh + 116)
+            .attr('fill', 'none').attr('stroke', P.rule).attr('stroke-width', 0.8);
+        tufteSmallCaps(svg, nx - 46, ny - 58, 'THE AXIS THE ABSTRACT LIVES ON', P.copper);
+
+        var iy2 = d3.scaleLinear().domain(c.insetDomain || [0.70, 0.76]).range([ny + nh, ny]);
+        svg.append('line').attr('x1', nx).attr('y1', ny).attr('x2', nx).attr('y2', ny + nh)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+        (c.insetTicks || [0.70, 0.72, 0.74, 0.76]).forEach(function (v) {
+            svg.append('line').attr('x1', nx - 5).attr('y1', iy2(v)).attr('x2', nx).attr('y2', iy2(v))
+                .attr('stroke', P.ink).attr('stroke-width', 0.8);
+            svg.append('text').attr('x', nx - 10).attr('y', iy2(v) + 4)
+                .attr('text-anchor', 'end').attr('font-family', SANS)
+                .attr('font-size', '11px').attr('fill', P.muted).text(v.toFixed(2));
+        });
+
+        var inPts = pts.filter(function (p) { return p.auroc != null; });
+        var slot = nw / Math.max(inPts.length, 1);
+        inPts.forEach(function (p, i) {
+            var cx = nx + slot * i + slot / 2;
+            var g = svg.append('g');
+            g.append('circle').attr('cx', cx).attr('cy', iy2(p.auroc)).attr('r', 5)
+                .attr('fill', p.color === 'copper' ? P.copper : (p.color === 'slate' ? P.slate : P.ink));
+            g.append('text').attr('x', cx).attr('y', ny + nh + 20)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '11px').attr('fill', P.ink).text(p.shortName || p.model);
+            g.append('text').attr('x', cx).attr('y', iy2(p.auroc) - 11)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('fill', P.muted).text(p.auroc.toFixed(3));
+            aiosReveal(g, i, 1200, 130);
+        });
+
+        // The delta bracket — labelled as a difference, never as an improvement.
+        if (c.aurocDelta && inPts.length >= 2) {
+            var y1 = iy2(c.aurocDelta.a), y2 = iy2(c.aurocDelta.b);
+            var xa = nx + slot / 2, xb = nx + slot + slot / 2, xm = (xa + xb) / 2;
+            var top = Math.min(y1, y2);
+            svg.append('path')
+                .attr('d', 'M ' + xa + ' ' + y1 + ' L ' + xa + ' ' + (top - 20) +
+                           ' L ' + xb + ' ' + (top - 20) + ' L ' + xb + ' ' + y2)
+                .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 1);
+            svg.append('text').attr('x', xm).attr('y', top - 26)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '12px').attr('font-weight', '700')
+                .attr('fill', P.copper).text(c.aurocDelta.label);
+        }
+
+        aiosNote(svg, nx - 46, ny + nh + 78, nw + 76,
+            c.insetNote || '', P.muted, 12);
+
+        if (c.caption) aiosNote(svg, 90, H * 0.845, W - 180, c.caption, P.ink, 12.5);
+        if (c.source) aiosSource(svg, 90, H * 0.905, c.source);
+    }
+
+
+    // ─── V3. benchmark-saturation ────────────────────────────────
+    //  Dot-and-whisker over a deliberately narrow-but-not-dishonest
+    //  x-domain. The point of the slide is the overlap, so the CIs are
+    //  the mark and the band across their union is the argument.
+    //    config.models[] = { model, auroc, ci:[lo,hi], category, hover }
+    //    config.band, config.strip, config.factors[], config.caption
+    function benchmarkSaturation(container, config) {
+        var W = 1280, H = 700, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+        var models = c.models || [];
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'Thirty-two models later, the result is not a winner.',
+            c.subtitle || 'Top five pathology encoders, TCGA tasks. Whiskers are 95% confidence intervals.');
+
+        var mx = 250, my = 165, mw = 470, rowH = 54;
+        var dom = c.domain || [0.70, 0.95];
+        var x = d3.scaleLinear().domain(dom).range([mx, mx + mw]);
+
+        // The band across the union of the confidence intervals is the finding.
+        var lo = d3.min(models, function (m) { return m.ci ? m.ci[0] : m.auroc; });
+        var hi = d3.max(models, function (m) { return m.ci ? m.ci[1] : m.auroc; });
+        svg.append('rect').attr('x', x(lo)).attr('y', my - 14)
+            .attr('width', x(hi) - x(lo)).attr('height', models.length * rowH + 10)
+            .attr('fill', P.copper).attr('opacity', 0.09);
+        svg.append('text').attr('x', (x(lo) + x(hi)) / 2).attr('y', my - 22)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '11.5px').attr('font-weight', '700')
+            .attr('letter-spacing', '0.8px').attr('fill', P.copper)
+            .text(c.band || 'NO STATISTICAL DIFFERENCE (WALD TESTS)');
+
+        // Axis
+        var axisY = my + models.length * rowH + 4;
+        svg.append('line').attr('x1', mx).attr('y1', axisY).attr('x2', mx + mw).attr('y2', axisY)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+        d3.range(dom[0], dom[1] + 0.0001, 0.05).forEach(function (v) {
+            svg.append('line').attr('x1', x(v)).attr('y1', axisY).attr('x2', x(v)).attr('y2', axisY + 5)
+                .attr('stroke', P.ink).attr('stroke-width', 0.8);
+            svg.append('text').attr('x', x(v)).attr('y', axisY + 20)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '11px').attr('fill', P.muted).text(v.toFixed(2));
+        });
+        svg.append('text').attr('x', mx + mw / 2).attr('y', axisY + 42)
+            .attr('text-anchor', 'middle').attr('font-family', SANS)
+            .attr('font-size', '11.5px').attr('letter-spacing', '1.4px').attr('fill', P.muted)
+            .text('AUROC');
+
+        models.forEach(function (m, i) {
+            var cy = my + i * rowH + 12;
+            var g = svg.append('g').style('cursor', 'pointer');
+
+            g.append('text').attr('x', mx - 18).attr('y', cy + 5)
+                .attr('text-anchor', 'end').attr('font-family', SERIF)
+                .attr('font-size', '15px').attr('fill', P.ink).text(m.model);
+            g.append('text').attr('x', mx - 18).attr('y', cy + 21)
+                .attr('text-anchor', 'end').attr('font-family', SANS)
+                .attr('font-size', '10px').attr('letter-spacing', '1.2px').attr('fill', P.muted)
+                .text(String(m.category || '').toUpperCase());
+
+            if (m.ci) {
+                g.append('line').attr('x1', x(m.ci[0])).attr('y1', cy).attr('x2', x(m.ci[1])).attr('y2', cy)
+                    .attr('stroke', P.ink).attr('stroke-width', 1).attr('opacity', 0.55)
+                    .attr('stroke-dasharray', m.ciEstimated ? '4,3' : null);
+                [m.ci[0], m.ci[1]].forEach(function (v) {
+                    g.append('line').attr('x1', x(v)).attr('y1', cy - 5).attr('x2', x(v)).attr('y2', cy + 5)
+                        .attr('stroke', P.ink).attr('stroke-width', 1).attr('opacity', 0.55);
+                });
+            }
+            g.append('circle').attr('cx', x(m.auroc)).attr('cy', cy).attr('r', 5)
+                .attr('fill', i === 0 ? P.copper : P.ink);
+            g.append('text').attr('x', x(m.auroc)).attr('y', cy - 12)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '11px').attr('fill', P.ink).text(m.auroc.toFixed(3));
+
+            aiosReveal(g, i, 600, 150);
+
+            if (m.hover) {
+                g.on('mousemove', function (event) {
+                    var pt = d3.pointer(event, container);
+                    _showTooltip(tip, m.hover, pt[0] + 16, pt[1] - 10);
+                }).on('mouseleave', function () { _hideTooltip(tip); });
+            }
+        });
+
+        // ── The strip: 32 evaluated, 5 shown ─────────────────────
+        if (c.strip) {
+            var sy = axisY + 76, sx0 = mx, n = c.strip.total || 32, sw = mw;
+            var pitch = sw / n;
+            tufteSmallCaps(svg, sx0, sy - 12, c.strip.label || '', P.muted);
+            for (var i2 = 0; i2 < n; i2++) {
+                var isTop = i2 < (c.strip.highlight || 0);
+                svg.append('line')
+                    .attr('x1', sx0 + i2 * pitch + pitch / 2).attr('y1', sy)
+                    .attr('x2', sx0 + i2 * pitch + pitch / 2).attr('y2', sy + (isTop ? 22 : 14))
+                    .attr('stroke', isTop ? P.copper : P.ink)
+                    .attr('stroke-width', isTop ? 2 : 1)
+                    .attr('opacity', isTop ? 1 : 0.28);
+            }
+        }
+
+        // ── Right column: what would actually change the ranking ─
+        var rx = 800;
+        tufteSmallCaps(svg, rx, my - 22, c.factorsLabel || 'WHAT WOULD CHANGE THE RANKING', P.ink);
+        (c.factors || []).forEach(function (f, i) {
+            var t = svg.append('text').attr('x', rx).attr('y', my + 8 + i * 26)
+                .attr('font-family', SERIF).attr('font-size', '14px').attr('fill', P.ink);
+            t.append('tspan').attr('fill', P.muted).attr('font-size', '11px').text(String(i + 1).padStart(2, '0') + '   ');
+            t.append('tspan').text(f);
+            aiosReveal(t, i, 900, 90);
+        });
+
+        if (c.caption) aiosNote(svg, 90, H * 0.845, W - 180, c.caption, P.ink, 12.5);
+        if (c.source) aiosSource(svg, 90, H * 0.905, c.source);
+    }
+
+    // ─── V3b. benchmark-scaling ──────────────────────────────────
+    //  "More parameters" and "more pre-training slides" are not the
+    //  lever any more. Two overlapping distributions (ensemble vs the
+    //  best single model) plus the verbatim scaling finding. No
+    //  per-model scatter is drawn, because the per-model parameter
+    //  counts are not verified — an invented cloud would be the exact
+    //  failure this slide is arguing against.
+    function benchmarkScaling(container, config) {
+        var W = 1280, H = 660, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'Scaling stopped being the lever.',
+            c.subtitle || 'And stacking the top five models on top of each other does not rescue it either.');
+
+        // ── Left: ensemble vs best single model ─────────────────
+        var bx = 120, by = 190, bw = 440, rowH = 78;
+        tufteSmallCaps(svg, bx, by - 42, c.barsLabel || 'BALANCED ACCURACY', P.ink);
+        var bars = c.bars || [];
+        var maxV = d3.max(bars, function (b) { return b.value + (b.sd || 0); }) || 1;
+        var bs = d3.scaleLinear().domain([0, maxV * 1.12]).range([0, bw]);
+
+        bars.forEach(function (b, i) {
+            var y = by + i * rowH;
+            var rect = svg.append('rect').attr('x', bx).attr('y', y)
+                .attr('width', 0).attr('height', 26)
+                .attr('fill', i === 0 ? P.copper : P.ink).attr('opacity', i === 0 ? 0.85 : 0.62);
+            if (REDUCED_MOTION) rect.attr('width', bs(b.value));
+            else rect.transition().delay(600 + i * 200).duration(700).attr('width', bs(b.value));
+
+            // SD whisker — the reason the comparison is not a comparison.
+            if (b.sd != null) {
+                var wy = y + 13;
+                svg.append('line').attr('x1', bx + bs(b.value - b.sd)).attr('y1', wy)
+                    .attr('x2', bx + bs(b.value + b.sd)).attr('y2', wy)
+                    .attr('stroke', P.ink).attr('stroke-width', 1).attr('opacity', 0.75);
+                [b.value - b.sd, b.value + b.sd].forEach(function (v) {
+                    svg.append('line').attr('x1', bx + bs(v)).attr('y1', wy - 6)
+                        .attr('x2', bx + bs(v)).attr('y2', wy + 6)
+                        .attr('stroke', P.ink).attr('stroke-width', 1).attr('opacity', 0.75);
+                });
+            }
+            svg.append('text').attr('x', bx).attr('y', y - 8)
+                .attr('font-family', SERIF).attr('font-size', '14.5px').attr('fill', P.ink).text(b.label);
+            svg.append('text').attr('x', bx + bs(b.value + (b.sd || 0)) + 12).attr('y', y + 19)
+                .attr('font-family', SANS).attr('font-size', '12px').attr('fill', P.ink)
+                .text(b.value.toFixed(3) + (b.sd != null ? '  ± ' + b.sd.toFixed(3) : ''));
+        });
+
+        if (c.barsNote) aiosNote(svg, bx, by + bars.length * rowH + 4, bw + 120, c.barsNote, P.crimson, 13);
+
+        // ── Right: the verbatim scaling finding + the bins ───────
+        var rx = 700, rw = 480;
+        tufteRule(svg, rx - 40, 175, rx - 40, H - 110, 0.5);
+
+        if (c.finding) {
+            var q = svg.append('text').attr('x', rx).attr('y', 200)
+                .attr('font-family', SERIF).attr('font-size', '17px').attr('fill', P.ink);
+            wsiWrap(q, '“' + c.finding + '”', rw, 24);
+            svg.append('text').attr('x', rx).attr('y', 200 + q.selectAll('tspan').size() * 24 + 8)
+                .attr('font-family', SANS).attr('font-size', '10.5px')
+                .attr('letter-spacing', '1.2px').attr('fill', P.muted)
+                .text(c.findingSource || '');
+        }
+
+        var ty = 330;
+        (c.binGroups || []).forEach(function (grp, gi) {
+            tufteSmallCaps(svg, rx, ty, grp.label, P.copper);
+            (grp.bins || []).forEach(function (b, i) {
+                svg.append('text').attr('x', rx + i * 158).attr('y', ty + 30)
+                    .attr('font-family', SERIF).attr('font-size', '15px').attr('fill', P.ink).text(b.bin);
+                svg.append('text').attr('x', rx + i * 158).attr('y', ty + 48)
+                    .attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.muted).text(b.value);
+            });
+            tufteRule(svg, rx, ty + 62, rx + rw, ty + 62, 0.6);
+            ty += 96;
+        });
+
+        if (c.closing) {
+            var cl = svg.append('text').attr('x', rx).attr('y', ty + 18)
+                .attr('font-family', SERIF).attr('font-size', '14.5px')
+                .attr('font-style', 'italic').attr('fill', P.ink);
+            wsiWrap(cl, c.closing, rw, 20);
+        }
+
+        if (c.source) aiosSource(svg, 90, H - 26, c.source);
+    }
+
+    // ─── V4. boundary-collapse ───────────────────────────────────
+    //  The thesis diagram. Eight activities that used to be separated
+    //  by an institutional handoff, redrawn as one loop. The human is
+    //  not removed — they move outside the ring and keep the two
+    //  things the ring cannot supply.
+    //    config.activities[] = { label, handoff, artifact }
+    //    config.hub, config.human[], config.beforeYear, config.afterYear
+    function boundaryCollapse(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+        var acts = c.activities || [];
+
+        tufteTitleBlock(svg, 90, 72, W - 180,
+            c.title || 'The boundaries collapsed. The judgment did not.',
+            c.subtitle || 'Eight activities that used to require a different person, a different budget line, and a different building.');
+
+        // ── LEFT: the old arrangement ───────────────────────────
+        var lx = 110, ly = 166, lw = 300, rowH = 54;
+        tufteSmallCaps(svg, lx, ly - 16, (c.beforeYear || 'BEFORE'), P.muted);
+
+        acts.forEach(function (a, i) {
+            var y = ly + i * rowH;
+            var g = svg.append('g');
+            g.append('rect').attr('x', lx).attr('y', y).attr('width', lw).attr('height', 34)
+                .attr('fill', 'none').attr('stroke', P.rule).attr('stroke-width', 0.9);
+            g.append('text').attr('x', lx + 14).attr('y', y + 22)
+                .attr('font-family', SERIF).attr('font-size', '14.5px').attr('fill', P.ink).text(a.label);
+            // The handoff between rows is the thing that cost money.
+            if (a.handoff) {
+                g.append('line').attr('x1', lx + 20).attr('y1', y + 34).attr('x2', lx + 20).attr('y2', y + rowH)
+                    .attr('stroke', P.crimson).attr('stroke-width', 2).attr('opacity', 0.5)
+                    .attr('class', 'aios-handoff');
+                g.append('text').attr('x', lx + 32).attr('y', y + 49)
+                    .attr('font-family', SANS).attr('font-size', '10.5px')
+                    .attr('font-style', 'italic').attr('fill', P.crimson)
+                    .attr('class', 'aios-handoff').text(a.handoff);
+            }
+            aiosReveal(g, i, 400, 110);
+        });
+
+        // The handoffs dissolve — that is the whole animation.
+        if (!REDUCED_MOTION) {
+            svg.selectAll('.aios-handoff').transition()
+                .delay(function (d, i) { return 2200 + i * 60; }).duration(900)
+                .style('opacity', 0.25);
+        }
+
+        // ── RIGHT: the ring ─────────────────────────────────────
+        var cx = 880, cy = 400, R = 190;
+        tufteSmallCaps(svg, cx - R, 156, (c.afterYear || 'NOW'), P.copper);
+
+        var ring = svg.append('g');
+        ring.append('circle').attr('cx', cx).attr('cy', cy).attr('r', R)
+            .attr('fill', 'none').attr('stroke', P.rule).attr('stroke-width', 1)
+            .attr('stroke-dasharray', '2,4');
+
+        // Hub
+        ring.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 78)
+            .attr('fill', P.bg).attr('stroke', P.copper).attr('stroke-width', 1.4);
+        var hub = ring.append('text').attr('x', cx).attr('y', cy - 18)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '12.5px').attr('fill', P.ink);
+        wsiWrap(hub, c.hub || 'a tool-using, code-writing, retrieving, remembering system', 132, 16);
+
+        acts.forEach(function (a, i) {
+            var ang = (-Math.PI / 2) + (i / acts.length) * Math.PI * 2;
+            var px = cx + Math.cos(ang) * R, py = cy + Math.sin(ang) * R;
+            var hx = cx + Math.cos(ang) * 80, hy = cy + Math.sin(ang) * 80;
+            var g = ring.append('g').style('cursor', a.artifact ? 'pointer' : 'default');
+
+            g.append('line').attr('x1', hx).attr('y1', hy).attr('x2', px).attr('y2', py)
+                .attr('stroke', P.copper).attr('stroke-width', 0.8).attr('opacity', 0.45);
+            g.append('circle').attr('cx', px).attr('cy', py).attr('r', 4.5)
+                .attr('fill', P.bg).attr('stroke', P.ink).attr('stroke-width', 1.1);
+
+            var outward = Math.cos(ang) >= -0.15;
+            var tx = cx + Math.cos(ang) * (R + 16), ty2 = cy + Math.sin(ang) * (R + 16) + 4;
+            g.append('text').attr('x', tx).attr('y', ty2)
+                .attr('text-anchor', outward ? 'start' : 'end')
+                .attr('font-family', SERIF).attr('font-size', '13.5px').attr('fill', P.ink)
+                .text(a.label);
+
+            aiosReveal(g, i, 1800, 120);
+
+            if (a.artifact) {
+                g.on('mousemove', function (event) {
+                    var pt = d3.pointer(event, container);
+                    _showTooltip(tip, '<strong>' + a.label + '</strong><br>' + a.artifact, pt[0] + 16, pt[1] - 10);
+                }).on('mouseleave', function () { _hideTooltip(tip); });
+            }
+        });
+
+        // ── The human, outside the ring ─────────────────────────
+        var hxp = cx - R - 168, hyp = cy - 96;
+        var person = svg.append('g');
+        person.append('circle').attr('cx', hxp).attr('cy', hyp).attr('r', 13)
+            .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1.3);
+        person.append('path')
+            .attr('d', 'M ' + (hxp - 22) + ' ' + (hyp + 46) + ' q 22 -30 44 0')
+            .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1.3);
+        (c.human || []).forEach(function (h, i) {
+            person.append('text').attr('x', hxp).attr('y', hyp + 76 + i * 30)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.copper).text(h);
+        });
+        if (c.humanNote) {
+            var hn = svg.append('text').attr('x', hxp).attr('y', hyp + 76 + (c.human || []).length * 30 + 14)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(hn, c.humanNote, 210, 16);
+        }
+        aiosReveal(person, 0, 3000, 0);
+
+        if (c.caption) aiosNote(svg, 110, H * 0.875, W - 220, c.caption, P.ink, 13);
+    }
+
+    // ─── V5. pathology-agents-timeline ───────────────────────────
+    //  Three lanes on one time axis. The visual argument is vertical,
+    //  not horizontal: the two anchor papers sit at the far right of
+    //  the evidence lane, after almost everything above them.
+    //    config.events[] = { date, name, who, kind, lane, url, tone }
+    //    lanes: 'systems' | 'infrastructure' | 'evidence'
+    function pathologyAgentsTimeline(container, config) {
+        var W = 1280, H = 700, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+        var events = (c.events || []).slice();
+
+        tufteTitleBlock(svg, 90, 70, W - 180,
+            c.title || 'In two years the pathology agent became a genre.',
+            c.subtitle || 'Systems, the plumbing they run on, and the evidence about whether any of it helps.');
+
+        var x0 = 196, x1 = W - 90;
+        var t0 = new Date(c.start || '2024-05-01'), t1 = new Date(c.end || '2026-09-30');
+        var x = d3.scaleTime().domain([t0, t1]).range([x0, x1]);
+
+        var lanes = c.lanes || [
+            { key: 'systems',        label: 'SYSTEMS',        y: 232 },
+            { key: 'infrastructure', label: 'INFRASTRUCTURE', y: 380 },
+            { key: 'evidence',       label: 'EVIDENCE',       y: 500 }
+        ];
+
+        // Year gridlines. The scale labels sit above the lanes: the evidence
+        // lane needs the space under it for two-line event labels.
+        (c.years || ['2024-07-01', '2025-01-01', '2025-07-01', '2026-01-01', '2026-07-01']).forEach(function (d) {
+            var dt = new Date(d);
+            svg.append('line').attr('x1', x(dt)).attr('y1', 152).attr('x2', x(dt)).attr('y2', 556)
+                .attr('stroke', P.fine).attr('stroke-width', 0.6);
+            svg.append('text').attr('x', x(dt)).attr('y', 144)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('fill', P.muted)
+                .text(d3.timeFormat('%b %Y')(dt));
+        });
+
+        lanes.forEach(function (ln) {
+            svg.append('line').attr('x1', x0).attr('y1', ln.y).attr('x2', x1).attr('y2', ln.y)
+                .attr('stroke', P.ink).attr('stroke-width', 0.9).attr('opacity', 0.5);
+            svg.append('text').attr('x', x0 - 12).attr('y', ln.y + 4)
+                .attr('text-anchor', 'end').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.4px').attr('fill', P.muted).text(ln.label);
+        });
+
+        // Alternate labels above/below within each lane, and drop to a second
+        // tier when the neighbour on the same side is too close — three
+        // preprints in one month is normal in this data.
+        var laneCount = {};
+        var lastEdge = {};          // (lane|side|tier) -> right edge of last label
+        var LABEL_W = 118, TIER = 30;
+        events.sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+
+        events.forEach(function (e, i) {
+            var ln = lanes.filter(function (l) { return l.key === e.lane; })[0] || lanes[0];
+            laneCount[e.lane] = (laneCount[e.lane] || 0) + 1;
+            var up = laneCount[e.lane] % 2 === 1;
+            var ex = x(new Date(e.date));
+            var half = Math.min(LABEL_W, Math.max(40, e.name.length * 5.4)) / 2;
+            var tier = 0;
+            while (tier < 3) {
+                var k = e.lane + '|' + up + '|' + tier;
+                if (lastEdge[k] == null || ex - half > lastEdge[k] + 8) {
+                    lastEdge[k] = ex + half;
+                    break;
+                }
+                tier++;
+            }
+            if (tier > 2) tier = 2;
+            var color = e.tone === 'anchor' ? P.copper : (e.tone === 'counter' ? P.crimson : P.ink);
+            var g = svg.append('g').style('cursor', e.url ? 'pointer' : 'default');
+
+            var stem = (up ? -34 : 34) + (up ? -1 : 1) * tier * TIER;
+            g.append('line').attr('x1', ex).attr('y1', ln.y).attr('x2', ex).attr('y2', ln.y + stem)
+                .attr('stroke', color).attr('stroke-width', 0.8).attr('opacity', 0.55);
+
+            if (e.tone === 'anchor') {
+                g.append('path')
+                    .attr('d', 'M ' + ex + ' ' + (ln.y - 7) + ' L ' + (ex + 7) + ' ' + ln.y +
+                               ' L ' + ex + ' ' + (ln.y + 7) + ' L ' + (ex - 7) + ' ' + ln.y + ' Z')
+                    .attr('fill', P.copper);
+            } else {
+                g.append('circle').attr('cx', ex).attr('cy', ln.y).attr('r', 3.4)
+                    .attr('fill', e.tone === 'counter' ? P.crimson : P.bg)
+                    .attr('stroke', color).attr('stroke-width', 1.1);
+            }
+
+            var ty = ln.y + stem + (up ? -6 : 14);
+            var t = g.append('text').attr('x', ex).attr('y', ty)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', e.tone === 'anchor' ? '13.5px' : '12px')
+                .attr('font-weight', e.tone === 'anchor' ? '700' : '400')
+                .attr('fill', color);
+            wsiWrap(t, e.name, 118, 14);
+            if (up) {
+                var nl = t.selectAll('tspan').size();
+                t.attr('y', ty - (nl - 1) * 14);
+                wsiWrap(t, e.name, 118, 14);
+            }
+
+            aiosReveal(g, i, 500, 55);
+
+            g.on('mousemove', function (event) {
+                var pt = d3.pointer(event, container);
+                _showTooltip(tip,
+                    '<strong>' + e.name + '</strong><br>' +
+                    d3.timeFormat('%d %b %Y')(new Date(e.date)) + (e.who ? ' · ' + e.who : '') +
+                    '<br><em>' + (e.kind || '') + '</em>' +
+                    (e.url ? '<br><span style="opacity:.7">click to open</span>' : ''),
+                    pt[0] + 16, pt[1] - 10);
+            }).on('mouseleave', function () { _hideTooltip(tip); });
+
+            if (e.url) g.on('click', function () { window.open(e.url, '_blank', 'noopener'); });
+        });
+
+        if (c.caption) aiosNote(svg, 96, H * 0.875, W - 200, c.caption, P.ink, 13);
+        if (c.source) aiosSource(svg, x1, 70, '').attr('text-anchor', 'end').text(c.source);
+    }
+
+
+    // ─── V6. three-clocks ────────────────────────────────────────
+    //  Three clocks running at 1 : 1/8 : 1/60. Over a two-minute stay
+    //  on this slide the capability hand laps the evidence hand many
+    //  times — which is the entire argument, made without a sentence.
+    //  Click a face to dim the others and expose that clock's sources.
+    //    config.clocks[] = { name, period, question, sources[], example, rate }
+    function threeClocks(container, config) {
+        var W = 1280, H = 706, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var clocks = c.clocks || [];
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'Three clocks, and we keep reading the slowest one as if it were the fastest.',
+            c.subtitle || 'Click a face to see what evidence that clock actually produces.');
+
+        var R = 84, cy = 262;
+        var slot = (W - 240) / Math.max(clocks.length, 1);
+        var groups = [];
+
+        clocks.forEach(function (cl, i) {
+            var cx = 120 + slot * i + slot / 2;
+            var g = svg.append('g').style('cursor', 'pointer');
+            groups.push(g);
+
+            // Face
+            g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', R)
+                .attr('fill', P.bg).attr('stroke', P.ink).attr('stroke-width', 1.2);
+            for (var t = 0; t < 12; t++) {
+                var a = (t / 12) * Math.PI * 2;
+                var r1 = R - (t % 3 === 0 ? 12 : 6), r2 = R - 2;
+                g.append('line')
+                    .attr('x1', cx + Math.sin(a) * r1).attr('y1', cy - Math.cos(a) * r1)
+                    .attr('x2', cx + Math.sin(a) * r2).attr('y2', cy - Math.cos(a) * r2)
+                    .attr('stroke', P.ink).attr('stroke-width', t % 3 === 0 ? 1.2 : 0.6)
+                    .attr('opacity', 0.75);
+            }
+            g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 3).attr('fill', P.ink);
+
+            // Hand
+            var hand = g.append('line')
+                .attr('x1', cx).attr('y1', cy)
+                .attr('x2', cx).attr('y2', cy - (R - 18))
+                .attr('stroke', i === 0 ? P.copper : P.ink).attr('stroke-width', 1.8)
+                .attr('stroke-linecap', 'round');
+
+            var rate = cl.rate || 1;   // full sweeps per 6 seconds
+            if (REDUCED_MOTION) {
+                var fixed = [ -0.35, 1.9, 3.4 ][i % 3];
+                hand.attr('transform', 'rotate(' + (fixed * 57.3) + ' ' + cx + ' ' + cy + ')');
+            } else {
+                // Only turn while the slide is actually on screen — three
+                // hands spinning behind a hidden section is pure waste.
+                var section = container.closest ? container.closest('section') : null;
+                d3.timer(function (elapsed) {
+                    if (section && !section.classList.contains('present')) return;
+                    var ang = (elapsed / 6000) * 360 * rate;
+                    hand.attr('transform', 'rotate(' + ang + ' ' + cx + ' ' + cy + ')');
+                });
+            }
+
+            // Name + period
+            g.append('text').attr('x', cx).attr('y', cy - R - 30)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '19px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(cl.name);
+            g.append('text').attr('x', cx).attr('y', cy - R - 12)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '11px').attr('letter-spacing', '1.4px').attr('fill', P.copper)
+                .text(String(cl.period || '').toUpperCase());
+
+            // Question
+            var q = svg.append('text').attr('x', cx).attr('y', cy + R + 34)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', P.ink);
+            wsiWrap(q, '“' + cl.question + '”', slot - 60, 19);
+
+            // Sources
+            var sy = cy + R + 92;
+            (cl.sources || []).forEach(function (s, j) {
+                svg.append('text').attr('x', cx).attr('y', sy + j * 17)
+                    .attr('text-anchor', 'middle').attr('font-family', SANS)
+                    .attr('font-size', '10.5px').attr('letter-spacing', '0.8px').attr('fill', P.muted)
+                    .attr('class', 'aios-clock-src aios-clock-src-' + i)
+                    .text(s);
+            });
+
+            // Example, revealed on click
+            var ex = svg.append('text').attr('x', cx).attr('y', sy + ((cl.sources || []).length) * 17 + 24)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12.5px').attr('fill', P.copper).style('opacity', 0);
+            wsiWrap(ex, cl.example || '', slot - 60, 17);
+
+            g.on('click', function () {
+                var on = ex.style('opacity') === '0';
+                svg.selectAll('.aios-example').style('opacity', 0);
+                groups.forEach(function (gg, k) { gg.style('opacity', on && k !== i ? 0.32 : 1); });
+                ex.style('opacity', on ? 1 : 0);
+            });
+            ex.classed('aios-example', true);
+        });
+
+        // ── The literature pointer ──────────────────────────────
+        //  Drawn UNDER the clocks. Above them it crosses the title, and a
+        //  slide about misreading evidence should not be hard to read.
+        if (c.pointer && clocks.length === 3) {
+            var arrow = aiosArrowDef(svg, 'aios-clock-arrow', P.crimson);
+            var x3 = 120 + slot * 2 + slot / 2, x1c = 120 + slot / 2;
+            var py = cy + R + 252;
+            svg.append('text').attr('x', x3).attr('y', py)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', P.crimson)
+                .text(c.pointer.on || 'the literature serves this clock');
+            // The two labels sit under the clocks they refer to; the arc
+            // runs between them rather than through the second label.
+            svg.append('text').attr('x', x1c).attr('y', py)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '13.5px').attr('font-style', 'italic').attr('fill', P.crimson)
+                .text(c.pointer.read || 'and we read it as a description of this one');
+            svg.append('path')
+                .attr('d', 'M ' + (x3 - 160) + ' ' + (py + 14) +
+                           ' C ' + (x3 - 300) + ' ' + (py + 62) +
+                           ', ' + (x1c + 300) + ' ' + (py + 62) +
+                           ', ' + (x1c + 160) + ' ' + (py + 14))
+                .attr('fill', 'none').attr('stroke', P.crimson).attr('stroke-width', 1)
+                .attr('stroke-dasharray', '5,4').attr('marker-end', arrow);
+        }
+
+        if (c.caption) aiosNote(svg, 90, H - 18, W - 180, c.caption, P.ink, 13);
+    }
+
+    // ─── V7. evidence-ladder ─────────────────────────────────────
+    //  Four claims, four kinds of evidence. The fourth rung stays empty
+    //  on purpose; filling it would be the exact conflation the slide is
+    //  about. Cards are sized from their own wrapped content — the
+    //  deployment rung carries five verified numbers and a fixed box
+    //  height simply cannot hold them.
+    //    config.rungs[] = { rung, claim, evidence, source, empty }
+    //    config.verbs[] = { verb, detail } — what it takes to cross a gap
+    function evidenceLadder(container, config) {
+        var W = 1280, H = 646, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var rungs = c.rungs || [];
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'Seeing it is not reproducing it. Reproducing it is not deploying it.',
+            c.subtitle || 'Four claims, four kinds of evidence. We routinely accept the first as proof of the fourth.');
+
+        var n = Math.max(rungs.length, 1);
+        var pad = 62, gapW = 24;
+        var cardW = (W - pad * 2 - gapW * (n - 1)) / n;
+        var rise = 20;                       // each rung sits a little higher
+        var topBase = 208;
+        var centres = [];
+
+        rungs.forEach(function (r, i) {
+            var cx = pad + i * (cardW + gapW);
+            var cy = topBase - i * rise;
+            var g = svg.append('g');
+
+            g.append('text').attr('x', cx + 16).attr('y', cy + 26)
+                .attr('font-family', SANS).attr('font-size', '10.5px')
+                .attr('font-weight', '700').attr('letter-spacing', '1.6px')
+                .attr('fill', r.empty ? P.crimson : P.copper)
+                .text(String(r.rung || ('0' + (i + 1))).toUpperCase());
+
+            var cl = g.append('text').attr('x', cx + 16).attr('y', cy + 52)
+                .attr('font-family', SERIF).attr('font-size', '16px')
+                .attr('font-weight', '700').attr('fill', P.ink);
+            wsiWrap(cl, r.claim, cardW - 32, 20);
+            var clLines = cl.selectAll('tspan').size() || 1;
+
+            var evY = cy + 52 + clLines * 20 + 8;
+            var ev = g.append('text').attr('x', cx + 16).attr('y', evY)
+                .attr('font-family', SERIF).attr('font-size', '12px')
+                .attr('font-style', 'italic').attr('fill', r.empty ? P.crimson : P.muted);
+            wsiWrap(ev, r.evidence, cardW - 32, 16);
+            var evLines = ev.selectAll('tspan').size() || 1;
+
+            var srcY = evY + evLines * 16 + 14;
+            var srcLines = 0;
+            if (r.source) {
+                var sr = g.append('text').attr('x', cx + 16).attr('y', srcY)
+                    .attr('font-family', SANS).attr('font-size', '10px')
+                    .attr('letter-spacing', '0.6px').attr('fill', P.muted);
+                wsiWrap(sr, r.source, cardW - 32, 13);
+                srcLines = sr.selectAll('tspan').size() || 1;
+            }
+
+            var cardH = Math.max(srcY + (srcLines ? (srcLines - 1) * 13 : 0) - cy + 16, 150);
+            // The frame is inserted behind the text it was measured from.
+            g.insert('rect', ':first-child')
+                .attr('x', cx).attr('y', cy).attr('width', cardW).attr('height', cardH)
+                .attr('fill', r.empty ? 'none' : P.bg)
+                .attr('stroke', r.empty ? P.crimson : P.ink)
+                .attr('stroke-width', r.empty ? 1.2 : 1)
+                .attr('stroke-dasharray', r.empty ? '6,5' : null);
+
+            centres.push({ x: cx + cardW / 2, bottom: cy + cardH, right: cx + cardW });
+            aiosReveal(g, i, 500, 240);
+        });
+
+        // ── The verbs, on a band under the cards ────────────────
+        //  Each gap is a place a project dies, so it gets its own line
+        //  rather than being squeezed into the 24 px between two boxes.
+        var bandY = d3.max(centres, function (d) { return d.bottom; }) + 76;
+        var arrow = aiosArrowDef(svg, 'aios-ladder-arrow', TUFTE.copper);
+
+        (c.verbs || []).forEach(function (v, i) {
+            if (i >= centres.length - 1) return;
+            var xa = centres[i].x, xb = centres[i + 1].x, mid = (xa + xb) / 2;
+            var g = svg.append('g');
+
+            g.append('line').attr('x1', xa).attr('y1', centres[i].bottom + 10)
+                .attr('x2', xa).attr('y2', bandY)
+                .attr('stroke', P.rule).attr('stroke-width', 0.7).attr('stroke-dasharray', '3,3');
+            g.append('line').attr('x1', xb).attr('y1', centres[i + 1].bottom + 10)
+                .attr('x2', xb).attr('y2', bandY)
+                .attr('stroke', P.rule).attr('stroke-width', 0.7).attr('stroke-dasharray', '3,3');
+            g.append('line').attr('x1', xa + 6).attr('y1', bandY).attr('x2', xb - 10).attr('y2', bandY)
+                .attr('stroke', P.copper).attr('stroke-width', 1).attr('marker-end', arrow);
+
+            g.append('text').attr('x', mid).attr('y', bandY - 12)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '11.5px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', P.copper)
+                .text(String(v.verb).toUpperCase());
+            var d = g.append('text').attr('x', mid).attr('y', bandY + 22)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(d, v.detail, 250, 16);
+
+            aiosReveal(g, i, 1400, 200);
+        });
+
+        if (c.caption) aiosNote(svg, pad, H - 40, W - 200, c.caption, P.ink, 13);
+    }
+
+    // ─── V8. fda-ai-devices ──────────────────────────────────────
+    //  The regulatory record is a slow-clock artifact and it shows.
+    //    config.panels[]  = { panel, n }
+    //    config.years[]   = { year, n, partial }
+    //    config.entries[] = { device, id, year, modern }
+    function fdaAiDevices(container, config) {
+        var W = 1280, H = 700, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+
+        tufteTitleBlock(svg, 90, 70, W - 180,
+            c.title || 'One thousand five hundred authorized AI devices. Nine of them are pathology.',
+            c.subtitle || 'FDA AI-enabled medical devices, by lead review panel.');
+
+        // ── Left: panels ────────────────────────────────────────
+        var panels = c.panels || [];
+        var px = 250, py = 152, pw = 330, rowH = 28;
+        var pmax = d3.max(panels, function (d) { return d.n; }) || 1;
+        var ps = d3.scaleLinear().domain([0, pmax]).range([0, pw]);
+
+        panels.forEach(function (p, i) {
+            var y = py + i * rowH;
+            var isPath = /patholog/i.test(p.panel);
+            var bar = svg.append('rect').attr('x', px).attr('y', y).attr('height', 15)
+                .attr('width', 0)
+                .attr('fill', isPath ? P.copper : P.ink).attr('opacity', isPath ? 0.9 : 0.35);
+            if (REDUCED_MOTION) bar.attr('width', Math.max(ps(p.n), 1.5));
+            else bar.transition().delay(500 + i * 90).duration(600).attr('width', Math.max(ps(p.n), 1.5));
+
+            svg.append('text').attr('x', px - 12).attr('y', y + 12)
+                .attr('text-anchor', 'end').attr('font-family', SERIF)
+                .attr('font-size', '13px').attr('font-weight', isPath ? '700' : '400')
+                .attr('fill', isPath ? P.copper : P.ink).text(p.panel);
+            svg.append('text').attr('x', px + Math.max(ps(p.n), 1.5) + 8).attr('y', y + 12)
+                .attr('font-family', SANS).attr('font-size', '11.5px')
+                .attr('font-weight', isPath ? '700' : '400')
+                .attr('fill', isPath ? P.copper : P.muted).text(p.n.toLocaleString());
+        });
+        if (c.totalLabel) {
+            svg.append('text').attr('x', px - 12).attr('y', py - 18)
+                .attr('text-anchor', 'end').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', P.muted).text(c.totalLabel);
+        }
+
+        // ── Right top: authorizations per year ──────────────────
+        var yx = 720, yy = 158, yw = 460, yh = 130;
+        tufteSmallCaps(svg, yx, yy - 18, c.yearsLabel || 'AI DEVICE AUTHORIZATIONS PER YEAR', P.muted);
+        var years = c.years || [];
+        var ymax = d3.max(years, function (d) { return d.n; }) || 1;
+        var bw = yw / Math.max(years.length, 1);
+        years.forEach(function (d, i) {
+            var h = (d.n / ymax) * yh;
+            var rect = svg.append('rect')
+                .attr('x', yx + i * bw + 4).attr('y', yy + yh - h)
+                .attr('width', bw - 12).attr('height', h)
+                .attr('fill', d.partial ? P.bg : P.ink).attr('opacity', d.partial ? 1 : 0.55)
+                .attr('stroke', d.partial ? P.ink : 'none')
+                .attr('stroke-width', d.partial ? 0.9 : 0)
+                .attr('stroke-dasharray', d.partial ? '3,2' : null);
+            aiosReveal(rect, i, 700, 90);
+            svg.append('text').attr('x', yx + i * bw + (bw - 8) / 2).attr('y', yy + yh + 16)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('fill', P.muted).text(d.year);
+            svg.append('text').attr('x', yx + i * bw + (bw - 8) / 2).attr('y', yy + yh - h - 6)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('fill', P.ink).text(d.n);
+        });
+        if (c.yearsNote) aiosNote(svg, yx, yy + yh + 38, yw, c.yearsNote, P.muted, 11.5);
+
+        // ── Full width below: the nine pathology entries in time ──
+        //  Given the whole width rather than a quarter of it, because six of
+        //  the nine fall in the last five years and their labels have to go
+        //  somewhere.
+        var ex0 = 250, ex1 = W - 90, ey = 512;
+        var t0 = c.entryStart || 1993, t1 = c.entryEnd || 2028;
+        var ex = d3.scaleLinear().domain([t0, t1]).range([ex0, ex1]);
+        tufteSmallCaps(svg, ex0, ey + 44, c.entriesLabel || 'THE NINE, ON A TIME AXIS', P.muted);
+        svg.append('line').attr('x1', ex0).attr('y1', ey).attr('x2', ex1).attr('y2', ey)
+            .attr('stroke', P.ink).attr('stroke-width', 0.9);
+        [1995, 2000, 2005, 2010, 2015, 2020, 2025].forEach(function (v) {
+            svg.append('line').attr('x1', ex(v)).attr('y1', ey).attr('x2', ex(v)).attr('y2', ey + 5)
+                .attr('stroke', P.ink).attr('stroke-width', 0.8);
+            svg.append('text').attr('x', ex(v)).attr('y', ey + 19)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('fill', P.muted).text(v);
+        });
+
+        // Strictly increasing lift within a dense run, so labels never share
+        // a level with a neighbour they would overlap.
+        var entries = (c.entries || []).slice().sort(function (a, b) { return a.year - b.year; });
+        var lastX = -1e9, level = -1;
+        entries.forEach(function (e, i) {
+            var xx = ex(e.year);
+            if (xx - lastX < 190) level++; else level = 0;
+            lastX = xx;
+            var lift = 26 + level * 21;
+            var right = xx > ex0 + (ex1 - ex0) * 0.62;
+            var g = svg.append('g').style('cursor', 'pointer');
+            g.append('line').attr('x1', xx).attr('y1', ey).attr('x2', xx).attr('y2', ey - lift)
+                .attr('stroke', e.modern ? P.copper : P.muted).attr('stroke-width', 0.9);
+            g.append('circle').attr('cx', xx).attr('cy', ey - lift).attr('r', 3.6)
+                .attr('fill', e.modern ? P.copper : P.bg)
+                .attr('stroke', e.modern ? P.copper : P.muted).attr('stroke-width', 1);
+            g.append('text').attr('x', xx + (right ? -9 : 9)).attr('y', ey - lift + 4)
+                .attr('text-anchor', right ? 'end' : 'start')
+                .attr('font-family', SERIF).attr('font-size', '11.5px')
+                .attr('fill', e.modern ? P.copper : P.muted)
+                .text(e.device + '  ' + (e.date || e.year));
+            aiosReveal(g, i, 1200, 90);
+            g.on('mousemove', function (event) {
+                var pt = d3.pointer(event, container);
+                _showTooltip(tip, '<strong>' + e.device + '</strong><br>' + e.id + ' \u00b7 ' + (e.date || e.year) +
+                    (e.modern ? '<br><em>whole-slide-image algorithm</em>' : '<br><em>not a WSI algorithm</em>'),
+                    pt[0] + 16, pt[1] - 10);
+            }).on('mouseleave', function () { _hideTooltip(tip); });
+        });
+
+        if (c.modernNote) aiosNote(svg, ex0, ey + 66, W - ex0 - 90, c.modernNote, P.ink, 12.5);
+        if (c.disclaimer) aiosNote(svg, 96, H - 82, 640, c.disclaimer, P.crimson, 12);
+        if (c.source) aiosSource(svg, 96, H - 26, c.source);
+    }
+
+    // ─── V9. paper-volume ────────────────────────────────────────
+    //  The mirror. Two series on one axis; the LLM-writing measures
+    //  are deliberately kept OFF the axis as marginalia, because they
+    //  measure different things and plotting them together would be
+    //  the kind of compression this lecture is complaining about.
+    //    config.series[] = { label, color, values:[{year,n,partial}] }
+    //    config.marginalia[] = { year, text }
+    function paperVolume(container, config) {
+        var W = 1280, H = 700, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var series = c.series || [];
+
+        tufteTitleBlock(svg, 90, 70, W - 180,
+            c.title || 'The mirror: what happens when producing an academically legible object gets cheap.',
+            c.subtitle || 'PubMed records per year. The 2026 bar is partial.');
+
+        var mx = 130, my = 170, mw = 700, mh = 330;
+        var allYears = [];
+        series.forEach(function (s) { (s.values || []).forEach(function (v) { allYears.push(v.year); }); });
+        var y0 = d3.min(allYears), y1 = d3.max(allYears);
+        var nmax = d3.max(series[0] ? series[0].values : [], function (d) { return d.n; }) || 1;
+
+        var x = d3.scaleBand().domain(d3.range(y0, y1 + 1)).range([mx, mx + mw]).padding(0.28);
+        var y = d3.scaleLinear().domain([0, nmax * 1.1]).range([my + mh, my]);
+
+        svg.append('line').attr('x1', mx).attr('y1', my + mh).attr('x2', mx + mw).attr('y2', my + mh)
+            .attr('stroke', P.ink).attr('stroke-width', 1);
+        [0, 250, 500, 750, 1000].filter(function (v) { return v <= nmax * 1.1; }).forEach(function (v) {
+            svg.append('line').attr('x1', mx).attr('y1', y(v)).attr('x2', mx + mw).attr('y2', y(v))
+                .attr('stroke', P.fine).attr('stroke-width', 0.6);
+            svg.append('text').attr('x', mx - 10).attr('y', y(v) + 4)
+                .attr('text-anchor', 'end').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('fill', P.muted).text(v.toLocaleString());
+        });
+
+        series.forEach(function (s, si) {
+            var col = s.color === 'copper' ? P.copper : (s.color === 'slate' ? P.slate : P.ink);
+            (s.values || []).forEach(function (v, i) {
+                var bx = x(v.year) + (si === 1 ? x.bandwidth() * 0.28 : 0);
+                var bwid = si === 1 ? x.bandwidth() * 0.44 : x.bandwidth();
+                var h = (my + mh) - y(v.n);
+                var rect = svg.append('rect').attr('x', bx).attr('y', my + mh)
+                    .attr('width', bwid).attr('height', 0)
+                    .attr('fill', v.partial ? P.bg : col)
+                    .attr('opacity', si === 1 ? 0.95 : 0.62)
+                    .attr('stroke', v.partial ? col : 'none').attr('stroke-width', v.partial ? 1 : 0)
+                    .attr('stroke-dasharray', v.partial ? '3,2' : null);
+                if (REDUCED_MOTION) rect.attr('y', y(v.n)).attr('height', h);
+                else rect.transition().delay(500 + si * 400 + i * 80).duration(600)
+                    .attr('y', y(v.n)).attr('height', h);
+            });
+            // Direct label at the end of the series — no legend.
+            var last = (s.values || [])[s.values.length - 1];
+            if (last) {
+                var lt = svg.append('text')
+                    .attr('x', x(last.year) + x.bandwidth() + 10).attr('y', y(last.n) + (si === 1 ? 18 : 4))
+                    .attr('font-family', SERIF).attr('font-size', '13px')
+                    .attr('font-weight', '700').attr('fill', col);
+                wsiWrap(lt, s.label, 150, 17);
+            }
+        });
+
+        d3.range(y0, y1 + 1).forEach(function (yr) {
+            svg.append('text').attr('x', x(yr) + x.bandwidth() / 2).attr('y', my + mh + 18)
+                .attr('text-anchor', 'middle').attr('font-family', SANS)
+                .attr('font-size', '10.5px').attr('fill', P.muted).text(yr);
+        });
+
+        // ── Marginalia: the writing measures, kept off the axis ──
+        var gx = mx + mw + 190, gy = my + 10;
+        tufteRule(svg, gx - 40, my - 10, gx - 40, my + mh, 0.5);
+        tufteSmallCaps(svg, gx, gy - 22, c.marginaliaLabel || 'AND WHO WROTE THEM', P.copper);
+        var myy = gy;
+        (c.marginalia || []).forEach(function (m, i) {
+            svg.append('text').attr('x', gx).attr('y', myy + 14)
+                .attr('font-family', SERIF).attr('font-size', '26px')
+                .attr('font-weight', '700').attr('fill', P.ink).text(m.value);
+            var t = svg.append('text').attr('x', gx).attr('y', myy + 36)
+                .attr('font-family', SERIF).attr('font-size', '12.5px').attr('fill', P.ink);
+            wsiWrap(t, m.text, 230, 16);
+            var tl = t.selectAll('tspan').size() || 1;
+            var s2 = svg.append('text').attr('x', gx).attr('y', myy + 36 + tl * 16 + 8)
+                .attr('font-family', SANS).attr('font-size', '10px')
+                .attr('letter-spacing', '0.6px').attr('fill', P.muted);
+            wsiWrap(s2, m.source, 230, 13);
+            // Stack on measured height: these two notes are different lengths
+            // and a fixed pitch put the second heading on the first's citation.
+            var sl = s2.selectAll('tspan').size() || 1;
+            myy = myy + 36 + tl * 16 + 8 + sl * 13 + 30;
+        });
+
+        if (c.footnote) aiosNote(svg, mx, my + mh + 46, mw + 60, c.footnote, P.crimson, 13);
+        if (c.caption) aiosNote(svg, mx, H * 0.845, W - 300, c.caption, P.ink, 13);
+        if (c.source) aiosSource(svg, mx, H * 0.905, c.source);
+    }
+
+
+    // ─── V10. scarcity-shift ─────────────────────────────────────
+    //  A qualitative claim, drawn as a qualitative claim. No axis, no
+    //  bars, no numbers — inventing a quantity here would undercut the
+    //  argument. The left column loses weight; the right column gains
+    //  a rule under it.
+    //    config.cheap[] / config.scarce[]  (strings)
+    function scarcityShift(container, config) {
+        var W = 1280, H = 700, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'What got cheap, and what did not.',
+            c.subtitle || 'Nothing on the right became more abundant. It only became more decisive.');
+
+        var lx = 150, rx = 720, top = 190, rowH = 42;
+
+        tufteSmallCaps(svg, lx, top - 26, c.cheapLabel || 'PRICE COLLAPSED', P.muted);
+        tufteSmallCaps(svg, rx, top - 26, c.scarceLabel || 'STILL SCARCE', P.copper);
+        tufteRule(svg, rx - 60, top - 46, rx - 60, top + Math.max((c.cheap || []).length, (c.scarce || []).length) * rowH, 0.5);
+
+        (c.cheap || []).forEach(function (t, i) {
+            var el = svg.append('text').attr('x', lx).attr('y', top + i * rowH)
+                .attr('font-family', SERIF).attr('font-size', '17px')
+                .attr('font-weight', '600').attr('fill', P.ink);
+            el.text(t);
+            if (REDUCED_MOTION) {
+                el.attr('font-weight', '300').attr('fill', P.muted).attr('opacity', 0.55);
+            } else {
+                el.transition().delay(700 + i * 110).duration(900)
+                    .attr('font-weight', '300').attr('fill', P.muted).attr('opacity', 0.55)
+                    .attr('y', top + i * rowH + 5);
+            }
+        });
+
+        (c.scarce || []).forEach(function (t, i) {
+            var el = svg.append('text').attr('x', rx).attr('y', top + i * rowH)
+                .attr('font-family', SERIF).attr('font-size', '17px')
+                .attr('font-weight', '600').attr('fill', P.ink).text(t);
+            var rule = svg.append('line')
+                .attr('x1', rx).attr('y1', top + i * rowH + 8)
+                .attr('x2', rx).attr('y2', top + i * rowH + 8)
+                .attr('stroke', P.copper).attr('stroke-width', 1.4);
+            var wpx = 0;
+            try { wpx = el.node().getComputedTextLength(); } catch (e) { wpx = 220; }
+            if (REDUCED_MOTION) rule.attr('x2', rx + wpx);
+            else rule.transition().delay(1600 + i * 120).duration(500).attr('x2', rx + wpx);
+        });
+
+        var closeY = top + Math.max((c.cheap || []).length, (c.scarce || []).length) * rowH + 12;
+        if (c.closing) {
+            var cl = svg.append('text').attr('x', lx).attr('y', closeY)
+                .attr('font-family', SERIF).attr('font-size', '17px')
+                .attr('font-style', 'italic').attr('fill', P.ink);
+            wsiWrap(cl, c.closing, W - 300, 24);
+            closeY += (cl.selectAll('tspan').size() || 1) * 24 + 12;
+        }
+        if (c.caution) aiosNote(svg, lx, closeY, W - 300, c.caution, P.crimson, 12.5);
+    }
+
+    // ─── V11. artifact-functions ─────────────────────────────────
+    //  A dot matrix of artifacts against the epistemic questions they
+    //  can actually answer. The diagonal is the honest picture; the
+    //  highlighted paper row is what the field has been asking one
+    //  artifact to do on its own.
+    //    config.artifacts[] = { label, example }
+    //    config.functions[] = string
+    //    config.matrix[][]  = '' | 'partial' | 'primary'
+    function artifactFunctions(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+        var rows = c.artifacts || [], cols = c.functions || [], M = c.matrix || [];
+
+        tufteTitleBlock(svg, 90, 66, W - 180,
+            c.title || 'Every artifact answers exactly one question well.',
+            c.subtitle || 'We spent thirty years asking the paper to answer all nine.');
+
+        var gx = 300, gy = 262, cw = (W - gx - 90) / Math.max(cols.length, 1), rh = 37;
+
+        // Rotated column headers
+        cols.forEach(function (f, j) {
+            var x = gx + j * cw + cw / 2;
+            var t = svg.append('text').attr('x', x).attr('y', gy - 18)
+                .attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.ink)
+                .attr('transform', 'rotate(-52 ' + x + ' ' + (gy - 18) + ')');
+            t.text(f);
+        });
+
+        rows.forEach(function (r, i) {
+            var y = gy + i * rh;
+            var g = svg.append('g').style('cursor', r.example ? 'pointer' : 'default');
+
+            // faint zebra rule
+            tufteRule(svg, gx - 14, y + 12, gx + cols.length * cw - cw / 2 + 14, y + 12, 0.45);
+
+            g.append('text').attr('x', gx - 26).attr('y', y + 5)
+                .attr('text-anchor', 'end').attr('font-family', SERIF)
+                .attr('font-size', '14.5px')
+                .attr('font-weight', r.emphasis ? '700' : '400')
+                .attr('fill', r.emphasis ? P.copper : P.ink).text(r.label);
+
+            (M[i] || []).forEach(function (v, j) {
+                var cx2 = gx + j * cw + cw / 2;
+                if (v === 'primary') {
+                    g.append('circle').attr('cx', cx2).attr('cy', y).attr('r', 6)
+                        .attr('fill', r.emphasis ? P.copper : P.ink);
+                } else if (v === 'partial') {
+                    g.append('circle').attr('cx', cx2).attr('cy', y).attr('r', 4.5)
+                        .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1).attr('opacity', 0.7);
+                }
+            });
+
+            aiosReveal(g, i, 500, 130);
+
+            if (r.example) {
+                g.on('mousemove', function (event) {
+                    var pt = d3.pointer(event, container);
+                    _showTooltip(tip, '<strong>' + r.label + '</strong><br>' + r.example, pt[0] + 16, pt[1] - 10);
+                }).on('mouseleave', function () { _hideTooltip(tip); });
+            }
+        });
+
+        // The overclaim: faint copper rings across the whole paper row.
+        var pi = rows.map(function (r) { return !!r.emphasis; }).indexOf(true);
+        if (pi >= 0) {
+            var py2 = gy + pi * rh;
+            cols.forEach(function (f, j) {
+                var cx3 = gx + j * cw + cw / 2;
+                if ((M[pi] || [])[j] === 'primary') return;
+                var ring = svg.append('circle').attr('cx', cx3).attr('cy', py2).attr('r', 10)
+                    .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 0.9)
+                    .attr('stroke-dasharray', '2,3').style('opacity', 0);
+                if (REDUCED_MOTION) ring.style('opacity', 0.7);
+                else ring.transition().delay(2200 + j * 90).duration(400).style('opacity', 0.7);
+            });
+            // Left of the row, not across the column headers.
+            var ol = svg.append('text').attr('x', gx - 26).attr('y', py2 - 22)
+                .attr('text-anchor', 'end')
+                .attr('font-family', SANS).attr('font-size', '11px')
+                .attr('font-weight', '700').attr('letter-spacing', '1.2px')
+                .attr('fill', P.copper).style('opacity', 0)
+                .text(c.overclaimLabel || 'WHAT WE HAVE BEEN ASKING THE PAPER TO DO');
+            if (REDUCED_MOTION) ol.style('opacity', 1);
+            else ol.transition().delay(3000).duration(500).style('opacity', 1);
+        }
+
+        // Legend, inline, no box.
+        var ly2 = gy + rows.length * rh + 34;
+        svg.append('circle').attr('cx', gx).attr('cy', ly2 - 4).attr('r', 6).attr('fill', P.ink);
+        svg.append('text').attr('x', gx + 14).attr('y', ly2)
+            .attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.muted)
+            .text('what this artifact establishes');
+        svg.append('circle').attr('cx', gx + 250).attr('cy', ly2 - 4).attr('r', 4.5)
+            .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1).attr('opacity', 0.7);
+        svg.append('text').attr('x', gx + 264).attr('y', ly2)
+            .attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.muted)
+            .text('partially, and only if you look');
+
+        if (c.closing) {
+            var cq = svg.append('text').attr('x', 96).attr('y', H - 58)
+                .attr('font-family', SERIF).attr('font-size', '15.5px')
+                .attr('font-style', 'italic').attr('fill', P.ink);
+            wsiWrap(cq, c.closing, W - 200, 21);
+        }
+    }
+
+    // ─── V12. memex-to-model ─────────────────────────────────────
+    //  A single associative trail, 1945 to now, in three colours: the
+    //  idea of the trail, the executable document, and the tool-using
+    //  system that can walk one on its own.
+    //    config.events[] = { date, label, band, url, tip }
+    //    config.quotes[] / config.additions[]
+    function memexToModel(container, config) {
+        var W = 1280, H = 760, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+        var events = (c.events || []).slice()
+            .sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+
+        tufteTitleBlock(svg, 90, 66, W - 180,
+            c.title || 'Bush described the trail. We finally built something that can walk one.',
+            c.subtitle || 'Eighty years from the memex to a system that constructs the trail while you are still asking.');
+
+        var x0 = 130, x1 = W - 110, mid = 296;
+        // A piecewise-linear time axis. The first forty years hold four
+        // events and the last ten hold seven; a single linear scale would
+        // pile the recent half on top of itself. The breakpoints are
+        // declared in config so the compression is visible, not hidden.
+        var knots = (c.axisKnots || [1943, 1990, 2012, 2021, 2027]);
+        var shares = (c.axisShares || [0, 0.17, 0.36, 0.58, 1]);
+        var x = d3.scaleLinear()
+            .domain(knots.map(function (yr) { return new Date(yr + '-01-01'); }))
+            .range(shares.map(function (s) { return x0 + (x1 - x0) * s; }));
+
+        var bandColor = { ideas: P.copper, documents: P.slate, systems: IRON };
+
+        // Nodes, placed on a gentle wave so labels can alternate.
+        events.forEach(function (e, i) {
+            e.cx = x(new Date(e.date));
+            e.cy = mid + Math.sin(i * 0.9) * 46;
+        });
+
+        // The trail, drawn per band so the colour changes with the idea.
+        ['ideas', 'documents', 'systems'].forEach(function (band, bi) {
+            var seg = events.filter(function (e) { return e.band === band; });
+            if (seg.length < 2) return;
+            // Bridge to the first node of the next band so the line is continuous.
+            var next = events.filter(function (e) { return e.band !== band; })
+                .filter(function (e) { return e.cx > seg[seg.length - 1].cx; })[0];
+            var pts = next ? seg.concat([next]) : seg;
+            var lg = d3.line().x(function (d) { return d.cx; }).y(function (d) { return d.cy; })
+                .curve(d3.curveCatmullRom.alpha(0.6));
+            var path = svg.append('path').attr('d', lg(pts)).attr('fill', 'none')
+                .attr('stroke', bandColor[band]).attr('stroke-width', 1.6).attr('opacity', 0.85);
+            if (!REDUCED_MOTION) {
+                var L = path.node().getTotalLength();
+                path.attr('stroke-dasharray', L).attr('stroke-dashoffset', L)
+                    .transition().delay(400 + bi * 700).duration(1100).ease(d3.easeCubicInOut)
+                    .attr('stroke-dashoffset', 0);
+            }
+        });
+
+        var lastLabelEdge = {};
+        events.forEach(function (e, i) {
+            var g = svg.append('g').style('cursor', e.url ? 'pointer' : 'default');
+            var col = bandColor[e.band] || P.ink;
+            g.append('circle').attr('cx', e.cx).attr('cy', e.cy).attr('r', 4.5)
+                .attr('fill', P.bg).attr('stroke', col).attr('stroke-width', 1.4);
+
+            var up = i % 2 === 0;
+            var full = e.date.slice(0, 4) + '  ' + e.label;
+            // ~6 px per character at 12 px Georgia; the earlier 3.6 under-measured
+            // and let two capped-width labels sit on the same tier.
+            var half = Math.min(168, Math.max(60, full.length * 6)) / 2;
+            var tier = 0;
+            while (tier < 3) {
+                var lk = up + '|' + tier;
+                if (lastLabelEdge[lk] == null || e.cx - half > lastLabelEdge[lk] + 10) {
+                    lastLabelEdge[lk] = e.cx + half; break;
+                }
+                tier++;
+            }
+            if (tier > 2) tier = 2;
+            var ty = up ? (mid - 78 - tier * 40) : (mid + 82 + tier * 40);
+            g.append('line').attr('x1', e.cx).attr('y1', e.cy + (up ? -6 : 6))
+                .attr('x2', e.cx).attr('y2', ty + (up ? 10 : -16))
+                .attr('stroke', col).attr('stroke-width', 0.6).attr('opacity', 0.45);
+            var t = g.append('text').attr('x', e.cx).attr('y', ty)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '12px').attr('fill', P.ink);
+            wsiWrap(t, full, 168, 15);
+            if (up) {
+                var nl = t.selectAll('tspan').size();
+                t.attr('y', ty - (nl - 1) * 15);
+                wsiWrap(t, full, 168, 15);
+            }
+
+            aiosReveal(g, i, 700, 90);
+
+            if (e.tip || e.url) {
+                g.on('mousemove', function (event) {
+                    var pt = d3.pointer(event, container);
+                    _showTooltip(tip, '<strong>' + e.label + '</strong>' +
+                        (e.tip ? '<br>' + e.tip : '') +
+                        (e.url ? '<br><span style="opacity:.7">click to open</span>' : ''),
+                        pt[0] + 16, pt[1] - 10);
+                }).on('mouseleave', function () { _hideTooltip(tip); });
+                if (e.url) g.on('click', function () { window.open(e.url, '_blank', 'noopener'); });
+            }
+        });
+
+        // Band legend, inline under the trail.
+        var lgx = x0;
+        [['ideas', c.bandLabels && c.bandLabels.ideas], ['documents', c.bandLabels && c.bandLabels.documents],
+         ['systems', c.bandLabels && c.bandLabels.systems]].forEach(function (pair, i) {
+            var lx2 = lgx + i * 300;
+            svg.append('line').attr('x1', lx2).attr('y1', 512).attr('x2', lx2 + 26).attr('y2', 512)
+                .attr('stroke', bandColor[pair[0]]).attr('stroke-width', 1.8);
+            svg.append('text').attr('x', lx2 + 34).attr('y', 516)
+                .attr('font-family', SANS).attr('font-size', '11px').attr('fill', P.muted)
+                .text(pair[1] || pair[0]);
+        });
+
+        // Bush in the margin.
+        tufteRule(svg, x0, 540, x1, 540, 0.6);
+        tufteSmallCaps(svg, x0, 566, c.quotesLabel || 'BUSH, 1945', P.copper);
+        var qy = 592;
+        (c.quotes || []).forEach(function (q, i) {
+            var t = svg.append('text').attr('x', x0).attr('y', qy)
+                .attr('font-family', SERIF).attr('font-size', '13px')
+                .attr('font-style', 'italic').attr('fill', P.ink);
+            wsiWrap(t, '“' + q + '”', 470, 17);
+            qy += (t.selectAll('tspan').size() || 1) * 17 + 16;
+        });
+
+        // What the model adds to the memex.
+        var ax = 680, colY = [592, 592];
+        tufteSmallCaps(svg, ax, 566, c.additionsLabel || 'WHAT THE MODEL ADDS TO THE MEMEX', P.ink);
+        (c.additions || []).forEach(function (a, i) {
+            var col = i % 2;
+            var t = svg.append('text').attr('x', ax + col * 268).attr('y', colY[col])
+                .attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink);
+            wsiWrap(t, a, 252, 16);
+            colY[col] += (t.selectAll('tspan').size() || 1) * 16 + 10;
+            aiosReveal(t, i, 2200, 110);
+        });
+    }
+
+    // ─── V13. canal-and-railroad ─────────────────────────────────
+    //  The closing metaphor. The ribbon is the RIGHT-OF-WAY, not the
+    //  canal — that is the whole point. Three transportation logics are
+    //  drawn as segments on the same corridor: water, iron, and (on the
+    //  top band) a bike trail. The bottom band is the same shape applied
+    //  to pathology infrastructure, with the iron drawn only as far as
+    //  today and ending in an arrowhead.
+    //    config.top / config.bottom = {
+    //      label, start, end, knots[], shares[], ticks[],
+    //      segments: [{ from, to, tone: 'canal'|'rail'|'trail', label, locks, rails, arrow }],
+    //      events:   [{ year, label, tone, tip }]
+    //    }
+    function canalAndRailroad(container, config) {
+        var W = 1280, H = 786, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var tip = _createTooltip(container);
+        var toneColor = { canal: P.slate, rail: IRON, trail: P.green };
+
+        tufteTitleBlock(svg, 90, 64, W - 180,
+            c.title || 'The canal was necessary, expensive, and obsolete within twenty years.',
+            c.subtitle || 'The railroad did not go around it. It was built on the same right-of-way.');
+
+        function band(spec, y, h, opts) {
+            var x0 = 120, x1 = W - 110;
+            // Piecewise axis: the canal's twenty dramatic years and the last
+            // decade of pathology both need room a linear axis will not give
+            // them. Breakpoints are declared in the JSON, not hidden here.
+            var knots = spec.knots || [spec.start, spec.end];
+            var shares = spec.shares || [0, 1];
+            var x = d3.scaleLinear()
+                .domain(knots)
+                .range(shares.map(function (s) { return x0 + (x1 - x0) * s; }));
+
+            // The corridor itself — it outlives everything drawn on it.
+            svg.append('rect').attr('x', x0).attr('y', y).attr('width', x1 - x0).attr('height', h)
+                .attr('fill', P.fine).attr('opacity', 0.7);
+            svg.append('rect').attr('x', x0).attr('y', y).attr('width', x1 - x0).attr('height', h)
+                .attr('fill', 'none').attr('stroke', P.rule).attr('stroke-width', 0.8);
+            svg.append('text').attr('x', x0).attr('y', y - 12)
+                .attr('font-family', SANS)
+                .attr('font-size', '10px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', P.muted)
+                .text(spec.label || '');
+
+            (spec.segments || []).forEach(function (sg, si) {
+                var sx = x(sg.from), sw = x(sg.to) - x(sg.from);
+                var col = toneColor[sg.tone] || P.slate;
+                var seg = svg.append('g');
+                var rect = seg.append('rect')
+                    .attr('x', sx).attr('y', y + 3).attr('width', 0).attr('height', h - 6)
+                    .attr('fill', col).attr('opacity', sg.tone === 'canal' ? 0.55 : 0.9);
+                if (REDUCED_MOTION) rect.attr('width', sw);
+                else rect.transition().delay(((opts && opts.delay) || 700) + si * 700)
+                    .duration(800).ease(d3.easeCubicInOut).attr('width', sw);
+
+                // Locks: the canal's real cost structure, drawn in negative space.
+                if (sg.locks) {
+                    for (var i = 0; i < sg.locks; i++) {
+                        var lx = sx + sw * (i / (sg.locks - 1));
+                        seg.append('line').attr('x1', lx).attr('y1', y + 4).attr('x2', lx).attr('y2', y + h - 4)
+                            .attr('stroke', P.bg).attr('stroke-width', 0.6).attr('opacity', 0.75);
+                    }
+                }
+                // Rails and sleepers, also in negative space so the iron
+                // segment cannot be mistaken for the water one.
+                if (sg.rails) {
+                    [y + h * 0.36, y + h * 0.64].forEach(function (ry) {
+                        seg.append('line').attr('x1', sx + 2).attr('y1', ry).attr('x2', sx + sw - 2).attr('y2', ry)
+                            .attr('stroke', P.bg).attr('stroke-width', 1.1).attr('opacity', 0.9);
+                    });
+                    var n = Math.max(6, Math.round(sw / 11));
+                    for (var k = 0; k < n; k++) {
+                        var kx = sx + 3 + (sw - 6) * (k / (n - 1));
+                        seg.append('line').attr('x1', kx).attr('y1', y + h * 0.28).attr('x2', kx).attr('y2', y + h * 0.72)
+                            .attr('stroke', P.bg).attr('stroke-width', 0.8).attr('opacity', 0.55);
+                    }
+                }
+                if (sg.arrow) {
+                    var ah = seg.append('path')
+                        .attr('d', 'M ' + (sx + sw) + ' ' + (y - 2) + ' L ' + (sx + sw + 22) + ' ' + (y + h / 2) +
+                                   ' L ' + (sx + sw) + ' ' + (y + h + 2) + ' Z')
+                        .attr('fill', col).attr('opacity', 0);
+                    if (REDUCED_MOTION) ah.attr('opacity', 0.9);
+                    else ah.transition().delay(((opts && opts.delay) || 700) + si * 700 + 800)
+                        .duration(400).attr('opacity', 0.9);
+                }
+                // Direct label, inside the segment when it fits, above it when not.
+                if (sg.label) {
+                    var inside = sw > sg.label.length * 6.4 + 16;
+                    seg.append('text')
+                        .attr('x', inside ? sx + sw / 2 : sx + sw + 26)
+                        .attr('y', y + h / 2 + 4)
+                        .attr('text-anchor', inside ? 'middle' : 'start')
+                        .attr('font-family', SANS).attr('font-size', '10.5px')
+                        .attr('font-weight', '700').attr('letter-spacing', '1.2px')
+                        .attr('fill', inside ? P.bg : col)
+                        .text(sg.label);
+                }
+            });
+
+            // Axis
+            (spec.ticks || []).forEach(function (t) {
+                svg.append('line').attr('x1', x(t)).attr('y1', y + h).attr('x2', x(t)).attr('y2', y + h + 16)
+                    .attr('stroke', P.fine).attr('stroke-width', 0.6);
+                svg.append('text').attr('x', x(t)).attr('y', y + h + 29)
+                    .attr('text-anchor', 'middle').attr('font-family', SANS)
+                    .attr('font-size', '10.5px').attr('fill', P.muted).text(t);
+            });
+
+            // Events — alternating sides, with a second tier when neighbours
+            // on the same side would sit on top of each other.
+            var above = true, lastEdge = {};
+            (spec.events || []).forEach(function (e, i) {
+                var ex = x(e.year);
+                above = !above;
+                var half = Math.min(130, Math.max(50, e.label.length * 3.1)) / 2;
+                var tier = 0;
+                while (tier < 2) {
+                    var key = above + '|' + tier;
+                    if (lastEdge[key] == null || ex - half > lastEdge[key] + 10) { lastEdge[key] = ex + half; break; }
+                    tier++;
+                }
+                if (tier > 1) tier = 1;
+
+                var col = toneColor[e.tone] || P.slate;
+                var stem = above ? -(38 + tier * 44) : (h + 46 + tier * 44);
+                var g = svg.append('g');
+                g.append('line').attr('x1', ex).attr('y1', above ? y : y + h)
+                    .attr('x2', ex).attr('y2', y + stem)
+                    .attr('stroke', col).attr('stroke-width', 0.8);
+                g.append('circle').attr('cx', ex).attr('cy', y + stem).attr('r', 2.8).attr('fill', col);
+
+                var ty = y + stem + (above ? -8 : 14);
+                var t = g.append('text').attr('x', ex).attr('y', ty)
+                    .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                    .attr('font-size', '11.5px').attr('fill', P.ink);
+                wsiWrap(t, e.label, 132, 14);
+                if (above) {
+                    var nl = t.selectAll('tspan').size();
+                    t.attr('y', ty - (nl - 1) * 14);
+                    wsiWrap(t, e.label, 132, 14);
+                }
+                aiosReveal(g, i, (opts && opts.eventDelay) || 500, 90);
+                if (e.tip) {
+                    g.style('cursor', 'pointer').on('mousemove', function (event) {
+                        var pt = d3.pointer(event, container);
+                        _showTooltip(tip, e.tip, pt[0] + 16, pt[1] - 10);
+                    }).on('mouseleave', function () { _hideTooltip(tip); });
+                }
+            });
+        }
+
+        band(c.top || {}, 232, 30, { delay: 800, eventDelay: 500 });
+        band(c.bottom || {}, 606, 30, { delay: 2400, eventDelay: 1400 });
+
+        if (c.marginalia) aiosNote(svg, 120, 414, 520, c.marginalia, P.muted, 12.5);
+        if (c.yaleNote) aiosNote(svg, 690, 414, 480, c.yaleNote, P.muted, 12.5);
+
+        if (c.closing) {
+            var cl = svg.append('text').attr('x', 120).attr('y', H - 34)
+                .attr('font-family', SERIF).attr('font-size', '16.5px')
+                .attr('font-style', 'italic').attr('fill', P.ink).style('opacity', 0);
+            wsiWrap(cl, c.closing, W - 240, 22);
+            if (REDUCED_MOTION) cl.style('opacity', 1);
+            else cl.transition().delay(3400).duration(700).style('opacity', 1);
+        }
+    }
+
+    // ─── V14. lecture-provenance ─────────────────────────────────
+    //  The meta slide. A lecture about collapsing the distance between
+    //  question, data, code and teaching should be able to show its
+    //  own trail — including the loop back from a question in the room.
+    //    config.stages[] = { label, detail, count }
+    //    config.loopLabel, config.build = { commit, date, slides, vizzes }
+    function lectureProvenance(container, config) {
+        var W = 1280, H = 700, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var stages = c.stages || [];
+
+        tufteTitleBlock(svg, 90, 74, W - 180,
+            c.title || 'This deck is the argument, not a picture of it.',
+            c.subtitle || 'One JSON file, a visualization library, a test suite, and a commit hash.');
+
+        var arrow = aiosArrowDef(svg, 'aios-prov-arrow', TUFTE.copper);
+        var n = Math.max(stages.length, 1);
+        var pad = 110, gapW = 26;
+        var cardW = (W - pad * 2 - gapW * (n - 1)) / n, cardH = 172, cy = 210;
+
+        var maxCardH = cardH;
+        stages.forEach(function (s, i) {
+            var cx = pad + i * (cardW + gapW);
+            var g = svg.append('g');
+
+            g.append('text').attr('x', cx + 14).attr('y', cy + 26)
+                .attr('font-family', SANS).attr('font-size', '10.5px')
+                .attr('font-weight', '700').attr('letter-spacing', '1.6px')
+                .attr('fill', P.copper).text(String(i + 1).padStart(2, '0'));
+
+            var lab = g.append('text').attr('x', cx + 14).attr('y', cy + 52)
+                .attr('font-family', SERIF).attr('font-size', '15.5px')
+                .attr('font-weight', '700').attr('fill', P.ink);
+            wsiWrap(lab, s.label, cardW - 28, 19);
+
+            var detY = cy + 52 + (lab.selectAll('tspan').size() || 1) * 19 + 10;
+            var det = g.append('text').attr('x', cx + 14).attr('y', detY)
+                .attr('font-family', SERIF).attr('font-size', '12px')
+                .attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(det, s.detail || '', cardW - 28, 16);
+            var detBottom = detY + ((det.selectAll('tspan').size() || 1) - 1) * 16;
+
+            if (s.count) {
+                g.append('text').attr('x', cx + 14).attr('y', detBottom + 26)
+                    .attr('font-family', SANS).attr('font-size', '11px')
+                    .attr('font-weight', '700').attr('fill', P.ink).text(s.count);
+            }
+
+            // Frames are drawn behind the text and sized from it: three of
+            // these details are two lines and three are four.
+            var thisH = Math.max(detBottom + (s.count ? 38 : 16) - cy, cardH);
+            maxCardH = Math.max(maxCardH, thisH);
+            g.insert('rect', ':first-child')
+                .attr('x', cx).attr('y', cy).attr('width', cardW).attr('height', thisH)
+                .attr('fill', P.bg).attr('stroke', P.rule).attr('stroke-width', 0.9);
+
+            if (i < n - 1) {
+                svg.append('line')
+                    .attr('x1', cx + cardW + 4).attr('y1', cy + cardH / 2)
+                    .attr('x2', cx + cardW + gapW - 4).attr('y2', cy + cardH / 2)
+                    .attr('stroke', P.copper).attr('stroke-width', 1).attr('marker-end', arrow);
+            }
+            aiosReveal(g, i, 500, 170);
+        });
+
+        // The loop: a question in the room goes back to stage one.
+        var lx0 = pad + (n - 1) * (cardW + gapW) + cardW / 2, lx1 = pad + cardW / 2;
+        var ly = cy + maxCardH;
+        svg.append('path')
+            .attr('d', 'M ' + lx0 + ' ' + (ly + 8) +
+                       ' C ' + lx0 + ' ' + (ly + 110) + ', ' + lx1 + ' ' + (ly + 110) + ', ' + lx1 + ' ' + (ly + 8))
+            .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5,4').attr('marker-end', arrow);
+        svg.append('text').attr('x', (lx0 + lx1) / 2).attr('y', ly + 108)
+            .attr('text-anchor', 'middle').attr('font-family', SERIF)
+            .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', P.copper)
+            .text(c.loopLabel || 'a question from the room re-enters at step one');
+
+        // Build facts, set in type like a colophon.
+        if (c.build) {
+            var by = ly + 156;
+            tufteRule(svg, pad, by - 22, W - pad, by - 22, 0.6);
+            var parts = c.build;
+            var cells = [
+                ['SLIDES', parts.slides], ['NEW VISUALIZATIONS', parts.vizzes],
+                ['REFERENCES VERIFIED', parts.references], ['BUILD', parts.date]
+            ].filter(function (p) { return p[1] != null; });
+            cells.forEach(function (p, i) {
+                var cx2 = pad + i * ((W - pad * 2) / cells.length);
+                svg.append('text').attr('x', cx2).attr('y', by)
+                    .attr('font-family', SANS).attr('font-size', '10px')
+                    .attr('font-weight', '700').attr('letter-spacing', '1.4px')
+                    .attr('fill', P.muted).text(p[0]);
+                svg.append('text').attr('x', cx2).attr('y', by + 24)
+                    .attr('font-family', SERIF).attr('font-size', '19px')
+                    .attr('font-weight', '700').attr('fill', P.ink).text(String(p[1]));
+            });
+        }
+
+        if (c.caption) aiosNote(svg, pad, H - 26, W - pad * 2, c.caption, P.ink, 12.5);
+    }
+
+
+    // Register the AI-operating-system lecture visualizations.
+    registry['learning-objectives-config'] = learningObjectivesConfig;
+    registry['eagle-routing-pipeline']     = eagleRoutingPipeline;
+    registry['auroc-vs-compute']           = aurocVsCompute;
+    registry['benchmark-saturation']       = benchmarkSaturation;
+    registry['benchmark-scaling']          = benchmarkScaling;
+    registry['boundary-collapse']          = boundaryCollapse;
+    registry['pathology-agents-timeline']  = pathologyAgentsTimeline;
+    registry['three-clocks']               = threeClocks;
+    registry['evidence-ladder']            = evidenceLadder;
+    registry['fda-ai-devices']             = fdaAiDevices;
+    registry['paper-volume']               = paperVolume;
+    registry['scarcity-shift']             = scarcityShift;
+    registry['artifact-functions']         = artifactFunctions;
+    registry['memex-to-model']             = memexToModel;
+    registry['canal-and-railroad']         = canalAndRailroad;
+    registry['lecture-provenance']         = lectureProvenance;
+
     function render(name, container, config) {
         var fn = registry[name];
         if (fn) fn(container, config || {});

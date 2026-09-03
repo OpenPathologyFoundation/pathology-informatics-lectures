@@ -1,0 +1,288 @@
+{
+  "_meta": {
+    "purpose": "Single source of truth for every number rendered in the 'AI Is Rewriting the Operating System of Pathology' lecture. Every value carries a `source` id that resolves in docs/ai_operating_system/REFERENCES.md. Visualizations MUST read from this file (fetch('/assets/data/ai-os/verified-numbers.json')) rather than hard-coding values.",
+    "compiled": "2026-09-02",
+    "verification_legend": {
+      "YES": "primary page/abstract/database fetched and quoted on 2026-09-02",
+      "PARTIAL": "bibliographic record confirmed; specific value from secondary source or not re-fetched",
+      "TODO": "value needed by a viz but NOT yet verified — coding agent must verify before render (see TASKS.md T1.3)"
+    }
+  },
+
+  "eagle": {
+    "source": "EAGLE-NatCommun",
+    "citation": "Neidlinger P, ... Kather JN. Nat Commun 17, 5740 (1 Jul 2026). doi:10.1038/s41467-026-74918-9",
+    "pipeline": [
+      { "stage": "Tessellation", "detail": "~18,000 tiles per slide at 0.5 MPP", "verified": "YES" },
+      { "stage": "CTransPath features @ 2 MPP", "seconds": 2.01, "verified": "YES" },
+      { "stage": "CHIEF attention ranking (frozen)", "seconds": 0.00036, "verified": "YES" },
+      { "stage": "Select top-25 tiles", "tiles": 25, "verified": "YES" },
+      { "stage": "Virchow2 re-extraction of 25 tiles", "seconds": 0.26, "verified": "YES" },
+      { "stage": "Equal-weight average → 1280-d slide embedding", "verified": "YES" }
+    ],
+    "seconds_per_slide_total": 2.27,
+    "hardware": "NVIDIA L40 (48 GB); model inference only",
+    "tiles_reprocessed_fraction": { "at_2mpp": 0.02, "at_0_5mpp": 0.001, "verified": "YES" },
+    "benchmark_main": { "wsis": 9528, "cohorts": 13, "cancer_types": 4, "tasks": 31, "external": true, "verified": "YES" },
+    "benchmark_extended": { "tasks": 43, "cancer_types": 9, "note": "12 extra PathoBench tasks are internal CV, not external validation", "verified": "YES" },
+    "auroc_mean_31_tasks": [
+      { "model": "EAGLE", "auroc": 0.742, "seconds_per_slide": 2.27, "verified": "YES" },
+      { "model": "TITAN", "auroc": 0.740, "seconds_per_slide": 3.296, "verified": "YES" },
+      { "model": "Virchow2 (STAMP)", "auroc": 0.723, "seconds_per_slide": null, "verified": "PARTIAL", "note": "per-slide time for full Virchow2 tiling not captured — TODO from paper Fig./Table" },
+      { "model": "CONCH v1.5 (STAMP)", "auroc": 0.721, "seconds_per_slide": 191.85, "verified": "YES" },
+      { "model": "Prov-GigaPath", "auroc": null, "seconds_per_slide": 960, "verified": "TODO", "note": "16 min/WSI verified; mean AUROC on the 31-task benchmark must be read from the paper" }
+    ],
+    "ensemble_of_folds": { "EAGLE": 0.750, "TITAN": 0.744, "CONCH": 0.736, "verified": "YES" },
+    "max_task_gain_pct": 23,
+    "compute_reduction_pct": 99,
+    "artifact_analysis": { "slides": 50, "with_pen_marks": 35, "pathologists": 1, "pen_marks_in_eagle_tiles_pct": 16, "pen_marks_in_baseline_tiles_pct": 23, "verified": "YES" },
+    "gini_attention": { "CHIEF": 0.702, "ABMIL": 0.087, "verified": "YES" },
+    "macbook_demo": { "device": "MacBook Air M3 (2024)", "minutes": 3, "slides": 7, "source": "EAGLE-GitHub", "verified": "YES", "note": "README figure, not in paper" },
+    "access_requirements": [
+      { "component": "Virchow2", "access": "Hugging Face gated (terms acceptance)", "verified": "YES" },
+      { "component": "CHIEF weights", "access": "Google-Drive request or Docker image; GPLv3 non-commercial", "verified": "YES" },
+      { "component": "CTransPath features", "access": "run STAMP-Benchmark at 2 MPP first", "verified": "YES" }
+    ],
+    "prospective_statement": "the average AUROC of 0.742 indicates that EAGLE's performance might not yet be adequate to replace standard clinical procedures. Future work may explore prospective clinical trials",
+    "study_design": "retrospective (all cohorts)"
+  },
+
+  "pathbench_stanford": {
+    "source": "PathBench-NatCommun",
+    "citation": "Bareja R, ... Gevaert O. Nat Commun 17, 9012 (24 Jul 2026). doi:10.1038/s41467-026-76004-6",
+    "models": 32, "categories": 4, "tasks": 41, "datasets": 53, "wsis_min": 17500,
+    "tasks_tcga": 19, "tasks_non_tcga": 22, "path_vm_count": 16,
+    "categories_list": ["VM (general vision)", "VLM (general vision-language)", "Path-VM (pathology vision)", "Path-VLM (pathology vision-language)"],
+    "top5_tcga": [
+      { "model": "Virchow2", "auroc": 0.830, "ci": [0.784, 0.875], "category": "Path-VM", "verified": "YES" },
+      { "model": "Prov-GigaPath", "auroc": 0.829, "ci": [0.784, 0.875], "category": "Path-VM", "verified": "YES" },
+      { "model": "H-optimus-0", "auroc": 0.824, "ci": [0.776, 0.873], "category": "Path-VM", "verified": "YES" },
+      { "model": "UNI", "auroc": 0.824, "ci": [0.777, 0.871], "category": "Path-VM", "verified": "YES" },
+      { "model": "UNI2", "auroc": 0.824, "ci": [0.779, 0.868], "category": "Path-VM", "verified": "YES" }
+    ],
+    "top5_non_tcga": [
+      { "model": "Virchow2", "auroc": 0.836, "ci": null, "verified": "PARTIAL", "note": "CI TODO from paper" },
+      { "model": "UNI", "auroc": 0.835, "ci": null, "verified": "PARTIAL" },
+      { "model": "H-optimus-0", "auroc": 0.832, "ci": null, "verified": "PARTIAL" },
+      { "model": "Prov-GigaPath", "auroc": 0.827, "ci": null, "verified": "PARTIAL" },
+      { "model": "UNI2", "auroc": 0.824, "ci": null, "verified": "PARTIAL" }
+    ],
+    "significance": {
+      "tcga": "no statistical differences ... among UNI, UNI2, Virchow2, Prov-GigaPath, and H-optimus-0 based on Wald tests",
+      "non_tcga": "largely non-significant; only Virchow2 vs UNI2 for sensitivity",
+      "patch_level_exception": "Virchow2 significantly > UNI, UNI2, Prov-GigaPath, H-optimus-0 (FDR p<0.001)",
+      "verified": "YES"
+    },
+    "ensemble": {
+      "method": "majority-vote late fusion of top-5 (non-TCGA ranked)",
+      "tcga_balanced_acc": { "fusion": 0.702, "fusion_sd": 0.111, "virchow2": 0.696, "virchow2_sd": 0.105 },
+      "non_tcga_balanced_acc": { "virchow2": 0.712, "fusion": 0.699, "uni": 0.698 },
+      "task_level_significant": false,
+      "verified": "YES"
+    },
+    "scaling_bins": {
+      "params": [ { "bin": "ViT-S", "params_m": 21 }, { "bin": "ViT-B", "params_m": 85 }, { "bin": "ViT-L", "params_m": ">300" } ],
+      "data": [ { "bin": "small", "wsis": "<0.1M" }, { "bin": "medium", "wsis": "0.1–1M" }, { "bin": "large", "wsis": ">1M" } ],
+      "finding": "neither increasing model size nor pre-training dataset size uniformly guarantees improved performance",
+      "verified": "YES"
+    },
+    "stated_limitations": ["frozen features + linear probing", "possible pretraining/evaluation overlap (TCGA, CPTAC)", "coarse scaling proxies", "simple mean pooling"],
+    "not_evaluated_by_design": ["calibration", "decision curves", "prospective workflow effects", "pathologist comparison", "patient outcomes"],
+    "protocol": { "magnification": "20x", "patch_px": 256, "resize_px": 224, "probe": "linear, lr 0.001, 30 epochs, no augmentation", "split": "70/30 patient-level", "bootstrap": 1000, "gpus": "4x A100 40GB", "verified": "YES" },
+    "model_facts_for_hover": [
+      { "model": "Virchow2", "params_m": 632, "pretrain_wsis": 3100000, "source": "Virchow2", "verified": "YES" },
+      { "model": "Prov-GigaPath", "params_m": null, "pretrain_wsis": 171189, "pretrain_tiles": 1300000000, "source": "Prov-GigaPath", "verified": "PARTIAL", "note": "param count TODO (ViT-G tile encoder)" },
+      { "model": "UNI", "params_m": null, "pretrain_wsis": null, "source": "UNI", "verified": "TODO" },
+      { "model": "UNI2", "params_m": null, "pretrain_wsis": null, "verified": "TODO" },
+      { "model": "H-optimus-0", "params_m": null, "pretrain_wsis": null, "verified": "TODO" }
+    ]
+  },
+
+  "batch_effects": {
+    "source": "F-4",
+    "citation": "de Jong ED, Marcus E, Teuwen J. arXiv:2501.18055 (29 Jan 2025)",
+    "models_evaluated": 10,
+    "finding": "the medical center of origin is predicted more accurately than the tissue source and cancer type",
+    "robustness_index_gt1_count": 1,
+    "verified": "YES"
+  },
+
+  "fda_ai_devices": {
+    "source": "D-1",
+    "citation": "FDA AI-Enabled Medical Devices list, page dated 16 Jun 2026; table parsed 2 Sep 2026",
+    "total": 1524,
+    "by_panel": [
+      { "panel": "Radiology", "n": 1164 },
+      { "panel": "Cardiovascular", "n": 147 },
+      { "panel": "Neurology", "n": 70 },
+      { "panel": "Anesthesiology", "n": 26 },
+      { "panel": "Gastroenterology-Urology", "n": 25 },
+      { "panel": "Hematology", "n": 21 },
+      { "panel": "Ophthalmic", "n": 10 },
+      { "panel": "Pathology", "n": 9 },
+      { "panel": "Clinical Chemistry", "n": 9 }
+    ],
+    "by_year": [
+      { "year": 2019, "n": 80 }, { "year": 2020, "n": 114 }, { "year": 2021, "n": 130 }, { "year": 2022, "n": 162 },
+      { "year": 2023, "n": 226 }, { "year": 2024, "n": 235 }, { "year": 2025, "n": 333 }, { "year": 2026, "n": 92, "note": "through 30 Mar 2026" }
+    ],
+    "pathology_entries": [
+      { "device": "AutoPap 300 QC", "id": "P950009", "year": 1995, "modern_wsi_ai": false },
+      { "device": "PAPNET", "id": "P940029", "year": 1995, "modern_wsi_ai": false },
+      { "device": "Paige Prostate", "id": "DEN200080", "date": "2021-09-21", "modern_wsi_ai": true },
+      { "device": "Tempus xT CDx", "id": "P210011", "year": 2023, "modern_wsi_ai": false },
+      { "device": "Hologic Genius Cervical AI", "id": "DEN210035", "date": "2024-01-31", "modern_wsi_ai": true },
+      { "device": "Ibex Galen Second Read", "id": "K241232", "date": "2025-01-24", "modern_wsi_ai": true },
+      { "device": "ArteraAI Prostate", "id": "DEN240068", "date": "2025-07-31", "modern_wsi_ai": true },
+      { "device": "Geneseeq GENESEEQPRIME", "id": "K250003", "date": "2025-08-29", "modern_wsi_ai": false },
+      { "device": "INFINITT DPS", "id": "K243449", "date": "2025-12-09", "modern_wsi_ai": false, "note": "digital pathology system, not an algorithm" }
+    ],
+    "innolitics_2026": { "source": "D-2", "ai_ml_pathology_adjacent": 51, "wsi_algorithms": 7, "regulated_as": "IVD (OHT7, 21 CFR 864.3700), not SaMD", "verified": "YES" },
+    "disclaimer": "The list is not a comprehensive resource of AI-enabled medical devices.",
+    "verified": "YES"
+  },
+
+  "pubmed_counts": {
+    "source": "G-7",
+    "citation": "PubMed E-utilities esearch counts, run 2 Sep 2026 18:00 UTC",
+    "query1_label": "(digital|computational pathology|whole slide) AND (AI|deep learning|machine learning) [tiab]",
+    "query1": [
+      { "year": 2018, "n": 65 }, { "year": 2019, "n": 143 }, { "year": 2020, "n": 253 }, { "year": 2021, "n": 433 },
+      { "year": 2022, "n": 556 }, { "year": 2023, "n": 650 }, { "year": 2024, "n": 799 }, { "year": 2025, "n": 1055 },
+      { "year": 2026, "n": 992, "partial": true, "note": "through 2 Sep 2026" }
+    ],
+    "query_fm_label": "\"foundation model\"[tiab] AND (pathology|histopathology|whole slide)[tiab]",
+    "query_fm": [
+      { "year": 2022, "n": 0 }, { "year": 2023, "n": 2 }, { "year": 2024, "n": 16 }, { "year": 2025, "n": 100 }, { "year": 2026, "n": 122, "partial": true }
+    ],
+    "verified": "YES"
+  },
+
+  "llm_in_writing": {
+    "kobak_2025": { "source": "G-2", "measure": "abstracts processed with LLMs (lower bound)", "year": 2024, "share_pct": 13.5, "corpus": ">15M biomedical abstracts 2010–2024", "verified": "YES" },
+    "kobak_2026": { "source": "G-2", "measure": "papers showing excess LLM-associated vocabulary (full text)", "year": 2025, "share_pct": 89, "discussion_pct": 68, "methods_pct": 32, "verified": "YES", "note": "different measure from 2025 paper — do not plot on the same axis without a caption" },
+    "hanson_2024": { "source": "G-1", "growth_2016_to_2022_pct": 47, "verified": "YES" },
+    "he_bu_2025": { "source": "G-4", "journals": 5114, "papers_m": 5.2, "journals_with_policy_pct": 70, "effect": "no significant difference", "verified": "YES" }
+  },
+
+  "peer_review_2026": {
+    "source": "G-5/G-6",
+    "iclr_2026": { "reviews_total": 70000, "papers": 19000, "fully_ai_reviews": 15899, "fully_ai_pct": 21, "some_ai_pct": ">50", "papers_over_50pct_ai": 9, "verified": "YES" },
+    "neurips_2026_position": { "papers": 971, "ai_score_ge50_pct": 70.5, "ai_score_ge50_pct_2025": 28.5, "ai_score_100_pct": 28.2, "desk_rejected": 178, "desk_rejected_pct": 18.4, "evidence_requested": 123, "verified": "YES" },
+    "icml_2026": { "reviews_removed": 795, "papers_desk_rejected": 497, "verified": "PARTIAL" },
+    "aaai_26": { "papers_with_ai_review": 22977, "time": "< 1 day", "verified": "YES" }
+  },
+
+  "metr": {
+    "source": "B-1/B-2/B-3",
+    "rct_2025": { "date": "2025-07-10", "developers": 16, "tasks": 246, "effect_pct": 19, "direction": "slower", "ci": [2, 39], "forecast_speedup_pct": 24, "verified": "YES" },
+    "update_2026": { "date": "2026-02-24", "developers": 57, "repos": 143, "tasks": "800+", "returning_speedup_pct": 18, "returning_ci": [-38, 9], "new_speedup_pct": 4, "new_ci": [-15, 9], "declined_tasks_without_ai_pct": [30, 50], "verified": "YES", "note": "negative = faster with AI in METR's sign convention as quoted: 'speedup of -18%'" },
+    "survey_2026": { "date": "2026-05-11", "respondents": 349, "median_value_change": "1.4–2x", "median_speed_change": "3x", "claude_code_regular_use_pct": 50, "verified": "YES" }
+  },
+
+  "clinical_evidence": {
+    "articulate_pro": { "source": "E-1", "citation": "npj Digit Med, 22 May 2026. doi:10.1038/s41746-026-02592-8", "sites": 3, "cases": 1613, "ai_assisted": 1049, "changed_dx_or_gg": 21, "changed_denominator": 386, "changed_pct": 5.4, "management_relevant": 5, "management_pct": 1.3, "tat_reduction_hours": 30.1, "ihc_odds_ratios": [0.50, 0.43, 0.33], "verified": "YES" },
+    "campanella_2025": { "source": "E-2", "citation": "Nat Med, 9 Jul 2025. doi:10.1038/s41591-025-03780-x", "n_slides": 8461, "auc_internal": 0.847, "auc_external": 0.870, "auc_silent_trial": 0.890, "rapid_molecular_tests_reduced_pct": 43, "verified": "YES" }
+  },
+
+  "standards": {
+    "dicom_sup145_final_text_year": 2010,
+    "connectathon_2025": { "source": "C-3", "implementers": 32, "ap_lis": 2, "scanners": 9, "archives": 7, "viewers": 15, "evidence_creators": 8, "verified": "YES" },
+    "ihe_dpia": { "source": "C-4", "status": "Trial Implementation", "rev": "1.3", "date": "2024-12-17", "verified": "YES" },
+    "cornish_2026": { "source": "C-2", "fda_cleared_scanners_min": 10, "proprietary_formats": ["SVS", "iSyntax", "BIF", "MRXS", "NDPI"], "verified": "YES" },
+    "msk_fleet": { "source": "C-5", "scanners": 16, "vendors": 7, "slides_compared": 347, "verified": "YES" },
+    "mcp": { "source": "A-13", "announced": "2024-11-25", "donated_to_linux_foundation": "2025-12-09", "verified": "YES" }
+  },
+
+  "agents_timeline": {
+    "source": "A-1..A-16",
+    "events": [
+      { "date": "2024-06-12", "name": "PathChat", "who": "Mahmood lab / Nature", "kind": "copilot", "url": "https://www.nature.com/articles/s41586-024-07618-3", "verified": "YES" },
+      { "date": "2024-09-05", "name": "Paige Alba", "who": "Paige (press)", "kind": "vendor copilot", "url": "https://www.paige.ai/press-releases/paige-unveils-alba", "verified": "PARTIAL" },
+      { "date": "2024-11-25", "name": "Model Context Protocol", "who": "Anthropic", "kind": "connector standard", "url": "https://www.anthropic.com/news/model-context-protocol", "verified": "YES" },
+      { "date": "2024-12-19", "name": "Building effective agents", "who": "Anthropic", "kind": "pattern language", "url": "https://www.anthropic.com/engineering/building-effective-agents", "verified": "YES" },
+      { "date": "2025-02-13", "name": "PathFinder", "who": "UW / Microsoft", "kind": "multi-agent (triage/navigate/describe/diagnose)", "url": "https://arxiv.org/abs/2502.08916", "verified": "YES" },
+      { "date": "2025-02-19", "name": "AI co-scientist", "who": "Google", "kind": "hypothesis agent", "url": "https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/", "verified": "YES" },
+      { "date": "2025-06-02", "name": "Biomni", "who": "Stanford", "kind": "general biomedical agent (code exec)", "url": "https://github.com/snap-stanford/biomni", "verified": "YES" },
+      { "date": "2025-06-26", "name": "SlideSeek / PathChat+", "who": "Mahmood lab", "kind": "multi-agent WSI navigation", "url": "https://arxiv.org/abs/2506.20964", "verified": "YES" },
+      { "date": "2025-07-19", "name": "WSI-Agents", "who": "—", "kind": "multi-agent with verification", "url": "https://arxiv.org/abs/2507.14680", "verified": "YES" },
+      { "date": "2025-09-24", "name": "TissueLab", "who": "Stanford (Huang lab)", "kind": "LLM orchestrates local tools; co-evolving", "url": "https://arxiv.org/abs/2509.20279", "verified": "PARTIAL" },
+      { "date": "2025-09-29", "name": "Effective context engineering", "who": "Anthropic", "kind": "context engineering", "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents", "verified": "YES" },
+      { "date": "2025-10-06", "name": "Pathology-CoT / AI Session Recorder", "who": "Stanford", "kind": "viewer telemetry → agent", "url": "https://arxiv.org/abs/2510.04587", "verified": "YES" },
+      { "date": "2025-10-16", "name": "Agent Skills", "who": "Anthropic", "kind": "skills standard", "url": "https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills", "verified": "YES" },
+      { "date": "2025-10-20", "name": "Claude for Life Sciences", "who": "Anthropic", "kind": "connectors (no pathology connector)", "url": "https://www.anthropic.com/news/claude-for-life-sciences", "verified": "YES" },
+      { "date": "2025-11-14", "name": "NOVA", "who": "Microsoft + Mahmood lab", "kind": "code-executing agent, 49 tools", "url": "https://arxiv.org/abs/2511.11324", "verified": "YES" },
+      { "date": "2025-11-21", "name": "PathAgent", "who": "ECCV 2026", "kind": "Navigator / Perceptor / Executor", "url": "https://arxiv.org/abs/2511.17052", "verified": "YES" },
+      { "date": "2025-12-09", "name": "MCP donated to Linux Foundation (AAIF)", "who": "Anthropic/Block/OpenAI", "kind": "standard governance", "url": "https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation", "verified": "YES" },
+      { "date": "2026-03-06", "name": "Expert perspectives: adoption has lagged", "who": "Da Q et al., 28 authors", "kind": "sober review", "url": "https://arxiv.org/abs/2603.05884", "verified": "YES" },
+      { "date": "2026-05-18", "name": "PathoSage", "who": "—", "kind": "evidence adjudication agent", "url": "https://arxiv.org/abs/2606.07549", "verified": "YES" },
+      { "date": "2026-05-22", "name": "PathNavigate", "who": "—", "kind": "budgeted WSI search agent", "url": "https://arxiv.org/abs/2605.23559", "verified": "YES" },
+      { "date": "2026-05-22", "name": "Articulate Pro prospective evaluation", "who": "NHS / npj Digit Med", "kind": "clinical evidence", "url": "https://www.nature.com/articles/s41746-026-02592-8", "verified": "YES" },
+      { "date": "2026-07-01", "name": "EAGLE (Nat Commun)", "who": "Kather lab", "kind": "anchor paper", "url": "https://doi.org/10.1038/s41467-026-74918-9", "verified": "YES" },
+      { "date": "2026-07-24", "name": "PathBench benchmark (Nat Commun)", "who": "Gevaert lab, Stanford", "kind": "anchor paper", "url": "https://doi.org/10.1038/s41467-026-76004-6", "verified": "YES" }
+    ]
+  },
+
+  "farmington_canal": {
+    "source": "H-3",
+    "events": [
+      { "date": "1822", "label": "Farmington Canal Company chartered; James Hillhouse (Yale treasurer) president", "verified": "YES" },
+      { "date": "1825-07-04", "label": "Groundbreaking at Granby — the governor's ceremonial shovel broke", "verified": "YES" },
+      { "date": "1828-06-20", "label": "First boat, the James Hillhouse, New Haven → Farmington", "verified": "YES", "note": "one source says Nov 1828" },
+      { "date": "1835-07-29", "label": "Opened through to Northampton, MA (~80–86 miles, 60 locks)", "verified": "YES" },
+      { "date": "1836", "label": "Reorganized as New Haven & Northampton Co.; shareholders lose >$1M", "verified": "YES" },
+      { "date": "1846-05", "label": "Legislature authorizes conversion to a railroad; Joseph E. Sheffield drives it", "verified": "YES" },
+      { "date": "1847", "label": "Tracks laid alongside the still-operating canal", "verified": "YES" },
+      { "date": "1848-01-18", "label": "Canal closes; the Canal Line railroad opens New Haven → Plainville on the canal right-of-way", "verified": "YES" },
+      { "date": "1856", "label": "Rail reaches Northampton", "verified": "PARTIAL" },
+      { "date": "1872", "label": "Merged into New York, New Haven & Hartford RR", "verified": "PARTIAL" },
+      { "date": "1980s", "label": "Rail service ends after flood damage", "verified": "PARTIAL" },
+      { "date": "1996", "label": "First six miles of the Farmington Canal Heritage Trail open", "verified": "YES" }
+    ],
+    "toll_revenue_share_of_expenses_pct": 20,
+    "years_profitable_in_first_ten": 1,
+    "sheffield_gift_to_yale_usd": 130000,
+    "trail_miles_ct_today": 56,
+    "verified": "YES"
+  },
+
+  "pathology_infrastructure_timeline": {
+    "_note": "Parallel track for the canal→railroad viz. Dates marked TODO must be verified by the coding agent (T1.3) before render; they are well known but were not fetched this session.",
+    "events": [
+      { "date": "1987", "label": "HL7 founded", "verified": "TODO" },
+      { "date": "1993", "label": "DICOM 3.0 published", "verified": "TODO" },
+      { "date": "2010", "label": "DICOM Supplement 145 (WSI) final text", "verified": "YES" },
+      { "date": "2017-04", "label": "First FDA authorization of WSI for primary diagnosis (Philips IntelliSite)", "verified": "TODO" },
+      { "date": "2021-09-21", "label": "Paige Prostate — first FDA de novo AI in pathology", "verified": "YES" },
+      { "date": "2024", "label": "Pathology foundation models: UNI, CONCH, Prov-GigaPath, CHIEF, Virchow2", "verified": "YES" },
+      { "date": "2024-11-25", "label": "Model Context Protocol", "verified": "YES" },
+      { "date": "2025-2026", "label": "Pathology agents become a genre (PathFinder → PathNavigate)", "verified": "YES" },
+      { "date": "2026-04-09", "label": "2025 DICOM WSI Connectathon report; IHE DPIA still Trial Implementation", "verified": "YES" }
+    ]
+  },
+
+  "memex_to_model": {
+    "source": "H-1, H-9, H-10",
+    "events": [
+      { "date": "1945-07", "label": "Bush, 'As We May Think' — memex, associative trails", "url": "https://www.theatlantic.com/magazine/archive/1945/07/as-we-may-think/303881/", "verified": "YES" },
+      { "date": "1962-10", "label": "Engelbart, 'Augmenting Human Intellect'", "url": "https://www.dougengelbart.org/pubs/augment-3906.html", "verified": "YES" },
+      { "date": "1965", "label": "Nelson coins 'hypertext'", "url": "https://doi.org/10.1145/800197.806036", "verified": "YES" },
+      { "date": "1984-02", "label": "Knuth, 'Literate Programming' (Computer Journal)", "url": "https://doi.org/10.1093/comjnl/27.2.97", "verified": "YES" },
+      { "date": "1991", "label": "World Wide Web public", "url": null, "verified": "TODO" },
+      { "date": "2011-03-10", "label": "Victor, 'Explorable Explanations'", "url": "https://worrydream.com/ExplorableExplanations/", "verified": "YES" },
+      { "date": "2014-07", "label": "Project Jupyter announced (SciPy)", "url": "https://blog.jupyter.org/the-big-split-9d7b88a031a7", "verified": "YES" },
+      { "date": "2017-04-28", "label": "Observable (d3.express) announced", "url": "https://medium.com/@mbostock/a-better-way-to-code-2b1d2876a3a0", "verified": "YES" },
+      { "date": "2022-07-28", "label": "Quarto 1.0", "url": "https://posit.co/blog/announcing-quarto-a-new-scientific-and-technical-publishing-system", "verified": "YES" },
+      { "date": "2023-08-14", "label": "marimo 0.1.0", "url": "https://github.com/marimo-team/marimo", "verified": "YES" },
+      { "date": "2024-11-25", "label": "Model Context Protocol", "url": "https://www.anthropic.com/news/model-context-protocol", "verified": "YES" },
+      { "date": "2024-12-19", "label": "'Building effective agents'", "url": "https://www.anthropic.com/engineering/building-effective-agents", "verified": "YES" },
+      { "date": "2025-09-29", "label": "'Effective context engineering for AI agents'", "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents", "verified": "YES" },
+      { "date": "2025-10-16", "label": "Agent Skills (open standard Dec 2025)", "url": "https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills", "verified": "YES" }
+    ],
+    "bush_quotes": [
+      "A record if it is to be useful to science, must be continuously extended, it must be stored, and above all it must be consulted.",
+      "The process of tying two items together is the important thing.",
+      "There is a new profession of trail blazers"
+    ]
+  }
+}

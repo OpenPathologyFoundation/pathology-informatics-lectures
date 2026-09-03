@@ -1,0 +1,2368 @@
+{
+  "meta": {
+    "title": "AI Is Rewriting the Operating System of Pathology",
+    "shortTitle": "The Operating System of Pathology",
+    "presenter": "Peter Gershkovich, MD. MHA",
+    "institution": "Yale University School of Medicine",
+    "date": "2026",
+    "theme": {
+      "primary": "#1f1a14",
+      "secondary": "#3d5b73",
+      "accent": "#a36015"
+    },
+    "glossary": [
+      {
+        "term": "agent",
+        "definition": "A model that is given tools and a goal rather than a single prompt: it plans, calls the tools, reads what comes back, and decides what to do next. In 2025–26 pathology agents navigate whole-slide images, run analysis code, and cite the regions they used."
+      },
+      {
+        "term": "Agent Skills",
+        "definition": "A packaging convention (Anthropic, October 2025; open standard December 2025) for giving an agent a reusable, inspectable procedure — instructions plus any scripts and resources it needs — instead of re-explaining the procedure in every prompt."
+      },
+      {
+        "term": "associative trail",
+        "definition": "Vannevar Bush's 1945 term for a named, re-traversable path linking one document to another. The memex stored trails; the point was that the linking, not the storage, was the intellectual act."
+      },
+      {
+        "term": "attention pooling",
+        "definition": "A learned weighting that decides how much each tile contributes to a slide-level prediction. ABMIL spreads weight almost evenly; CHIEF concentrates it, which is what makes it useful as a router."
+      },
+      {
+        "term": "AUROC",
+        "definition": "Area under the receiver-operating-characteristic curve — the probability that a random positive case is ranked above a random negative one. It measures discrimination only: it says nothing about calibration, about the decision threshold, or about whether using the model changes anything."
+      },
+      {
+        "term": "batch effect",
+        "definition": "Systematic signal that tracks how or where data were produced rather than what they contain. In pathology this is scanner, stain, and site: in ten public foundation models, the medical center of origin is predicted more accurately than the tissue type."
+      },
+      {
+        "term": "benchmark saturation",
+        "definition": "The point at which the leading entries on a benchmark are no longer statistically distinguishable, so the benchmark stops being able to rank them and the interesting variance moves elsewhere."
+      },
+      {
+        "term": "bootstrap",
+        "definition": "Resampling the evaluation set with replacement — 1,000 times, in the Stanford benchmark — to put a confidence interval around a performance estimate."
+      },
+      {
+        "term": "calibration",
+        "definition": "Whether a model's stated probability matches the observed frequency. A model can discriminate well (high AUROC) and still be badly calibrated, which is what matters the moment a number is used to make a decision."
+      },
+      {
+        "term": "CHIEF",
+        "definition": "A pathology foundation model (Wang et al., Nature 2024; 60,530 WSIs) whose attention weights are used inside EAGLE as a frozen ranker — the cheap step that decides where the expensive model looks."
+      },
+      {
+        "term": "CONCH",
+        "definition": "A vision–language pathology foundation model (Lu et al., Nat Med 2024). CONCH v1.5 appears in EAGLE's comparison at 191.85 seconds per slide."
+      },
+      {
+        "term": "connector",
+        "definition": "An adapter that exposes an institutional system — a repository, a database, a scanner archive — to a model as a callable tool. Claude for Life Sciences shipped connectors for Benchling, PubMed and others in October 2025; there is still no pathology or WSI connector."
+      },
+      {
+        "term": "context engineering",
+        "definition": "Deciding what an agent should have in front of it at each step: which files, which prior results, which instructions, and what to leave out. It has quietly replaced prompt wording as the thing that determines whether an agent works."
+      },
+      {
+        "term": "CTransPath",
+        "definition": "A 2022 transformer-based tile encoder, used inside EAGLE for the cheap first pass over every tile at 2 microns per pixel."
+      },
+      {
+        "term": "datasheet",
+        "definition": "A structured description of a dataset — how it was collected, who is in it, what it should not be used for. The dataset analogue of a model card."
+      },
+      {
+        "term": "decision curve",
+        "definition": "An analysis of net clinical benefit across the range of thresholds a clinician might actually use. Neither anchor paper reports one; almost no computational-pathology paper does."
+      },
+      {
+        "term": "DICOM Supplement 145",
+        "definition": "The whole-slide-imaging extension to DICOM. Final text 2010 — the standard is sixteen years old, and the 2025 Connectathon still counted only 32 implementers."
+      },
+      {
+        "term": "EAGLE",
+        "definition": "Efficient Approach for Guided Local Examination — the Kather-lab framework (Nat Commun, 1 July 2026) in which a frozen CHIEF ranker selects 25 tiles out of roughly 18,000 for an expensive encoder to re-read."
+      },
+      {
+        "term": "embedding",
+        "definition": "A fixed-length vector standing in for an image, a tile, or a slide. EAGLE's output is a single 1,280-dimensional vector per slide — small enough to store, reuse, and search."
+      },
+      {
+        "term": "evidence ladder",
+        "definition": "The four distinct claims this lecture keeps apart: I saw it work · I reproduced it · it is deployed in a workflow · it improved something for a patient. Each requires a different kind of evidence."
+      },
+      {
+        "term": "external validation",
+        "definition": "Evaluating on cohorts that contributed nothing to training or model selection. Internal cross-validation on additional tasks is not external validation, however many tasks it adds."
+      },
+      {
+        "term": "Farmington Canal",
+        "definition": "The 1828–1848 canal from New Haven to Northampton, chartered under Yale treasurer James Hillhouse. It cost more than a million dollars, turned a profit once in its first decade, and was closed and railed over on its own right-of-way."
+      },
+      {
+        "term": "foundation model",
+        "definition": "A large model pre-trained on unlabeled data and then reused, usually frozen, as a feature extractor for many downstream tasks. In pathology the 2024 cohort — UNI, CONCH, Prov-GigaPath, CHIEF, Virchow2 — is what every 2026 benchmark is comparing."
+      },
+      {
+        "term": "frozen features",
+        "definition": "Using a pre-trained model's outputs without updating its weights. Both anchor papers evaluate frozen features, which makes them comparable and also makes them a lower bound on what a fine-tuned model could do."
+      },
+      {
+        "term": "Hugging Face gated",
+        "definition": "A model whose weights require accepting terms and receiving approval before download. Virchow2 is gated; CHIEF's weights are requested separately. Reproducing a published result can therefore require three separate permissions."
+      },
+      {
+        "term": "IBIS",
+        "definition": "Integrated Biospecimen and Informatics System — a natural-language search layer over pathology data built at Yale so that a cohort question can be asked without writing a query."
+      },
+      {
+        "term": "IHE PaLM DPIA",
+        "definition": "The IHE Pathology and Laboratory Medicine Digital Pathology Workflow – Image Acquisition profile. Revision 1.3, December 2024, still Trial Implementation."
+      },
+      {
+        "term": "intended use",
+        "definition": "The regulatory statement of what a device is for, in whom, and by whom. Performance is only meaningful relative to it; a model with excellent AUROC and no intended use has not made a clinical claim at all."
+      },
+      {
+        "term": "issue tracker",
+        "definition": "The public log of a repository's bugs and unmet expectations. It is the only artifact in the whole ecosystem whose primary function is to reveal failure modes."
+      },
+      {
+        "term": "IVD",
+        "definition": "In vitro diagnostic. Pathology AI in the United States is generally reviewed as an IVD component under OHT7, not as software-as-a-medical-device — which is why the FDA's AI device list shows nine pathology entries and 1,164 radiology ones."
+      },
+      {
+        "term": "linear probe",
+        "definition": "Freezing a model and training only a single linear layer on top. It measures how much task-relevant information the representation already contains, and it deliberately excludes everything fine-tuning could add."
+      },
+      {
+        "term": "LIS",
+        "definition": "Laboratory Information System — specimen tracking, result reporting, quality control. It carries every case in the building and will keep doing so; that is the canal, not an insult."
+      },
+      {
+        "term": "literate programming",
+        "definition": "Knuth's 1984 proposal that a program should be written as an explanation to a human being, with the executable code embedded in the prose rather than the other way round."
+      },
+      {
+        "term": "MCP",
+        "definition": "Model Context Protocol — an open standard (Anthropic, November 2024; donated to the Linux Foundation in December 2025) for connecting models to tools and data sources through one interface instead of one integration per pair."
+      },
+      {
+        "term": "mean pooling",
+        "definition": "Averaging tile-level features into a slide-level feature. Simple, reproducible, and — as the Stanford benchmark notes among its own limitations — almost certainly leaving performance on the table."
+      },
+      {
+        "term": "memex",
+        "definition": "The desk-sized machine Bush described in 1945: it stores what you read, and above all it lets you build and consult trails between items. Every idea in this lecture's last act is a footnote to it."
+      },
+      {
+        "term": "MIL",
+        "definition": "Multiple-instance learning — training on bags of tiles with only a slide-level label, because nobody annotated eighteen thousand tiles."
+      },
+      {
+        "term": "model card",
+        "definition": "A short structured document stating what a model was trained on, what it is for, how it was evaluated, and where it should not be used (Mitchell et al., 2019)."
+      },
+      {
+        "term": "MPP",
+        "definition": "Microns per pixel — the resolution a slide is read at. EAGLE tessellates at 0.5 MPP and runs its cheap pass at 2 MPP, which is why the same slide is about 18,000 tiles in one sentence and about 1,100 in the next."
+      },
+      {
+        "term": "PCCP",
+        "definition": "Predetermined Change Control Plan — the FDA mechanism that lets an authorized AI device be updated along a pre-agreed path without a new submission."
+      },
+      {
+        "term": "Prov-GigaPath",
+        "definition": "A whole-slide foundation model trained on 1.3 billion tiles from 171,189 slides (Nature 2024). In EAGLE's comparison it takes about sixteen minutes per slide."
+      },
+      {
+        "term": "REALM",
+        "definition": "Rapidly Evolving Agile Laboratory Modules — the family of clinical and research applications built inside Yale Pathology over nearly two decades."
+      },
+      {
+        "term": "retrieval",
+        "definition": "Fetching relevant material at question time and putting it in front of the model, instead of hoping the model memorized it during training."
+      },
+      {
+        "term": "right-of-way",
+        "definition": "The corridor of land a route occupies, independent of what runs on it. The Farmington Canal's right-of-way has carried a canal, a railroad, and a bicycle trail; the corridor outlived all three transportation logics."
+      },
+      {
+        "term": "silent trial",
+        "definition": "Running a model prospectively on live cases while hiding its output from the people making decisions. It measures real-world performance without exposing patients to it."
+      },
+      {
+        "term": "SaMD",
+        "definition": "Software as a Medical Device — software that is itself the device. Most pathology AI is not regulated this way, which changes both the evidence expected and the list you find it on."
+      },
+      {
+        "term": "TAT",
+        "definition": "Turnaround time. At this institution the median has not moved in twenty years — 89 hours in April 2006, 89 hours in April 2026, on 23% more cases."
+      },
+      {
+        "term": "TCGA",
+        "definition": "The Cancer Genome Atlas — the public cohort on which a large share of computational pathology is trained, tuned, and then evaluated. Overlap between those three uses is a stated limitation of the Stanford benchmark."
+      },
+      {
+        "term": "tile",
+        "definition": "A small square crop of a whole-slide image, typically 256 pixels at 20×. Models see tiles; pathologists see slides; the gap between those two facts is most of the engineering."
+      },
+      {
+        "term": "TITAN",
+        "definition": "A multimodal whole-slide foundation model (Ding et al., Nat Med 2025). Its mean AUROC over EAGLE's 31 external tasks is 0.740, against EAGLE's 0.742."
+      },
+      {
+        "term": "tool use",
+        "definition": "A model calling an external function — a search, a script, a database query — and reading the result before continuing. It is the difference between a system that describes an analysis and one that runs it."
+      },
+      {
+        "term": "UNI",
+        "definition": "A general-purpose pathology foundation model (Chen et al., Nat Med 2024); with UNI2, among the five top-ranked encoders in the Stanford benchmark that cannot be statistically separated."
+      },
+      {
+        "term": "Virchow2",
+        "definition": "A 632-million-parameter pathology encoder pre-trained on 3.1 million slides. It is EAGLE's expensive step and the Stanford benchmark's top-ranked model — by a margin the same paper reports as not significant."
+      },
+      {
+        "term": "Wald test",
+        "definition": "The significance test the Stanford benchmark used to compare its top models. Its answer, for the top five, was that there is no difference to report."
+      },
+      {
+        "term": "WSI",
+        "definition": "Whole-slide image — the digitized glass slide. FDA authorized the first system for primary diagnosis in April 2017."
+      },
+      {
+        "term": "Xenonym",
+        "definition": "An open-source synthetic name generator producing linguistically plausible names belonging to no real person — built so that a research pipeline can be tested against realistic, occasionally adversarial, HIPAA-safe data."
+      }
+    ]
+  },
+  "slides": [
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "zoom",
+      "title": "AI Is Rewriting the Operating System of Pathology",
+      "subtitle": "A 2026 update on AI in pathology — and why the literature alone cannot supply it",
+      "presenter": "Peter Gershkovich, MD. MHA",
+      "institution": "Yale University School of Medicine",
+      "date": "2026"
+    },
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter's independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+    {
+      "id": "hook-the-update-you-asked-for",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "evidence",
+      "bgColor": "#0f172a",
+      "title": "The Brief for This Session",
+      "subtitle": "A 2026 update on AI in pathology, anchored on two papers the organizers asked to have reviewed",
+      "cards": [
+        {
+          "icon": "✉",
+          "label": "The brief",
+          "value": "An Update",
+          "description": "Two papers published this year in Nature Communications: an efficiency framework and a 32-model benchmark.",
+          "accentColor": "#60a5fa"
+        },
+        {
+          "icon": "≡",
+          "label": "What the papers show",
+          "value": "0.002",
+          "description": "A two-thousandths AUROC difference in one; 32 models and no statistically separable winner in the other. Both results are correctly reported.",
+          "accentColor": "#fbbf24"
+        },
+        {
+          "icon": "✣",
+          "label": "What is actually changing",
+          "value": "The Boundaries",
+          "description": "Between asking a question, finding data, writing code, running the analysis, publishing, and teaching it.",
+          "accentColor": "#a78bfa"
+        },
+        {
+          "icon": "▶",
+          "label": "What this session does",
+          "value": "The Railroad",
+          "description": "Not an inventory of what is travelling on the canal — a demonstration that the railroad has arrived, on the canal's own right-of-way.",
+          "accentColor": "#f87171"
+        }
+      ],
+      "takeaway": {
+        "text": "The two papers are not outdated. They are conceptually incomplete — and the gap is where the interesting part of 2026 lives.",
+        "comment": "Nothing in this session is a criticism of either paper. Both are excellent and both are correctly reported. The claim is narrower and harder: what changed in 2026 is not measurable on the axis either paper reports. Say “conceptually incomplete”, then move on — the next twenty minutes earns it."
+      }
+    },
+    {
+      "id": "thesis",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Thesis: The Model Stopped Being the Interesting Part",
+      "subtitle": "The most important pathology-AI development of 2026 may not be a model that reads slides",
+      "left": {
+        "heading": "What Has Not Changed",
+        "bullets": [
+          "A glass slide still carries far more information than any single reading extracts",
+          "The hard problems are still semantic — what counts as a case, which exception matters, when a formally correct answer is operationally wrong",
+          "Discrimination is still not calibration; retrospective performance is still not clinical utility",
+          "The <strong>pathologist's judgment</strong> is still the thing the system cannot supply"
+        ]
+      },
+      "right": {
+        "heading": "What Changed",
+        "highlight": true,
+        "bullets": [
+          "Choosing a model is <strong>ceasing to be the main question</strong> — the top five are indistinguishable",
+          "The interesting engineering moved to <strong>routing, composition, reuse and inspectability</strong>",
+          "AI systems now <strong>use tools</strong>: they retrieve, write and run code, query data, and remember",
+          "The boundaries between asking, finding, coding, analyzing, publishing and teaching <strong>collapsed</strong>"
+        ]
+      },
+      "takeaway": {
+        "text": "Ten years ago the question was which model. Now the question is what you assemble, what you can inspect, and what you can defend.",
+        "comment": "This is the thesis slide; everything after it is either evidence or consequence. Slow down on the right-hand column's last line — that is the sentence the whole second half of the talk unpacks."
+      }
+    },
+    {
+      "id": "objectives",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "dockTitle": "Learning objectives",
+      "vizType": "learning-objectives-config",
+      "vizConfig": {
+        "title": "Learning objectives",
+        "subtitle": "Five claims you should be able to make — and defend — by the end of the hour.",
+        "objectives": [
+          {
+            "verb": "Distinguish",
+            "text": "Seeing a capability from reproducing it, reproducing it from deploying it, and deploying it from improving outcomes."
+          },
+          {
+            "verb": "Read",
+            "text": "A 2026 computational-pathology paper for its engineering lesson, not its headline AUROC."
+          },
+          {
+            "verb": "Explain",
+            "text": "Why 32 models whose leaders are statistically identical means model choice is no longer the main question."
+          },
+          {
+            "verb": "Locate",
+            "text": "The frontier across three clocks — capability, engineering, clinical evidence — and the sources that serve each."
+          },
+          {
+            "verb": "Decide",
+            "text": "What is worth producing: one question whose answer would change a decision, and the artifact that would establish it."
+          }
+        ],
+        "footnote": "The progression is deliberate. Objective five is unreachable until the first four are settled, which is why most “AI strategy” conversations stall."
+      },
+      "speakerNotes": "Read the five verbs, not the five sentences. Distinguish — Read — Explain — Locate — Decide. The last one is the assignment: by the end of the hour, one question in your own practice whose answer would change a decision, and the artifact that would establish it. Not necessarily a paper."
+    },
+    {
+      "id": "who-this-is-for",
+      "type": "content",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Who This Session Is For",
+      "subtitle": "Look around the room — if any of these describe you, you are exactly the audience",
+      "bullets": [
+        "<strong>The pathologist who has now watched four AI demonstrations</strong> — and still cannot say what any of them would change about next Thursday's sign-out.",
+        "<strong>The colleague who read both 2026 papers</strong> — and came away with a number, not an idea.",
+        "<strong>The lab director asked to “have an AI strategy”</strong> — by people who mean a purchase order.",
+        "<strong>The trainee who can already do this</strong> — and has never been told that assembling a working system is a legitimate scientific act.",
+        "<strong>The colleague who suspects this is overhyped</strong> — the most valuable person in the room, because the honest version of this argument has to survive that scrutiny."
+      ],
+      "fragments": false,
+      "takeaway": {
+        "text": "If you are any of these, the rest of this session is addressed to you specifically.",
+        "comment": "Look up from the slides. Name the skeptic last and mean it — the talk is stronger if the room believes you have already argued with them in your head."
+      }
+    },
+    {
+      "id": "two-papers",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "evidence",
+      "title": "The Two Anchor Papers",
+      "subtitle": "Both published in Nature Communications in mid-2026. Both excellent. Both bounded in the same direction.",
+      "left": {
+        "heading": "EAGLE — Nat Commun 17:5740 (1 Jul 2026)",
+        "bullets": [
+          "Neidlinger, Lenz, Foersch, … Kather",
+          "A pipeline: a cheap frozen model <strong>ranks</strong> ~18,000 tiles; an expensive model re-reads <strong>25</strong>",
+          "<strong>2.27 s</strong> of model inference per slide; a single 1,280-dimensional slide embedding",
+          "Mean AUROC <strong>0.742</strong> across 31 external tasks, 13 cohorts, 9,528 slides"
+        ]
+      },
+      "right": {
+        "heading": "Foundation-model benchmark — Nat Commun 17:9012 (24 Jul 2026)",
+        "highlight": true,
+        "bullets": [
+          "Bareja, Carrillo-Perez, … Gevaert (Stanford + Argonne)",
+          "<strong>32 models</strong>, 4 categories, 41 tasks, 53 datasets, more than 17,500 slides",
+          "Frozen features, linear probe, mean pooling, 70/30 patient split, 1,000 bootstraps",
+          "Top five: <strong>0.830 / 0.829 / 0.824 / 0.824 / 0.824</strong> — and no statistical difference between them"
+        ]
+      },
+      "takeaway": {
+        "text": "Do not call them outdated. Call them conceptually incomplete — and then ask what the incompleteness is made of.",
+        "comment": "Name the authors. Colleagues in this room will meet them at USCAP, and the argument only lands if it is visibly respectful. The critique is of what the genre can express, not of the work itself."
+      }
+    },
+    {
+      "id": "eagle-pipeline",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "technical",
+      "dockTitle": "EAGLE: route, do not brute-force",
+      "vizType": "eagle-routing-pipeline",
+      "vizConfig": {
+        "title": "Route the expensive model. Do not brute-force the slide.",
+        "subtitle": "Every component here is off the shelf. The contribution is the order they run in — and what is allowed to be expensive.",
+        "field": {
+          "cols": 45,
+          "rows": 25,
+          "label": "EVERY TILE ON ONE SLIDE, AT 2 MICRONS PER PIXEL"
+        },
+        "selected": 25,
+        "fieldNote": "About 1,100 tiles at 2 MPP; the same slide is ~18,000 at 0.5 MPP. CTransPath reads every one; CHIEF ranks them.",
+        "insetNote": "The 25 tiles Virchow2 actually re-reads: about 2% of the tiles at 2 MPP, about 0.1% of the slide at 0.5 MPP.",
+        "statements": [
+          {
+            "value": "0.36 ms",
+            "label": "Choosing where to look is the cheapest step here."
+          },
+          {
+            "value": "1,280-d",
+            "label": "One vector per slide, reused by every downstream task."
+          }
+        ],
+        "stations": [
+          {
+            "label": "Tessellate",
+            "sub": "~18,000 tiles at 0.5 MPP",
+            "tip": "The slide is cut into tiles before any model runs. This step is not in the 2.27 s."
+          },
+          {
+            "label": "CTransPath",
+            "sub": "features on every tile, 2 MPP",
+            "seconds": 2.01,
+            "secondsLabel": "2.01 s",
+            "tip": "<strong>CTransPath, 2.01 s</strong><br>The cheap pass. It reads everything, at low resolution, once."
+          },
+          {
+            "label": "CHIEF ranks",
+            "sub": "frozen attention",
+            "seconds": 0.00036,
+            "secondsLabel": "0.36 ms",
+            "tip": "<strong>CHIEF attention, 0.36 ms</strong><br>Frozen — no training. Used purely as a ranking function.<br><em>Gini of the attention weights: CHIEF 0.702, ABMIL 0.087. Concentration is what makes a ranker.</em>"
+          },
+          {
+            "label": "Top 25 tiles",
+            "sub": "2% of tiles at 2 MPP",
+            "tip": "25 tiles survive. The regions are preserved and can be shown to a pathologist — which is not the same as a faithful causal explanation."
+          },
+          {
+            "label": "Virchow2",
+            "sub": "re-extraction at full detail",
+            "seconds": 0.26,
+            "secondsLabel": "0.26 s",
+            "tip": "<strong>Virchow2, 0.26 s</strong><br>632 M parameters, pre-trained on 3.1 M slides — pointed at 25 tiles instead of 18,000."
+          },
+          {
+            "label": "Slide embedding",
+            "sub": "equal-weight average, 1,280-d",
+            "tip": "One vector per slide. Cheap to store, cheap to search, reusable across tasks."
+          }
+        ],
+        "total": 2.27,
+        "hardware": "NVIDIA L40 (48 GB) — model inference only",
+        "notIncludedLabel": "WHAT THAT 2.27 SECONDS DOES NOT INCLUDE",
+        "notIncluded": [
+          "scanning the glass",
+          "tessellation and storage I/O",
+          "the CTransPath feature cache at 2 MPP",
+          "downloading gated weights: Virchow2 by terms acceptance, CHIEF by request",
+          "container build and environment setup",
+          "everything a laboratory would call integration"
+        ],
+        "footnote": "The repository README reports about three minutes for seven slides on a MacBook Air M3 — which is the more useful number, and it is not in the paper.",
+        "source": "Neidlinger et al., Nat Commun 17:5740 (2026) · KatherLab/EAGLE"
+      },
+      "speakerNotes": "Walk the rail left to right and land hard on the 0.36 millisecond bar. That sliver is the argument: the step that decides where the expensive model looks costs nothing. This is selective computation and model orchestration — it is closer to systems engineering than to training a better model. Then point at the lower dashed track. The 2.27 seconds is model inference on an L40. It does not include scanning, tiling, the feature cache, weight downloads, or anything a laboratory would recognize as integration. Both facts are true at once, and only one of them is in the abstract.",
+      "takeaway": {
+        "text": "The lesson is not the number. It is that a cheap frozen model, used as a router, buys you an expensive model's attention at 2% of the cost.",
+        "comment": "If someone asks whether 25 tiles can miss a rare or dispersed finding: yes, and the authors say so. That is a real limitation, not a rhetorical concession — answer it plainly and move to the honest-reading slide."
+      }
+    },
+    {
+      "id": "eagle-two-thousandths",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "The two-thousandths",
+      "vizType": "auroc-vs-compute",
+      "vizConfig": {
+        "title": "The interesting number is on the other axis.",
+        "subtitle": "Mean AUROC over 31 external tasks, against seconds of model inference per slide.",
+        "points": [
+          {
+            "model": "EAGLE",
+            "shortName": "EAGLE",
+            "auroc": 0.742,
+            "seconds": 2.27,
+            "color": "copper",
+            "note": "25 tiles re-read by Virchow2"
+          },
+          {
+            "model": "TITAN",
+            "shortName": "TITAN",
+            "auroc": 0.74,
+            "seconds": 3.296,
+            "color": "ink"
+          },
+          {
+            "model": "CONCH v1.5",
+            "shortName": "CONCH v1.5",
+            "auroc": 0.721,
+            "seconds": 191.85,
+            "color": "slate",
+            "note": "STAMP pipeline, full tiling"
+          }
+        ],
+        "marginal": [
+          {
+            "axis": "y",
+            "auroc": 0.723,
+            "label": "Virchow2 (STAMP) 0.723 — per-slide time not reported here"
+          },
+          {
+            "axis": "x",
+            "seconds": 960,
+            "label": "Prov-GigaPath: about 16 min per slide. Its mean AUROC on this benchmark could not be verified for this review, so it is not plotted."
+          }
+        ],
+        "computeBrackets": [
+          {
+            "from": 2.27,
+            "to": 191.85,
+            "label": "84× less compute"
+          },
+          {
+            "from": 2.27,
+            "to": 960,
+            "label": "423×"
+          }
+        ],
+        "insetDomain": [
+          0.7,
+          0.76
+        ],
+        "insetTicks": [
+          0.7,
+          0.72,
+          0.74,
+          0.76
+        ],
+        "aurocDelta": {
+          "a": 0.742,
+          "b": 0.74,
+          "label": "Δ = 0.002"
+        },
+        "insetNote": "A six-hundredths window. At this magnification the difference is visible — which is exactly the problem.",
+        "caption": "Mean AUROC across 31 external tasks (13 cohorts, 9,528 WSIs). Seconds are model inference on an NVIDIA L40, not end-to-end. Δ is a difference, not an improvement: the paper reports no significance test for it.",
+        "source": "EAGLE · Neidlinger et al., Nat Commun 17:5740 (2026)"
+      },
+      "speakerNotes": "Two panels, one point. On the honest axis — 0.50 to 1.00 — EAGLE, TITAN, CONCH and Virchow2 are one dot. Zoom to the window the abstract lives in and a difference appears; that is a property of the zoom, not of the models. Meanwhile the horizontal axis separates them by two orders of magnitude. The interesting part of EAGLE is not two-thousandths over TITAN. It is the transition from brute-force computation to routing, composition, reuse and inspectable execution.",
+      "takeaway": {
+        "text": "0.742 against 0.740 is a difference, not an improvement. 2.27 seconds against 16 minutes is the finding.",
+        "comment": "Never say “improvement” about the delta on this slide. If a statistician in the room presses on it, agree immediately: no significance test is reported for that comparison, and the paper does not claim one."
+      }
+    },
+    {
+      "id": "eagle-honest-reading",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "An Honest Reading of a Good Paper",
+      "left": {
+        "heading": "What It Shows",
+        "style": "good",
+        "bullets": [
+          "<strong>Route cheap to expensive</strong> — a frozen ranker decides where the costly model looks",
+          "<strong>Concentrate compute</strong> — 25 tiles instead of 18,000, at about 2% of the tiles at 2 MPP",
+          "<strong>Reuse</strong> — one 1,280-d embedding per slide, stored once, used by every downstream task",
+          "<strong>Preserve the regions</strong> — the 25 tiles survive and can be put in front of a pathologist",
+          "<strong>Budget as a design objective</strong> — speed and cost treated as first-class requirements, not afterthoughts"
+        ]
+      },
+      "right": {
+        "heading": "What It Does Not Show",
+        "style": "bad",
+        "bullets": [
+          "<strong>Inference only, on an L40</strong> — the 2.27 s excludes scanning, tiling, the feature cache and three separate access gates",
+          "<strong>25 regions can miss</strong> a rare or dispersed finding — the authors say so",
+          "<strong>Sparsity is not explanation</strong> — fewer regions are easier to review; that is not a faithful causal account",
+          "<strong>The pen-mark analysis is 50 slides and one pathologist</strong> — pen marks in 16% of EAGLE tiles vs 23% of baseline tiles",
+          "<strong>Retrospective throughout</strong> — the authors write that 0.742 “might not yet be adequate to replace standard clinical procedures”"
+        ]
+      },
+      "takeaway": {
+        "text": "Both columns are true. A paper can be excellent, correctly reported, and still unable to answer the question you actually have.",
+        "comment": "The phrase “emulates pathologists” appears around work like this. It emulates selective viewing. Pathologists do many things while looking at a slide; choosing where to look next is one of them, and it is the only one being emulated here."
+      }
+    },
+    {
+      "id": "eagle-engineering-principles",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "ai",
+      "theme": "light",
+      "bgColor": "#faf7f1",
+      "title": "Five Principles, None of Which Are About the Model",
+      "subtitle": "What a pathology department should actually take from EAGLE",
+      "cards": [
+        {
+          "icon": "↳",
+          "label": "Route",
+          "value": "Cheap → Expensive",
+          "description": "Let a fast, frozen component decide where the costly component looks. The routing decision cost 0.36 milliseconds.",
+          "accentColor": "#a36015"
+        },
+        {
+          "icon": "⊞",
+          "label": "Compose",
+          "value": "Off-the-shelf Parts",
+          "description": "CTransPath, CHIEF and Virchow2 already existed. Nothing was trained. The contribution was the arrangement.",
+          "accentColor": "#3d5b73"
+        },
+        {
+          "icon": "↻",
+          "label": "Reuse",
+          "value": "One Vector Per Slide",
+          "description": "A 1,280-dimensional embedding computed once and reused by every task — storage and search become tractable.",
+          "accentColor": "#0e3f2c"
+        },
+        {
+          "icon": "◎",
+          "label": "Inspect",
+          "value": "Keep the Regions",
+          "description": "The 25 tiles are preserved and reviewable. Inspectability is a design choice, not a property that emerges.",
+          "accentColor": "#7a1f1a"
+        },
+        {
+          "icon": "⚖",
+          "label": "Budget",
+          "value": "Cost Is a Requirement",
+          "description": "Seconds per slide treated as a first-class objective is what makes the difference between a demo and something a lab can run.",
+          "accentColor": "#5b2d71"
+        }
+      ],
+      "takeaway": {
+        "text": "This is selective computation and model orchestration — closer to AI engineering than to one model doing one task.",
+        "comment": "If your department is going to fund one skill, fund this one. None of these five principles require training a model, and all five require someone who can read a repository."
+      }
+    },
+    {
+      "id": "pathbench-what",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "evidence",
+      "bgColor": "#0f172a",
+      "title": "What the Benchmark Actually Did",
+      "subtitle": "Stanford and Argonne, 32 models, one protocol held constant across all of them",
+      "cards": [
+        {
+          "icon": "⌗",
+          "label": "Models",
+          "value": "32",
+          "description": "Four categories: general vision, general vision-language, pathology vision (16 of them), pathology vision-language.",
+          "accentColor": "#60a5fa"
+        },
+        {
+          "icon": "≡",
+          "label": "Tasks",
+          "value": "41",
+          "description": "19 built on TCGA, 22 on non-TCGA data — across 53 datasets and more than 17,500 whole-slide images.",
+          "accentColor": "#22c55e"
+        },
+        {
+          "icon": "⊟",
+          "label": "Protocol",
+          "value": "Held Constant",
+          "description": "20×, 256-pixel patches resized to 224, frozen features, linear probe, mean pooling, 70/30 patient-level split.",
+          "accentColor": "#a78bfa"
+        },
+        {
+          "icon": "∿",
+          "label": "Uncertainty",
+          "value": "1,000 Bootstraps",
+          "description": "Confidence intervals on every estimate, and Wald tests between the leaders. This is the part that makes the finding a finding.",
+          "accentColor": "#fbbf24"
+        }
+      ],
+      "takeaway": {
+        "text": "A benchmark is a protocol, not a leaderboard. This one held everything constant so that the comparison would mean something.",
+        "comment": "Emphasize the bootstraps. Most leaderboards report a point estimate and let the reader assume the ordering is real. This one measured whether the ordering is real, and then reported that it is not."
+      }
+    },
+    {
+      "id": "benchmark-saturation",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "Thirty-two models, no winner",
+      "vizType": "benchmark-saturation",
+      "vizConfig": {
+        "title": "Thirty-two models later, the result is not a winner.",
+        "subtitle": "Top five encoders on the 19 TCGA tasks. Whiskers are 95% confidence intervals.",
+        "domain": [
+          0.7,
+          0.95
+        ],
+        "band": "NO STATISTICAL DIFFERENCE AMONG THESE FIVE (WALD TESTS)",
+        "models": [
+          {
+            "model": "Virchow2",
+            "auroc": 0.83,
+            "ci": [
+              0.784,
+              0.875
+            ],
+            "category": "Path-VM",
+            "hover": "<strong>Virchow2</strong><br>632 M parameters<br>3.1 M pre-training slides<br>Hugging Face: gated"
+          },
+          {
+            "model": "Prov-GigaPath",
+            "auroc": 0.829,
+            "ci": [
+              0.784,
+              0.875
+            ],
+            "category": "Path-VM",
+            "hover": "<strong>Prov-GigaPath</strong><br>171,189 slides / 1.3 B tiles<br>parameter count: could not be verified for this review"
+          },
+          {
+            "model": "H-optimus-0",
+            "auroc": 0.824,
+            "ci": [
+              0.776,
+              0.873
+            ],
+            "category": "Path-VM",
+            "hover": "<strong>H-optimus-0</strong><br>Bioptimus, 2024<br>parameters and pre-training scale: could not be verified for this review"
+          },
+          {
+            "model": "UNI",
+            "auroc": 0.824,
+            "ci": [
+              0.777,
+              0.871
+            ],
+            "category": "Path-VM",
+            "hover": "<strong>UNI</strong><br>Chen et al., Nat Med 2024<br>scale figures: could not be verified for this review"
+          },
+          {
+            "model": "UNI2",
+            "auroc": 0.824,
+            "ci": [
+              0.779,
+              0.868
+            ],
+            "category": "Path-VM",
+            "hover": "<strong>UNI2</strong><br>2025<br>scale figures: could not be verified for this review"
+          }
+        ],
+        "strip": {
+          "total": 32,
+          "highlight": 5,
+          "label": "32 MODELS EVALUATED · 5 SHOWN"
+        },
+        "factorsLabel": "WHAT WOULD ACTUALLY CHANGE THE RANKING",
+        "factors": [
+          "Training-data composition",
+          "Domain similarity to your cases",
+          "How the task is defined",
+          "Preprocessing and magnification",
+          "Aggregation beyond mean pooling",
+          "Evaluation design",
+          "Genuine external validation",
+          "Calibration at the decision threshold",
+          "Integration into a real workflow",
+          "Compute and operational constraints"
+        ],
+        "caption": "Frozen features and a linear probe, mean pooling, 70/30 patient-level split, 1,000 bootstraps, 4×A100. On patch-level tasks Virchow2 does separate from the rest (FDR p<0.001) — the saturation claim is about slide-level ranking.",
+        "source": "Bareja et al., Nat Commun 17:9012 (2026) · gevaertlab/benchmarking-path-models"
+      },
+      "speakerNotes": "The band across the confidence intervals is the finding. Thirty-two models, and the top five cannot be separated by a Wald test. Read the right-hand column slowly — those ten factors are where the variance actually went. Every one of them is an institutional decision, not a download. And note the honest exception in the caption: at patch level Virchow2 does separate. The saturation claim is about slide-level ranking, and I will not overstate it.",
+      "takeaway": {
+        "text": "The result is not that a model won. The result is that choosing a model is ceasing to be the main question.",
+        "comment": "This is the slide that reframes the procurement conversation. If the model is not the differentiator, the integration is — and integration is a local capability, which is what makes an applied informatics team fundable."
+      }
+    },
+    {
+      "id": "what-decides-performance",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "isOptional": true,
+      "dockTitle": "Scaling stopped being the lever",
+      "vizType": "benchmark-scaling",
+      "vizConfig": {
+        "title": "Scaling stopped being the lever.",
+        "subtitle": "And ensembling the top five does not rescue it either.",
+        "barsLabel": "BALANCED ACCURACY, TCGA TASKS",
+        "bars": [
+          {
+            "label": "Majority-vote fusion of the top five",
+            "value": 0.702,
+            "sd": 0.111
+          },
+          {
+            "label": "Virchow2 alone",
+            "value": 0.696,
+            "sd": 0.105
+          }
+        ],
+        "barsNote": "Six thousandths apart, with standard deviations of eleven and ten hundredths. The paper reports the difference as not significant at task level — and on non-TCGA tasks Virchow2 alone (0.712) is ahead of the fusion (0.699).",
+        "finding": "neither increasing model size nor pre-training dataset size uniformly guarantees improved performance",
+        "findingSource": "BAREJA ET AL., NAT COMMUN 17:9012 (2026)",
+        "binGroups": [
+          {
+            "label": "MODEL-SIZE BINS USED IN THE ANALYSIS",
+            "bins": [
+              {
+                "bin": "ViT-S",
+                "value": "about 21 M parameters"
+              },
+              {
+                "bin": "ViT-B",
+                "value": "about 85 M parameters"
+              },
+              {
+                "bin": "ViT-L +",
+                "value": "more than 300 M"
+              }
+            ]
+          },
+          {
+            "label": "PRE-TRAINING DATA BINS",
+            "bins": [
+              {
+                "bin": "small",
+                "value": "fewer than 0.1 M WSIs"
+              },
+              {
+                "bin": "medium",
+                "value": "0.1 to 1 M WSIs"
+              },
+              {
+                "bin": "large",
+                "value": "more than 1 M WSIs"
+              }
+            ]
+          }
+        ],
+        "closing": "No per-model scatter is drawn here: the per-model parameter counts could not be verified for this review. Drawing a cloud of plausible points would be exactly the failure this slide is about.",
+        "source": "Bareja et al., Nat Commun 17:9012 (2026)"
+      },
+      "speakerNotes": "Two claims. First: the ensemble does not save you. Fusing the top five gives 0.702 against 0.696 for Virchow2 alone, with standard deviations that swamp the difference, and on non-TCGA data the single model is actually ahead. Second: the scaling story, quoted verbatim. Neither more parameters nor more pre-training slides uniformly helps. Point at the closing note if anyone asks why there is no scatter plot — I did not have verified per-model parameter counts, so I did not draw one. Optional slide; cut it first if the demos are running long."
+    },
+    {
+      "id": "what-benchmarks-cannot-see",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "What a Benchmark Cannot See",
+      "subtitle": "Four limitations the authors state, and five that are outside the design by construction",
+      "left": {
+        "heading": "Stated by the Authors",
+        "bullets": [
+          "<strong>Frozen features and linear probing</strong> — a lower bound, not a ceiling",
+          "<strong>Possible pre-training / evaluation overlap</strong> — TCGA and CPTAC appear on both sides",
+          "<strong>Coarse scaling proxies</strong> — parameter and data bins are blunt instruments",
+          "<strong>Simple mean pooling</strong> — almost certainly leaving performance unmeasured",
+          "And separately: in ten public foundation models, the <strong>medical center of origin is predicted more accurately than the tissue type</strong> (de Jong et al., 2025)"
+        ]
+      },
+      "right": {
+        "heading": "Outside the Design Entirely",
+        "highlight": true,
+        "bullets": [
+          "<strong>Calibration</strong> — not evaluated. This is an observation of the present review, not a limitation the authors state",
+          "<strong>Decision curves</strong> — no net-benefit analysis at any threshold",
+          "<strong>Prospective workflow effects</strong> — no measurement of what changes when the tool is actually used",
+          "<strong>Comparison against pathologists</strong> — not part of the protocol",
+          "<strong>Patient outcomes</strong> — not in scope here, and rarely in scope anywhere in this literature"
+        ]
+      },
+      "takeaway": {
+        "text": "The benchmark's code, dashboard, dependencies and reproducibility may tell us as much about the state of the field as its AUROC tables do.",
+        "comment": "Be scrupulous here. The word “calibration” does not appear in the paper; the observation belongs to this review, and the authors should not be credited with a limitation they did not state. That distinction is the ethic of the whole session."
+      }
+    },
+    {
+      "id": "poll-where-do-you-look",
+      "type": "poll",
+      "transition": "fade",
+      "title": "Poll: Where Does Your Sense of the Field Come From?",
+      "prompt": "Where do you actually get your sense of what AI can do in pathology today?",
+      "options": [
+        "Peer-reviewed journals",
+        "Preprints (arXiv, bioRxiv, medRxiv)",
+        "Vendor demonstrations and booths",
+        "YouTube, X, LinkedIn",
+        "Colleagues and corridor conversations",
+        "Trying the tools myself",
+        "Conferences and courses",
+        "I could not say"
+      ],
+      "note": "We will come back to your answers when we look at what each kind of artifact can and cannot establish."
+    },
+    {
+      "id": "boundary-collapse",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "ai",
+      "dockTitle": "The boundaries collapsed",
+      "vizType": "boundary-collapse",
+      "vizConfig": {
+        "title": "The boundaries collapsed. The judgment did not.",
+        "subtitle": "Eight activities that used to require a different person, a different budget line, and usually a different building.",
+        "beforeYear": "UNTIL RECENTLY",
+        "afterYear": "NOW",
+        "hub": "one tool-using, code-writing, retrieving, remembering system",
+        "activities": [
+          {
+            "label": "Ask the question",
+            "handoff": "a study section",
+            "artifact": "Still yours. This is one of the two things the ring cannot supply."
+          },
+          {
+            "label": "Find the data",
+            "handoff": "an honest broker, 10–16 weeks",
+            "artifact": "Retrieval and connectors — though there is still no pathology connector in Claude for Life Sciences (Oct 2025)."
+          },
+          {
+            "label": "Write the code",
+            "handoff": "a programmer, or a grant",
+            "artifact": "NOVA (Nov 2025) writes and runs Python across 49 tools."
+          },
+          {
+            "label": "Run the analysis",
+            "handoff": "a core facility",
+            "artifact": "TissueLab orchestrates local tools and co-evolves with use (Sep 2025)."
+          },
+          {
+            "label": "Navigate the slide",
+            "handoff": "a second pathologist",
+            "artifact": "PathAgent — Navigator, Perceptor, Executor (Nov 2025); PathNavigate budgets the search (May 2026)."
+          },
+          {
+            "label": "Visualize and explain",
+            "handoff": "a graphics person",
+            "artifact": "Pathology-CoT learns from recorded expert viewer behaviour (Oct 2025)."
+          },
+          {
+            "label": "Publish it",
+            "handoff": "a journal, 9–18 months",
+            "artifact": "The bottleneck moved: 992 pathology-AI papers by September 2026 alone."
+          },
+          {
+            "label": "Teach it",
+            "artifact": "This deck. One JSON file, editable during the questions."
+          }
+        ],
+        "human": [
+          "Question",
+          "Judgment"
+        ],
+        "humanNote": "The human is not removed from the loop. They move to the two inputs the loop cannot generate for itself.",
+        "caption": "Nothing in the ring was deleted. Every activity still happens — but the handoff between them stopped costing a grant cycle."
+      },
+      "speakerNotes": "Left side first: eight activities, and between each pair a crimson bar. That bar is the handoff, and the handoff is what cost money and time. A grant. A collaborator. A journal. A reviewer. A course. Then watch the bars fade. On the right the same eight activities sit on one ring around a system that uses tools. Hover any of them during questions — each one has a 2025 or 2026 pathology artifact behind it. And note where the human is: outside the ring, holding the question and the judgment. That is not a consolation prize. Those are the two scarce inputs, and this whole talk is an argument about how to spend them.",
+      "takeaway": {
+        "text": "The collapse is not that the work disappeared. It is that the handoffs between the pieces of work stopped costing a grant cycle.",
+        "comment": "If someone objects that this is hype: ask them which of the eight boxes still requires a different person in their own department. Usually two or three, and the number is falling. That is the honest version of the claim."
+      }
+    },
+    {
+      "id": "what-modern-ai-is",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "technical",
+      "theme": "light",
+      "bgColor": "#faf7f1",
+      "title": "What “AI” Now Means, When It Is Not a Slide Classifier",
+      "subtitle": "The capability set the two anchor papers do not measure — and are not trying to",
+      "cards": [
+        {
+          "icon": "⟳",
+          "label": "Agentic Coding",
+          "value": "Plan · Execute · Test",
+          "description": "A loop that proposes a change, runs it, reads the failure, tries again — with a human owning the spec and the merge.",
+          "accentColor": "#a36015"
+        },
+        {
+          "icon": "⚒",
+          "label": "Tool Use",
+          "value": "It Calls, It Reads, It Continues",
+          "description": "MCP turned one-integration-per-pair into one interface. There is still no pathology connector.",
+          "accentColor": "#3d5b73"
+        },
+        {
+          "icon": "⌕",
+          "label": "Retrieval and Memory",
+          "value": "Context Engineering",
+          "description": "What the system has in front of it at each step. This has replaced prompt wording as what decides whether it works.",
+          "accentColor": "#0e3f2c"
+        },
+        {
+          "icon": "✓",
+          "label": "Continuous Evaluation",
+          "value": "Evals and Drift",
+          "description": "Regression suites for behaviour, not just code — plus monitoring for the day the scanner or case mix changes.",
+          "accentColor": "#5b2d71"
+        },
+        {
+          "icon": "⛨",
+          "label": "The Boundary",
+          "value": "Non-Negotiable",
+          "description": "No autonomous diagnosis. No PHI in prompts. No hidden transformations. No unverified production code.",
+          "accentColor": "#c0392b"
+        }
+      ],
+      "takeaway": {
+        "text": "Five capabilities, one of which is a prohibition. The prohibition is what makes the other four deployable in a regulated laboratory.",
+        "comment": "Read the last card aloud, in full. A research audience hearing the AI argument for the first time needs to hear the boundary stated as firmly as the capability. Every risk here has a testable mitigation: hallucinated logic goes to unit tests, prompt drift to regression suites, leakage to a structurally enforced no-PHI policy."
+      }
+    },
+    {
+      "id": "pathology-agents-2026",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "ai",
+      "dockTitle": "The pathology agent became a genre",
+      "vizType": "pathology-agents-timeline",
+      "vizConfig": {
+        "title": "In two years the pathology agent became a genre.",
+        "subtitle": "Systems, the plumbing they run on, and the evidence about whether any of it helps. Hover for detail; click to open the source.",
+        "start": "2024-05-01",
+        "end": "2026-10-01",
+        "years": [
+          "2024-07-01",
+          "2025-01-01",
+          "2025-07-01",
+          "2026-01-01",
+          "2026-07-01"
+        ],
+        "events": [
+          {
+            "date": "2024-06-12",
+            "name": "PathChat",
+            "who": "Mahmood lab / Nature",
+            "kind": "multimodal pathology copilot",
+            "lane": "systems",
+            "url": "https://www.nature.com/articles/s41586-024-07618-3"
+          },
+          {
+            "date": "2024-09-05",
+            "name": "Paige Alba",
+            "who": "Paige (press release)",
+            "kind": "vendor copilot",
+            "lane": "systems",
+            "url": "https://www.paige.ai/press-releases/paige-unveils-alba"
+          },
+          {
+            "date": "2025-02-13",
+            "name": "PathFinder",
+            "who": "UW / Microsoft",
+            "kind": "multi-agent: triage, navigate, describe, diagnose",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2502.08916"
+          },
+          {
+            "date": "2025-06-26",
+            "name": "SlideSeek",
+            "who": "Mahmood lab",
+            "kind": "multi-agent WSI navigation with evidence",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2506.20964"
+          },
+          {
+            "date": "2025-07-19",
+            "name": "WSI-Agents",
+            "who": "multi-institutional",
+            "kind": "multi-agent with a verification step",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2507.14680"
+          },
+          {
+            "date": "2025-09-24",
+            "name": "TissueLab",
+            "who": "Stanford (Huang lab)",
+            "kind": "LLM orchestrating local tools; co-evolving",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2509.20279"
+          },
+          {
+            "date": "2025-10-06",
+            "name": "Pathology-CoT",
+            "who": "Stanford",
+            "kind": "viewer telemetry becomes training signal",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2510.04587"
+          },
+          {
+            "date": "2025-11-14",
+            "name": "NOVA",
+            "who": "Microsoft + Mahmood lab",
+            "kind": "writes and runs Python across 49 tools",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2511.11324"
+          },
+          {
+            "date": "2025-11-21",
+            "name": "PathAgent",
+            "who": "ECCV 2026",
+            "kind": "Navigator / Perceptor / Executor",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2511.17052"
+          },
+          {
+            "date": "2026-05-18",
+            "name": "PathoSage",
+            "who": "—",
+            "kind": "evidence adjudication agent",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2606.07549"
+          },
+          {
+            "date": "2026-05-22",
+            "name": "PathNavigate",
+            "who": "—",
+            "kind": "budgeted whole-slide search agent",
+            "lane": "systems",
+            "url": "https://arxiv.org/abs/2605.23559"
+          },
+          {
+            "date": "2024-11-25",
+            "name": "Model Context Protocol",
+            "who": "Anthropic",
+            "kind": "one interface instead of one integration per pair",
+            "lane": "infrastructure",
+            "url": "https://www.anthropic.com/news/model-context-protocol"
+          },
+          {
+            "date": "2024-12-19",
+            "name": "Building effective agents",
+            "who": "Anthropic",
+            "kind": "a pattern language for agent design",
+            "lane": "infrastructure",
+            "url": "https://www.anthropic.com/engineering/building-effective-agents"
+          },
+          {
+            "date": "2025-06-02",
+            "name": "Biomni",
+            "who": "Stanford",
+            "kind": "general biomedical agent with code execution",
+            "lane": "infrastructure",
+            "url": "https://github.com/snap-stanford/biomni"
+          },
+          {
+            "date": "2025-09-29",
+            "name": "Context engineering",
+            "who": "Anthropic",
+            "kind": "what the agent should have in front of it",
+            "lane": "infrastructure",
+            "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents"
+          },
+          {
+            "date": "2025-10-20",
+            "name": "Claude for Life Sciences — no pathology connector",
+            "who": "Anthropic",
+            "kind": "connectors for Benchling, PubMed, Synapse, 10x — and nothing for slides",
+            "lane": "infrastructure",
+            "tone": "counter",
+            "url": "https://www.anthropic.com/news/claude-for-life-sciences"
+          },
+          {
+            "date": "2025-12-09",
+            "name": "MCP to the Linux Foundation",
+            "who": "Anthropic, Block, OpenAI",
+            "kind": "standard governance",
+            "lane": "infrastructure",
+            "url": "https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation"
+          },
+          {
+            "date": "2025-07-09",
+            "name": "Campanella silent trial",
+            "who": "Mount Sinai",
+            "kind": "real-world deployment, AUC 0.890, 43% fewer rapid molecular tests",
+            "lane": "evidence",
+            "url": "https://doi.org/10.1038/s41591-025-03780-x"
+          },
+          {
+            "date": "2026-03-06",
+            "name": "“Adoption has lagged”",
+            "who": "Da Q et al., 28 authors",
+            "kind": "international expert perspectives — the counterweight",
+            "lane": "evidence",
+            "tone": "counter",
+            "url": "https://arxiv.org/abs/2603.05884"
+          },
+          {
+            "date": "2026-05-22",
+            "name": "Articulate Pro",
+            "who": "NHS / npj Digital Medicine",
+            "kind": "1,613 prospective cases",
+            "lane": "evidence",
+            "url": "https://www.nature.com/articles/s41746-026-02592-8"
+          },
+          {
+            "date": "2026-07-01",
+            "name": "EAGLE",
+            "who": "Kather lab, Nat Commun",
+            "kind": "anchor paper one",
+            "lane": "evidence",
+            "tone": "anchor",
+            "url": "https://doi.org/10.1038/s41467-026-74918-9"
+          },
+          {
+            "date": "2026-07-24",
+            "name": "The 32-model benchmark",
+            "who": "Gevaert lab, Nat Commun",
+            "kind": "anchor paper two",
+            "lane": "evidence",
+            "tone": "anchor",
+            "url": "https://doi.org/10.1038/s41467-026-76004-6"
+          }
+        ],
+        "caption": "The two copper diamonds are the anchor papers. They sit at the far right of the evidence lane — after almost every capability event above them. That is not a criticism of the authors; it is what peer review costs.",
+        "source": "Full citations on the sources slide"
+      },
+      "speakerNotes": "Do not read this timeline out. Let the room look at the shape of it. Top lane: eleven systems in twenty-four months, almost all of them preprints. Middle lane: the plumbing, and one deliberate red mark — Claude for Life Sciences shipped connectors for Benchling, PubMed and Synapse in October 2025, and there is still no connector for a pathology archive. Bottom lane: the evidence, sparse, and the two anchor papers arriving last. Also in crimson: a twenty-eight-author expert review in March 2026 whose finding is that real-world adoption has lagged. I am putting that on the slide because a timeline that only goes one direction is propaganda.",
+      "takeaway": {
+        "text": "Capability moves in preprints and repositories. Evidence moves in journals. Reading only the second and calling it the state of the field is a category error.",
+        "comment": "The counterweight matters. Twenty-eight authors, March 2026: real-world adoption has lagged. Both things are true — the genre expanded rapidly and almost none of it is in routine laboratory use. That tension is the honest position."
+      }
+    },
+    {
+      "id": "lis-vs-assembling-systems",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "workflow",
+      "title": "Two Kinds of System, Both Necessary",
+      "left": {
+        "heading": "What the LIS Does — and Must Keep Doing",
+        "style": "muted",
+        "bullets": [
+          "Moves <strong>predefined records</strong> through <strong>predefined channels</strong>",
+          "<em>“The system recorded it”</em> — accession, result, report, release",
+          "Metrics after the fact: turnaround-time reports, volumes, backlogs",
+          "Every case in the building depends on it, and will for years",
+          "Necessary. Not designed to help you construct a route that does not exist yet."
+        ]
+      },
+      "right": {
+        "heading": "What the Emerging Systems Do",
+        "style": "highlight",
+        "bullets": [
+          "<strong>Help construct the route while the work is under way</strong>",
+          "Route work, surface exceptions, coordinate handoffs, adapt to what actually happened",
+          "Treat the question as something to sharpen, not as a fixed input",
+          "Produce artifacts — code, embeddings, evaluations — that outlive the question that prompted them",
+          "Insufficient on their own. Nothing here replaces the record of what was done."
+        ]
+      },
+      "takeaway": {
+        "text": "This is not LIS versus AI. It is a system that records a route against a system that helps you build one — and a laboratory needs both.",
+        "comment": "Do not let this become a vendor-bashing slide. Epic, Beaker, and every LIS in the room are doing exactly what they were built to do. The failure is expecting the record-keeping layer to also be the orchestration layer. It never was."
+      }
+    },
+    {
+      "id": "three-clocks",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "dockTitle": "Three clocks",
+      "vizType": "three-clocks",
+      "vizConfig": {
+        "title": "Three clocks — and we keep reading the slowest one as if it were the fastest.",
+        "subtitle": "Click a face: the other two dim, and that clock's 2026 example appears.",
+        "clocks": [
+          {
+            "name": "Capability",
+            "period": "days to weeks",
+            "question": "What can be done today?",
+            "sources": [
+              "PREPRINTS",
+              "REPOSITORIES",
+              "DEMOS AND VIDEOS",
+              "MODEL CARDS",
+              "RELEASE NOTES"
+            ],
+            "example": "Nov 2025: NOVA writes and runs Python across 49 tools. Nov 2025: PathAgent navigates a slide. Both preprints.",
+            "rate": 1
+          },
+          {
+            "name": "Engineering",
+            "period": "weeks to months",
+            "question": "Can it be made reliable, reproducible, economical and safe?",
+            "sources": [
+              "INTEGRATIONS AND APIs",
+              "STANDARDS",
+              "EVAL SUITES",
+              "ISSUE TRACKERS",
+              "SHADOW DEPLOYMENTS"
+            ],
+            "example": "2025 DICOM WSI Connectathon: 32 implementers. IHE DPIA: still Trial Implementation. EAGLE: three separate access gates before you can run it.",
+            "rate": 0.125
+          },
+          {
+            "name": "Clinical evidence",
+            "period": "months to years",
+            "question": "Does it improve clinical work or patient care, under a defined intended use?",
+            "sources": [
+              "PROSPECTIVE TRIALS",
+              "IMPLEMENTATION STUDIES",
+              "REGULATORY RECORDS",
+              "LAB AND PATIENT OUTCOMES"
+            ],
+            "example": "Articulate Pro: 1,613 prospective cases, diagnosis or grade group changed in 5.4%, management-relevant in 1.3%, turnaround time down 30.1 hours at one site.",
+            "rate": 0.0167
+          }
+        ],
+        "pointer": {
+          "on": "the literature serves this clock",
+          "read": "and we read it as a description of this one"
+        },
+        "caption": "The hands are running at 1 : 1/8 : 1/60. In the two minutes we spend on this slide, the capability hand will lap the evidence hand roughly twenty times."
+      },
+      "speakerNotes": "Let the clocks run for a beat before saying anything. Three clocks, three different questions, three different literatures. The mistake almost everybody makes — me included — is reading a journal article, which serves the slow clock, as if it described the fast one. A paper accepted in June 2026 describes work done in 2024 and 2025. That is not a flaw in journals; that is what peer review costs. The fix is not to stop reading journals. It is to learn to read repositories, model cards, issue trackers, standards documents and regulatory records as evidence too — each for the one thing it can establish."
+    },
+    {
+      "id": "evidence-ladder",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "The evidence ladder",
+      "vizType": "evidence-ladder",
+      "vizConfig": {
+        "title": "Seeing it is not reproducing it. Reproducing it is not deploying it.",
+        "subtitle": "Four claims, four kinds of evidence. We routinely accept the first as proof of the fourth.",
+        "rungs": [
+          {
+            "rung": "I saw it work",
+            "claim": "The capability exists",
+            "evidence": "EAGLE: 2.27 s per slide, mean AUROC 0.742 over 31 external tasks. Retrospective, all cohorts.",
+            "source": "Nat Commun 17:5740 (2026)"
+          },
+          {
+            "rung": "I reproduced it",
+            "claim": "The method runs somewhere else",
+            "evidence": "The README: about 3 minutes for 7 slides on a MacBook Air M3 — after clearing three access gates. Across computational pathology, few published algorithms are reused.",
+            "source": "KatherLab/EAGLE · Wagner et al., Mod Pathol 2024"
+          },
+          {
+            "rung": "It is deployed",
+            "claim": "It survives contact with a workflow",
+            "evidence": "Articulate Pro: 1,613 cases, 1,049 AI-assisted; diagnosis or grade group changed in 21 of 386 (5.4%); management-relevant in 5 (1.3%); TAT down 30.1 h at one site; IHC odds ratios 0.50, 0.43, 0.33.",
+            "source": "npj Digit Med (22 May 2026)"
+          },
+          {
+            "rung": "It improved outcomes",
+            "claim": "A patient was better off",
+            "evidence": "No pathology-AI study with a patient-outcome endpoint was identified for this review. Corrections are welcome during discussion — and this rung can be filled in on the spot.",
+            "empty": true
+          }
+        ],
+        "verbs": [
+          {
+            "verb": "install",
+            "detail": "weights, licences, features, a GPU"
+          },
+          {
+            "verb": "integrate",
+            "detail": "LIS, viewer, HL7, an intended use"
+          },
+          {
+            "verb": "measure",
+            "detail": "prospectively, against a defined endpoint"
+          }
+        ],
+        "caption": "Each gap has a verb, and each verb is where a project dies. Most pathology-AI conversations are conducted entirely on rung one."
+      },
+      "speakerNotes": "Four rungs. The fourth is dashed and empty, and it stays empty: no pathology-AI study with a patient-outcome endpoint was identified for this review. If anyone in the room knows of one, that is the most useful thing that can come out of the discussion, and the deck can be corrected before the session ends — which, given how it is built, is a literal statement. Note the verbs between the rungs: install, integrate, measure. Every one of them is an institutional capability, not a download."
+    },
+    {
+      "id": "regulatory-clock",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "data",
+      "dockTitle": "The regulatory clock",
+      "vizType": "fda-ai-devices",
+      "vizConfig": {
+        "title": "1,524 AI-enabled devices are authorized. Nine of them are pathology.",
+        "subtitle": "FDA AI-enabled medical devices by lead review panel — the slowest clock, rendered as a list.",
+        "totalLabel": "1,524 ENTRIES TOTAL",
+        "panels": [
+          {
+            "panel": "Radiology",
+            "n": 1164
+          },
+          {
+            "panel": "Cardiovascular",
+            "n": 147
+          },
+          {
+            "panel": "Neurology",
+            "n": 70
+          },
+          {
+            "panel": "Anesthesiology",
+            "n": 26
+          },
+          {
+            "panel": "Gastroenterology-Urology",
+            "n": 25
+          },
+          {
+            "panel": "Hematology",
+            "n": 21
+          },
+          {
+            "panel": "Ophthalmic",
+            "n": 10
+          },
+          {
+            "panel": "Pathology",
+            "n": 9
+          },
+          {
+            "panel": "Clinical Chemistry",
+            "n": 9
+          }
+        ],
+        "yearsLabel": "AI DEVICE AUTHORIZATIONS PER YEAR",
+        "years": [
+          {
+            "year": 2019,
+            "n": 80
+          },
+          {
+            "year": 2020,
+            "n": 114
+          },
+          {
+            "year": 2021,
+            "n": 130
+          },
+          {
+            "year": 2022,
+            "n": 162
+          },
+          {
+            "year": 2023,
+            "n": 226
+          },
+          {
+            "year": 2024,
+            "n": 235
+          },
+          {
+            "year": 2025,
+            "n": 333
+          },
+          {
+            "year": 2026,
+            "n": 92,
+            "partial": true
+          }
+        ],
+        "yearsNote": "2026 is partial — through 30 March. 2025 was a record year across all panels.",
+        "entriesLabel": "THE NINE PATHOLOGY ENTRIES, ON A TIME AXIS",
+        "entryStart": 1993,
+        "entryEnd": 2028,
+        "entries": [
+          {
+            "device": "AutoPap 300 QC",
+            "id": "P950009",
+            "year": 1995.0,
+            "modern": false,
+            "date": "1995"
+          },
+          {
+            "device": "PAPNET",
+            "id": "P940029",
+            "year": 1995.0,
+            "modern": false,
+            "date": "1995"
+          },
+          {
+            "device": "Paige Prostate",
+            "id": "DEN200080",
+            "date": "21 Sep 2021",
+            "year": 2021.72,
+            "modern": true
+          },
+          {
+            "device": "Tempus xT CDx",
+            "id": "P210011",
+            "year": 2023.0,
+            "modern": false,
+            "date": "2023"
+          },
+          {
+            "device": "Hologic Genius Cervical AI",
+            "id": "DEN210035",
+            "date": "31 Jan 2024",
+            "year": 2024.08,
+            "modern": true
+          },
+          {
+            "device": "Ibex Galen Second Read",
+            "id": "K241232",
+            "date": "24 Jan 2025",
+            "year": 2025.07,
+            "modern": true
+          },
+          {
+            "device": "ArteraAI Prostate",
+            "id": "DEN240068",
+            "date": "31 Jul 2025",
+            "year": 2025.58,
+            "modern": true
+          },
+          {
+            "device": "Geneseeq GENESEEQPRIME",
+            "id": "K250003",
+            "date": "29 Aug 2025",
+            "year": 2025.66,
+            "modern": false
+          },
+          {
+            "device": "INFINITT DPS",
+            "id": "K243449",
+            "date": "9 Dec 2025",
+            "year": 2025.94,
+            "modern": false
+          }
+        ],
+        "modernNote": "Four of the nine are whole-slide-image algorithms: Paige 2021, Hologic 2024, Ibex 2025, Artera 2025. Pathology AI is generally reviewed as an IVD component under OHT7, not as software-as-a-medical-device — which is part of why this list is short.",
+        "disclaimer": "FDA's own caveat, verbatim: “The list is not a comprehensive resource of AI-enabled medical devices.” List page dated 16 June 2026; table parsed 2 September 2026.",
+        "source": "FDA AI-Enabled Medical Devices list · Innolitics 2026 snapshot: 51 AI/ML devices in pathology-adjacent panels, 7 of them WSI algorithms"
+      },
+      "speakerNotes": "Radiology has 1,164. Pathology has nine, and four of them are whole-slide-image algorithms. The right-hand time axis has the last two entries offset so the labels do not collide — the dates in the hover are the real ones. Two honest caveats. First, the FDA says on its own page that this list is not comprehensive, and I am putting that sentence on the slide rather than in my mouth. Second, the reason the number is small is partly structural: pathology AI is reviewed as an IVD, not as SaMD, so it does not all land on this list. The shape is still the point — the regulatory clock is the slow one, and it is where an intended use gets defined."
+    },
+    {
+      "id": "ibis-cohort-discovery",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "evidence",
+      "dockTitle": "IBIS — live demo",
+      "vizType": "ibis-flow",
+      "vizConfig": {
+        "hideHeader": true
+      },
+      "speakerNotes": "LIVE DEMO ONE. The top half is what the investigator does: asks a natural-language question, gets a cohort back in seconds instead of weeks. The bottom half is the part this room needs to see clearly — IBIS was built outside the institution, on entirely synthetic data, in a Docker-based Elasticsearch stack that has never touched PHI. The pathway in is the responsible one: open source, adapt to the internal data model, Enterprise GitHub, security review, CI/CD. If the live instance is up, run two queries now. One structured — cohort by IHC profile or stage. One free-text — a concept with no code behind it. After each: one short sentence. “Notice, no SQL was written.” “Notice, that came out of a free-text report, not a coded field.” If the demo is unavailable, switch to the recorded fallback and do not apologize. The talk works without it; it does not work without the idea of it.",
+      "takeaway": {
+        "text": "No SQL was written, and nothing here has ever touched PHI. Both of those are engineering decisions, not luck.",
+        "comment": "This is the existence proof for the whole second half of the talk. One informaticist, synthetic data, an applied team for the safety review. The methodology existed before AI; what changed was the cost of building, which is what made it feasible at that scale."
+      }
+    },
+    {
+      "id": "xenonym-live",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "interactive",
+      "title": "Xenonym — A Tool That Was Never Worth Building Before",
+      "subtitle": "Live at <a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a> — a sixty-second demonstration",
+      "vizType": "xenonym-browser",
+      "vizConfig": {},
+      "takeaway": {
+        "text": "Synthetic names that sound like names, belong to nobody, and include the ones that break your pipeline.",
+        "comment": "Bobby Tables is not a joke, it is a test case. If your research pipeline cannot store “Nontra Null” or “Čapek”, that is a bug, and depending on context a compliance failure waiting to happen. The point is not the tool. The point is that supplementary infrastructure of this size is now affordable to build — which is the same economic claim the rest of the talk makes about bigger things."
+      }
+    },
+    {
+      "id": "tat-2006-2026",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "data",
+      "dockTitle": "Twenty years, same median TAT",
+      "vizType": "tat-2006-2026",
+      "vizConfig": {},
+      "speakerNotes": "LIVE DEMO TWO. Press D for the full dashboard; ESC closes it. April 2006 against April 2026 at this institution. Twenty-three percent more cases. Every digital tool the field produced in between. Mean turnaround time went from 101 hours to 106. Median went from 89 to 89. The share signed out within two days fell slightly. This is the bridge to the closing metaphor: the canal carried more boats every year, and it never got faster. The tools were real. The orchestration layer that would have turned those tools into shorter cycle times was never built.",
+      "takeaway": {
+        "text": "Twenty years of tools, 23% more cases, and a median turnaround time of 89 hours in both April 2006 and April 2026.",
+        "comment": "Do not let this land as cynicism. The right reading is diagnostic: we bought capability and never built the layer that converts capability into cycle time. That layer is the subject of the last third of this talk."
+      }
+    },
+    {
+      "id": "the-mirror",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "debate",
+      "dockTitle": "The mirror",
+      "vizType": "paper-volume",
+      "vizConfig": {
+        "title": "The mirror: what happens when producing an academically legible object gets cheap.",
+        "subtitle": "PubMed records per year. The 2026 bars are partial — through 2 September.",
+        "series": [
+          {
+            "label": "digital / computational pathology × AI",
+            "color": "ink",
+            "values": [
+              {
+                "year": 2018,
+                "n": 65
+              },
+              {
+                "year": 2019,
+                "n": 143
+              },
+              {
+                "year": 2020,
+                "n": 253
+              },
+              {
+                "year": 2021,
+                "n": 433
+              },
+              {
+                "year": 2022,
+                "n": 556
+              },
+              {
+                "year": 2023,
+                "n": 650
+              },
+              {
+                "year": 2024,
+                "n": 799
+              },
+              {
+                "year": 2025,
+                "n": 1055
+              },
+              {
+                "year": 2026,
+                "n": 992,
+                "partial": true
+              }
+            ]
+          },
+          {
+            "label": "“foundation model” in pathology",
+            "color": "copper",
+            "values": [
+              {
+                "year": 2022,
+                "n": 0
+              },
+              {
+                "year": 2023,
+                "n": 2
+              },
+              {
+                "year": 2024,
+                "n": 16
+              },
+              {
+                "year": 2025,
+                "n": 100
+              },
+              {
+                "year": 2026,
+                "n": 122,
+                "partial": true
+              }
+            ]
+          }
+        ],
+        "marginaliaLabel": "AND HOW THEY WERE WRITTEN",
+        "marginalia": [
+          {
+            "value": "≥ 13.5%",
+            "text": "of 2024 biomedical abstracts show signs of LLM processing — a lower bound, measured on abstracts.",
+            "source": "KOBAK ET AL., SCI ADV 11(27) 2025 · >15 M ABSTRACTS"
+          },
+          {
+            "value": "89%",
+            "text": "of 2025 papers show excess LLM-associated vocabulary — measured on full text. A different measure from the one above; do not read them as a trend line.",
+            "source": "HOLZWARTH, GONZÁLEZ-MÁRQUEZ, KOBAK 2026"
+          }
+        ],
+        "footnote": "70% of 5,114 journals now have an AI-use policy. Measured across 5.2 million papers, the policies made no significant difference to usage (He & Bu, 2025).",
+        "caption": "This slide is not an accusation. Volume was rising before LLMs — 47% more articles between 2016 and 2022. What AI did was collapse the cost of producing an object that looks like a contribution, and thereby expose how much of the existing corpus already was one.",
+        "source": "PubMed E-utilities counts, run 2 September 2026; query strings in the lecture repository"
+      },
+      "speakerNotes": "Two series and two numbers in the margin, deliberately kept off the axis because they measure different things. Thirteen and a half percent is a lower bound on 2024 abstracts. Eighty-nine percent is full-text vocabulary in 2025 papers. Plotting those together as a trend would be exactly the kind of compression this talk is complaining about. And the footnote is the finding that should worry a journal editor: seventy percent of journals have a policy, and the policies changed nothing measurable. Now the hard sentence, and I want to say it carefully. This is not an accusation about anyone's writing. Never infer authorship from style. The claim is systemic: AI exposes the enormous volume of academically legible but low-marginal-value production inside science, including in our field.",
+      "takeaway": {
+        "text": "AI did not create low-value science. It collapsed the cost of producing the thing that looks like science, and thereby exposed how much of it there already was.",
+        "comment": "Guardrail, hold it firmly: never infer AI authorship from writing style. The claim on this slide is about the system, not about any individual paper or author. If a question pushes toward naming names, refuse it and restate the systemic version."
+      }
+    },
+    {
+      "id": "scarcity-shift",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "dockTitle": "What got cheap, what stayed scarce",
+      "vizType": "scarcity-shift",
+      "vizConfig": {
+        "title": "What got cheap, and what did not.",
+        "subtitle": "Nothing on the right became more abundant. It only became more decisive.",
+        "cheapLabel": "PRICE COLLAPSED",
+        "scarceLabel": "STILL SCARCE",
+        "cheap": [
+          "Writing code",
+          "Manipulating data",
+          "Running the statistics",
+          "Finding the literature",
+          "Producing the figures",
+          "Drafting the manuscript",
+          "Correcting the language",
+          "Assisting the peer review",
+          "Reformatting and resubmitting"
+        ],
+        "scarce": [
+          "Questions worth answering",
+          "High-quality data",
+          "Experimental judgment",
+          "Reliable evaluation",
+          "Clinical integration",
+          "Accountability",
+          "Trusted attention",
+          "Telling significance from volume"
+        ],
+        "closing": "If AI makes it almost effortless to produce papers, code, analyses and presentations, then our responsibility is no longer to produce more. It is to decide what is worth producing, how it should be tested, and whether it changes anything that matters.",
+        "caution": "Was that corpus “produced using AI”? In a systemic sense, increasingly yes — whether or not a model wrote any given sentence. Authorship must never be inferred from writing style."
+      },
+      "speakerNotes": "Let the left column visibly lose weight while you say nothing. Then read four items from the right column slowly. Every one of them is a human institutional capability, and not one of them has a vendor. Close on the sentence at the bottom — it is the thesis of the last act, and it is the sentence I want the room to leave with."
+    },
+    {
+      "id": "artifact-functions",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "meta",
+      "dockTitle": "What each artifact establishes",
+      "vizType": "artifact-functions",
+      "vizConfig": {
+        "title": "Every artifact answers exactly one question well.",
+        "subtitle": "We spent thirty years asking the paper to answer all nine. Hover a row for its 2026 example.",
+        "functions": [
+          "records a claim",
+          "demonstrates a capability",
+          "shows the method runs",
+          "documents intended use",
+          "reveals failure modes",
+          "allows re-comparison",
+          "defines approved use",
+          "tests whether it improves work",
+          "tests whether it helps patients"
+        ],
+        "artifacts": [
+          {
+            "label": "Peer-reviewed paper",
+            "emphasis": true,
+            "example": "EAGLE, Nat Commun 17:5740. It records a claim and its formal evidence — and that is what it is for."
+          },
+          {
+            "label": "Video or demo",
+            "example": "A NOVA or PathChat walkthrough. It transmits tacit knowledge that no methods section can."
+          },
+          {
+            "label": "Repository",
+            "example": "KatherLab/EAGLE, GPL-3.0, Zenodo-archived. It shows the method runs — and its issues reveal where it does not."
+          },
+          {
+            "label": "Model card",
+            "example": "paige-ai/Virchow2 on Hugging Face, gated. It states what the model was trained on and what it is not for."
+          },
+          {
+            "label": "Issue tracker",
+            "example": "The only artifact in this list whose primary job is to surface failure modes."
+          },
+          {
+            "label": "Interactive benchmark",
+            "example": "pathbench.stanford.edu. It lets a comparison stay live after the paper is frozen."
+          },
+          {
+            "label": "Regulatory record",
+            "example": "Paige Prostate, DEN200080. It is the only artifact here that defines an approved intended use."
+          },
+          {
+            "label": "Prospective implementation",
+            "example": "Articulate Pro: 1,613 cases, and a measurement of what changed in the reporting workflow."
+          },
+          {
+            "label": "Clinical-outcomes study",
+            "example": "None was identified in pathology AI for this review. The row is aspirational."
+          }
+        ],
+        "matrix": [
+          [
+            "primary",
+            "",
+            "partial",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "primary",
+            "partial",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            "primary",
+            "partial",
+            "partial",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            "",
+            "primary",
+            "",
+            "",
+            "partial",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            "",
+            "",
+            "primary",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "partial",
+            "",
+            "",
+            "",
+            "",
+            "primary",
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            "",
+            "partial",
+            "",
+            "",
+            "primary",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "primary",
+            "partial"
+          ],
+          [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "partial",
+            "primary"
+          ]
+        ],
+        "overclaimLabel": "WHAT WE HAVE BEEN ASKING THE PAPER TO DO",
+        "closing": "Views measure attention. Peer review measures passage through a validation process. Neither of them directly measures clinical usefulness — and a field that conflates the three will keep being surprised."
+      },
+      "speakerNotes": "This is the slide to return to the poll on. Whatever the room answered — journals, preprints, vendor demos, YouTube, colleagues, trying it yourself — none of those answers is wrong. Each of them is a row in this matrix, and each row establishes exactly one thing. The failure is not using YouTube. The failure is treating a demo as evidence of deployment, or a paper as evidence of outcome. Watch the copper rings appear across the paper row: that is what academic culture has been asking one artifact to do on its own. Read the closing line as written."
+    },
+    {
+      "id": "memex-to-model",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "meta",
+      "dockTitle": "From the memex to the model",
+      "vizType": "memex-to-model",
+      "vizConfig": {
+        "title": "Bush described the trail. We finally built something that can walk one.",
+        "subtitle": "Eighty years from the memex to a system that constructs the trail while you are still asking the question.",
+        "axisKnots": [
+          1943,
+          1990,
+          2012,
+          2021,
+          2027
+        ],
+        "axisShares": [
+          0,
+          0.17,
+          0.36,
+          0.58,
+          1
+        ],
+        "bandLabels": {
+          "ideas": "the idea of the trail",
+          "documents": "the executable document",
+          "systems": "systems that use tools"
+        },
+        "events": [
+          {
+            "date": "1945-07-01",
+            "label": "Bush, “As We May Think”",
+            "band": "ideas",
+            "tip": "The memex: stores, extends, and above all lets you consult trails.",
+            "url": "https://www.theatlantic.com/magazine/archive/1945/07/as-we-may-think/303881/"
+          },
+          {
+            "date": "1962-10-01",
+            "label": "Engelbart, “Augmenting Human Intellect”",
+            "band": "ideas",
+            "url": "https://www.dougengelbart.org/pubs/augment-3906.html"
+          },
+          {
+            "date": "1965-01-01",
+            "label": "Nelson coins “hypertext”",
+            "band": "ideas",
+            "url": "https://doi.org/10.1145/800197.806036"
+          },
+          {
+            "date": "1984-02-01",
+            "label": "Knuth, “Literate Programming”",
+            "band": "documents",
+            "tip": "A program written as an explanation to a human being, with the code embedded in the prose.",
+            "url": "https://doi.org/10.1093/comjnl/27.2.97"
+          },
+          {
+            "date": "2011-03-10",
+            "label": "Victor, “Explorable Explanations”",
+            "band": "documents",
+            "url": "https://worrydream.com/ExplorableExplanations/"
+          },
+          {
+            "date": "2014-07-01",
+            "label": "Project Jupyter",
+            "band": "documents",
+            "url": "https://blog.jupyter.org/the-big-split-9d7b88a031a7"
+          },
+          {
+            "date": "2017-04-28",
+            "label": "Observable",
+            "band": "documents",
+            "url": "https://medium.com/@mbostock/a-better-way-to-code-2b1d2876a3a0"
+          },
+          {
+            "date": "2022-07-28",
+            "label": "Quarto 1.0",
+            "band": "documents",
+            "url": "https://posit.co/blog/announcing-quarto-a-new-scientific-and-technical-publishing-system"
+          },
+          {
+            "date": "2023-08-14",
+            "label": "marimo",
+            "band": "documents",
+            "url": "https://github.com/marimo-team/marimo"
+          },
+          {
+            "date": "2024-11-25",
+            "label": "Model Context Protocol",
+            "band": "systems",
+            "tip": "One interface between models and tools, instead of one integration per pair.",
+            "url": "https://www.anthropic.com/news/model-context-protocol"
+          },
+          {
+            "date": "2025-09-29",
+            "label": "Context engineering",
+            "band": "systems",
+            "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents"
+          },
+          {
+            "date": "2025-10-16",
+            "label": "Agent Skills",
+            "band": "systems",
+            "url": "https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills"
+          }
+        ],
+        "quotesLabel": "BUSH, JULY 1945",
+        "quotes": [
+          "A record if it is to be useful to science, must be continuously extended, it must be stored, and above all it must be consulted.",
+          "The process of tying two items together is the important thing.",
+          "There is a new profession of trail blazers."
+        ],
+        "additionsLabel": "WHAT THE MODEL ADDS TO THE MEMEX",
+        "additions": [
+          "It constructs the trail, not only stores it",
+          "It translates between media",
+          "It writes and runs the code",
+          "It interrogates the data directly",
+          "It proposes connections you did not ask for",
+          "It regenerates the explanation for a new audience",
+          "It preserves the process, not just the result",
+          "And it will confidently invent a trail that is not there"
+        ]
+      },
+      "speakerNotes": "Bush wanted a machine that stores, extends and consults — and he understood that the intellectual act was the trail, not the storage. Read the third quote: “There is a new profession of trail blazers.” He was describing a job that did not exist. It exists now, and some of you already have it. The right-hand list is what the model adds to the memex. Read the last item aloud with the same weight as the others: it will confidently invent a trail that is not there. That item is on the slide on purpose. An honest list of new capabilities includes the new failure mode."
+    },
+    {
+      "id": "what-this-lecture-is",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "meta",
+      "dockTitle": "How this deck was made",
+      "vizType": "lecture-provenance",
+      "vizConfig": {
+        "title": "This deck is the argument, not a picture of it.",
+        "subtitle": "There is no PowerPoint here. One JSON file, a D3 visualization library, a test suite, and a commit hash.",
+        "stages": [
+          {
+            "label": "A brief",
+            "detail": "One document: thesis, audience, the sentence the room should leave with.",
+            "count": "1 file"
+          },
+          {
+            "label": "Research agents",
+            "detail": "Three passes: the anchor papers, the 2026 landscape, the historical and epistemic sources.",
+            "count": "3 passes"
+          },
+          {
+            "label": "A verified registry",
+            "detail": "Every number the deck may render, each tied to a source id and a verification status.",
+            "count": "YES / PARTIAL / TODO"
+          },
+          {
+            "label": "Visualization specs",
+            "detail": "One spec per figure: the argument, the data, the encoding, the acceptance test.",
+            "count": "16 specs"
+          },
+          {
+            "label": "A coding agent",
+            "detail": "Visualizations written into the shared library, the deck written as JSON. Reviewed by a human, line by line.",
+            "count": "16 new vizzes"
+          },
+          {
+            "label": "Tests, then commit",
+            "detail": "Static analysis of every SVG, link validation, and a Playwright pass before anything is shown.",
+            "count": "3 gates"
+          }
+        ],
+        "loopLabel": "a question from the room re-enters at step one",
+        "build": {
+          "slides": 37,
+          "vizzes": 16,
+          "references": "76 YES · 2 TODO",
+          "date": "2026"
+        },
+        "caption": "The medium demonstrates the argument. If a question in this session exposes something the deck answers badly, the fix is a pull request — not a reprint."
+      },
+      "speakerNotes": "Twenty minutes ago I claimed that the boundaries between asking, finding, coding, analyzing, publishing and teaching have collapsed. This slide is the receipt. A brief, three research passes, a registry where every number carries a source and a verification status, sixteen visualization specs, a coding agent, and three test gates. Then the loop: a question from this room re-enters at step one. That is not a metaphor. Six of the numbers in this deck are marked TODO in the registry and are deliberately not rendered anywhere — including one AUROC I would have liked to show you on the compute slide. The registry says I did not verify it, so the slide says so too."
+    },
+    {
+      "id": "canal-and-railroad",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "ecosystem",
+      "dockTitle": "The canal and the railroad",
+      "vizType": "canal-and-railroad",
+      "vizConfig": {
+        "title": "The canal was necessary, expensive, and obsolete within twenty years.",
+        "subtitle": "The railroad did not go around it. It was laid on the canal's own right-of-way — and the bike path is on it now.",
+        "top": {
+          "label": "NEW HAVEN TO NORTHAMPTON — ONE CORRIDOR, THREE TRANSPORTATION LOGICS",
+          "start": 1820,
+          "end": 2026,
+          "knots": [
+            1820,
+            1875,
+            1990,
+            2026
+          ],
+          "shares": [
+            0,
+            0.58,
+            0.8,
+            1
+          ],
+          "ticks": [
+            1825,
+            1850,
+            1875,
+            1950,
+            2000,
+            2026
+          ],
+          "segments": [
+            {
+              "from": 1828,
+              "to": 1848,
+              "tone": "canal",
+              "label": "CANAL",
+              "locks": 60
+            },
+            {
+              "from": 1847,
+              "to": 1985,
+              "tone": "rail",
+              "label": "RAILROAD",
+              "rails": true
+            },
+            {
+              "from": 1996,
+              "to": 2026,
+              "tone": "trail",
+              "label": "TRAIL"
+            }
+          ],
+          "events": [
+            {
+              "year": 1825,
+              "label": "Groundbreaking — the governor's ceremonial shovel broke",
+              "tone": "canal",
+              "tip": "4 July 1825, Granby. Chartered 1822 under James Hillhouse, treasurer of Yale."
+            },
+            {
+              "year": 1835,
+              "label": "Open to Northampton — about 80 miles, 60 locks",
+              "tone": "canal"
+            },
+            {
+              "year": 1836,
+              "label": "Shareholders lose more than $1 million",
+              "tone": "canal",
+              "tip": "Toll revenue covered roughly 20% of expenses. Profitable once in its first ten years."
+            },
+            {
+              "year": 1848,
+              "label": "Canal closes; the Canal Line opens on the right-of-way",
+              "tone": "rail",
+              "tip": "18 January 1848. Tracks had been laid alongside the working canal the year before. Joseph E. Sheffield drove the conversion — and later endowed the Sheffield Scientific School."
+            },
+            {
+              "year": 1996,
+              "label": "First six miles of the Heritage Trail open",
+              "tone": "trail",
+              "tip": "Fifty-six miles across Connecticut today — the third transportation logic on the same corridor."
+            }
+          ]
+        },
+        "bottom": {
+          "label": "PATHOLOGY INFRASTRUCTURE — AND WHAT IS BEING LAID ON TOP OF IT",
+          "start": 1980,
+          "end": 2027,
+          "knots": [
+            1980,
+            2015,
+            2027
+          ],
+          "shares": [
+            0,
+            0.44,
+            1
+          ],
+          "ticks": [
+            1990,
+            2000,
+            2010,
+            2020,
+            2026
+          ],
+          "segments": [
+            {
+              "from": 1980,
+              "to": 2027,
+              "tone": "canal",
+              "label": "LIS · HL7 · DICOM — STILL CARRYING EVERY CASE"
+            },
+            {
+              "from": 2024,
+              "to": 2026.6,
+              "tone": "rail",
+              "rails": true,
+              "arrow": true
+            }
+          ],
+          "events": [
+            {
+              "year": 2010,
+              "label": "DICOM Supplement 145 (WSI) — final text",
+              "tone": "canal",
+              "tip": "Sixteen years old. The 2025 Connectathon counted 32 implementers; IHE DPIA is still Trial Implementation."
+            },
+            {
+              "year": 2017.3,
+              "label": "FDA authorizes WSI for primary diagnosis",
+              "tone": "canal"
+            },
+            {
+              "year": 2021.7,
+              "label": "Paige Prostate — first FDA de novo AI in pathology",
+              "tone": "canal"
+            },
+            {
+              "year": 2024.2,
+              "label": "Foundation models: UNI, CONCH, Prov-GigaPath, CHIEF, Virchow2",
+              "tone": "rail"
+            },
+            {
+              "year": 2024.9,
+              "label": "Model Context Protocol",
+              "tone": "rail"
+            },
+            {
+              "year": 2026.3,
+              "label": "Agents become a genre; two anchor papers land",
+              "tone": "rail"
+            }
+          ]
+        },
+        "marginalia": "Toll revenue covered about 20% of expenses. The canal turned a profit once in its first ten years, and cost its shareholders more than a million dollars — and it was still the right thing to have built, because it proved the corridor.",
+        "yaleNote": "The canal's first president was James Hillhouse, treasurer of Yale. The man who converted it to a railroad, Joseph E. Sheffield, endowed the Sheffield Scientific School — the institution's answer to where applied knowledge belongs.",
+        "closing": "My goal is not to give you an inventory of everything travelling on the canal. My goal is to show you that the railroad has arrived — and that it is running on the canal's right-of-way, not around it."
+      },
+      "speakerNotes": "Top band: the Farmington Canal, which ran two hundred yards from where some of you parked. Chartered by Yale's treasurer. The governor's shovel broke at the groundbreaking, which is the most honest omen in the history of infrastructure. It reached Northampton in 1835 with sixty locks, lost over a million dollars, and closed on the eighteenth of January 1848 — the same day the railroad opened on its right-of-way. The tracks had been laid alongside the working canal the year before. In 1996 the corridor became a bike trail. Three transportation logics, one right-of-way. Bottom band: our own corridor. DICOM WSI in 2010. FDA in 2017. Paige in 2021. Then, from 2024, the iron overlay begins — and note that the rail is drawn only to today and ends in an arrowhead. The railroad has arrived. It is not finished. And the canal is not closing: the LIS carries every case in this building and will keep doing so for years. What changed is the transportation logic."
+    },
+    {
+      "id": "your-move",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "interactive",
+      "title": "Your Move",
+      "vizType": "your-role",
+      "vizConfig": {
+        "epigraph": {
+          "text": "You do not need to build models. You need to be the person who knows which question would change a decision."
+        },
+        "steps": [
+          {
+            "number": 1,
+            "question": "Name the question",
+            "detail": "One question in your own practice whose answer would change a decision."
+          },
+          {
+            "number": 2,
+            "question": "Name the artifact",
+            "detail": "A paper, a repository, a model card, a silent trial, a prospective evaluation?"
+          },
+          {
+            "number": 3,
+            "question": "Find the rung",
+            "detail": "Saw it, reproduced it, deployed it, improved outcomes — where does yours sit?"
+          },
+          {
+            "number": 4,
+            "question": "Read one repository",
+            "detail": "Not a paper. One repository: README, issues, licence, access gates."
+          },
+          {
+            "number": 5,
+            "question": "Bring it to the team",
+            "detail": "The applied informatics team — or the first informaticist who could become one."
+          }
+        ],
+        "takeaway": {
+          "text": "One question, one artifact, one rung, one repository, one conversation.",
+          "comment": "The bottleneck is no longer implementation. It is deciding what is worth implementing — and that is the thing you are uniquely qualified to do."
+        }
+      },
+      "speakerNotes": "Five moves on a commitment timeline. Today: name the question. This week: name the artifact that would establish it. This month: locate it honestly on the evidence ladder. This quarter: read one repository end to end — README, issues, licence, access gates — because thirty minutes there tells you more about whether a thing is deployable than the abstract ever will. This year: take it to the people who can build it. Make each step sound small, because each one is. The compound effect is what changes a department.",
+      "takeaway": {
+        "text": "One question, one artifact, one rung, one repository, one conversation.",
+        "comment": "The bottleneck is no longer implementation. It is deciding what is worth implementing — and that is the thing you are uniquely qualified to do."
+      }
+    },
+    {
+      "id": "takeaways",
+      "type": "takeaways",
+      "transition": "convex",
+      "title": "Key Takeaways",
+      "items": [
+        "<strong>EAGLE's lesson is orchestration</strong> — route, compose, reuse, inspect, budget — not two-thousandths of AUROC. A cheap frozen model bought an expensive one's attention at 2% of the cost.",
+        "<strong>Thirty-two models later there is no winner, and that is the finding.</strong> Data composition, task definition, evaluation design, calibration and integration now matter more than model identity.",
+        "The frontier runs on <strong>three clocks</strong>. The literature serves the slowest and is read as the fastest. Learn to read repositories, model cards, issue trackers, standards and regulatory records as evidence — each for the one thing it can establish.",
+        "AI collapsed the cost of academically legible output and thereby <strong>exposed</strong> how much of it was low-marginal-value. The scarce resources are questions, data, judgment, evaluation, integration, accountability and trusted attention.",
+        "<strong>The railroad has arrived.</strong> The LIS canal still carries every case and will for years. What changed is not the corridor — it is the transportation logic running on it."
+      ],
+      "cta": {
+        "label": "Your challenge:",
+        "text": "Write down one question in your practice whose answer would change a decision. Name the artifact that would establish it — and if the honest answer is “a prospective evaluation in my own laboratory” rather than “a paper”, say so, and bring it to your applied informatics team. If your institution does not have such a team, that single page is the strongest case you can make for funding one."
+      }
+    },
+    {
+      "id": "sources",
+      "type": "content",
+      "transition": "fade",
+      "title": "Sources &amp; Further Reading",
+      "subtitle": "Every number in this deck resolves to one of these. Verification status is recorded in the repository.",
+      "bullets": [
+        "<style>\n.reveal .intro-slide ul.fragment-list:has(.sources-scroll){list-style:none !important;padding:0 !important;margin:0 !important;}\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll){padding:0 !important;margin:0 !important;font-size:13px !important;line-height:1.55 !important;}\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll)::before,\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll):before{content:none !important;display:none !important;}\n.sources-scroll{\n  max-height:520px; overflow-y:auto; overflow-x:hidden;\n  padding:18px 26px 18px 22px; background:#fdfcf8;\n  border:1px solid #e0d9c8; border-radius:6px;\n  text-align:left; font-family:'Inter',sans-serif;\n  scrollbar-width:thin; scrollbar-color:#b5a98e #f0eadd;\n}\n.sources-scroll::-webkit-scrollbar{width:9px;}\n.sources-scroll::-webkit-scrollbar-track{background:#f0eadd;}\n.sources-scroll::-webkit-scrollbar-thumb{background:#b5a98e; border-radius:4px;}\n.sources-scroll::-webkit-scrollbar-thumb:hover{background:#9a8d70;}\n.sources-scroll h4{\n  font-size:11.5px !important; font-weight:700 !important;\n  color:#1B3A5C; text-transform:uppercase; letter-spacing:1.7px;\n  margin:20px 0 8px 0 !important; padding-bottom:4px;\n  border-bottom:1px solid #d6cfbf;\n}\n.sources-scroll h4:first-child{margin-top:0 !important;}\n.sources-scroll p{\n  font-size:12.5px !important; font-weight:400 !important;\n  line-height:1.55 !important; margin:0 0 8px 0 !important;\n  padding:0 0 0 18px !important; text-indent:-18px;\n  color:#3a3024 !important;\n}\n.sources-scroll a{\n  color:#0e6e8c; text-decoration:none;\n  border-bottom:1px dotted rgba(14,110,140,0.5);\n}\n.sources-scroll a:hover{\n  background:rgba(14,110,140,0.07); border-bottom-color:#0e6e8c;\n}\n.sources-scroll em{font-style:italic;}\n.sources-scroll .scroll-hint{\n  display:block; text-align:right; font-size:10.5px;\n  color:#6b5c48; font-style:italic; margin-bottom:10px;\n  letter-spacing:0.4px; opacity:0.78;\n}\n.sources-scroll .annot{color:#6b5c48; font-style:italic; font-size:12px;}\n</style><div class=\"sources-scroll\"><span class=\"scroll-hint\">↓ scroll within this list for the full bibliography</span><h4>The Two Anchor Papers</h4>\n  <p><a href=\"https://doi.org/10.1038/s41467-026-74918-9\" target=\"_blank\">Neidlinger P, Lenz T, Foersch S, … Kather JN. A deep learning framework for efficient pathology image analysis. <em>Nat Commun</em>. 2026;17:5740.</a> <span class=\"annot\">EAGLE. Code: <a href=\"https://github.com/KatherLab/EAGLE\" target=\"_blank\">KatherLab/EAGLE</a>, GPL-3.0.</span></p>\n  <p><a href=\"https://doi.org/10.1038/s41467-026-76004-6\" target=\"_blank\">Bareja R, Carrillo-Perez F, Zheng Y, … Gevaert O. A benchmark study of vision and pathology foundation models for computational pathology. <em>Nat Commun</em>. 2026;17:9012.</a> <span class=\"annot\">32 models, 41 tasks, 53 datasets. Dashboard: <a href=\"https://pathbench.stanford.edu/\" target=\"_blank\">pathbench.stanford.edu</a>. Three unrelated projects are called “PathBench”; this is the Stanford one.</span></p>\n  <h4>Models Named in Those Papers</h4>\n  <p><a href=\"https://doi.org/10.1038/s41586-024-07894-z\" target=\"_blank\">Wang X, … Yu K-H. A pathology foundation model for cancer diagnosis and prognosis prediction. <em>Nature</em>. 2024;634:970-978.</a> <span class=\"annot\">CHIEF — the frozen ranker inside EAGLE.</span></p>\n  <p><a href=\"https://arxiv.org/abs/2408.00738\" target=\"_blank\">Zimmermann E, … Severson K. Virchow2: scaling self-supervised mixed magnification models in pathology. arXiv:2408.00738.</a> <span class=\"annot\">632 M parameters, 3.1 M slides; weights gated on Hugging Face.</span></p>\n  <p><a href=\"https://doi.org/10.1038/s41591-025-03982-3\" target=\"_blank\">Ding T, … Mahmood F. A multimodal whole-slide foundation model for pathology. <em>Nat Med</em>. 2025;31:3749-3761.</a> <span class=\"annot\">TITAN.</span></p>\n  <p><a href=\"https://doi.org/10.1038/s41591-024-02857-3\" target=\"_blank\">Chen RJ, … Mahmood F. Towards a general-purpose foundation model for computational pathology. <em>Nat Med</em>. 2024;30:850-862.</a> <span class=\"annot\">UNI.</span> &middot; <a href=\"https://doi.org/10.1038/s41591-024-02856-4\" target=\"_blank\">Lu MY, … Mahmood F. A visual-language foundation model for computational pathology. <em>Nat Med</em>. 2024;30:863-874.</a> <span class=\"annot\">CONCH.</span></p>\n  <p><a href=\"https://doi.org/10.1038/s41586-024-07441-w\" target=\"_blank\">Xu H, … Poon H. A whole-slide foundation model for digital pathology from real-world data. <em>Nature</em>. 2024;630:181-188.</a> <span class=\"annot\">Prov-GigaPath — 1.3 B tiles from 171,189 slides.</span></p>\n  <h4>Benchmarks, Robustness, Reproducibility</h4>\n  <p><a href=\"https://arxiv.org/abs/2501.18055\" target=\"_blank\">de Jong ED, Marcus E, Teuwen J. Current pathology foundation models are unrobust to medical center differences. arXiv:2501.18055 (2025).</a> <span class=\"annot\">In ten models the center of origin is predicted more accurately than the tissue type.</span></p>\n  <p><a href=\"https://doi.org/10.1016/j.modpat.2023.100350\" target=\"_blank\">Wagner SJ, … Peng T. Built to last? Reproducibility and reusability of deep learning algorithms in computational pathology. <em>Mod Pathol</em>. 2024;37:100350.</a></p>\n  <p><a href=\"https://doi.org/10.1038/s41467-025-58796-1\" target=\"_blank\">Campanella G, … Fuchs TJ. A clinical benchmark of public self-supervised pathology foundation models. <em>Nat Commun</em>. 2025;16.</a></p>\n  <h4>Clinical Evidence</h4>\n  <p><a href=\"https://doi.org/10.1038/s41746-026-02592-8\" target=\"_blank\">An evaluation of AI-assisted prostate biopsy reporting in the Articulate Pro study. <em>npj Digit Med</em>. 22 May 2026.</a> <span class=\"annot\">1,613 cases; 5.4% of reviewed cases changed; 1.3% management-relevant; TAT −30.1 h at one site.</span></p>\n  <p><a href=\"https://doi.org/10.1038/s41591-025-03780-x\" target=\"_blank\">Campanella G, … Fuchs TJ. Real-world deployment of a fine-tuned pathology foundation model for lung cancer biomarker detection. <em>Nat Med</em>. 9 Jul 2025.</a> <span class=\"annot\">Silent trial AUC 0.890; up to 43% fewer rapid molecular tests.</span></p>\n  <p><a href=\"https://doi.org/10.1038/s41571-025-00991-6\" target=\"_blank\">Aggarwal A, … Madabhushi A. AI in digital pathology — time for a reality check. <em>Nat Rev Clin Oncol</em>. 2025;22:283-291.</a></p>\n  <h4>Agents and Tool-Using Systems</h4>\n  <p><a href=\"https://doi.org/10.1038/s41586-024-07618-3\" target=\"_blank\">Lu MY, … Mahmood F. A multimodal generative AI copilot for human pathology. <em>Nature</em>. 2024;634.</a> <span class=\"annot\">PathChat.</span></p>\n  <p><a href=\"https://arxiv.org/abs/2502.08916\" target=\"_blank\">Ghezloo F, et al. PathFinder. arXiv:2502.08916.</a> &middot; <a href=\"https://arxiv.org/abs/2506.20964\" target=\"_blank\">Weishaupt LL, et al. SlideSeek / PathChat+. arXiv:2506.20964.</a> &middot; <a href=\"https://arxiv.org/abs/2507.14680\" target=\"_blank\">Lyu X, et al. WSI-Agents. arXiv:2507.14680.</a></p>\n  <p><a href=\"https://arxiv.org/abs/2511.11324\" target=\"_blank\">Vaidya AJ, et al. NOVA: an agentic framework for automated histopathology analysis and discovery. arXiv:2511.11324.</a> <span class=\"annot\">49 tools; writes and runs Python.</span> &middot; <a href=\"https://arxiv.org/abs/2511.17052\" target=\"_blank\">PathAgent. arXiv:2511.17052.</a> &middot; <a href=\"https://arxiv.org/abs/2510.04587\" target=\"_blank\">Wang S, et al. Pathology-CoT. arXiv:2510.04587.</a> &middot; <a href=\"https://arxiv.org/abs/2509.20279\" target=\"_blank\">TissueLab. arXiv:2509.20279.</a></p>\n  <p><a href=\"https://arxiv.org/abs/2603.05884\" target=\"_blank\">Da Q, et al. Computational pathology in the era of emerging foundation and agentic AI — international expert perspectives. arXiv:2603.05884 (6 Mar 2026).</a> <span class=\"annot\">Twenty-eight authors: “real world adoption has lagged.”</span></p>\n  <p><a href=\"https://www.anthropic.com/news/model-context-protocol\" target=\"_blank\">Model Context Protocol (25 Nov 2024)</a> &middot; <a href=\"https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation\" target=\"_blank\">donated to the Linux Foundation (9 Dec 2025)</a> &middot; <a href=\"https://www.anthropic.com/engineering/building-effective-agents\" target=\"_blank\">Building effective agents (19 Dec 2024)</a> &middot; <a href=\"https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents\" target=\"_blank\">Effective context engineering (29 Sep 2025)</a> &middot; <a href=\"https://www.anthropic.com/news/claude-for-life-sciences\" target=\"_blank\">Claude for Life Sciences (20 Oct 2025)</a> <span class=\"annot\">— connectors for Benchling, PubMed, Synapse, 10x; none for pathology.</span></p>\n  <h4>Standards and Interoperability</h4>\n  <p><a href=\"https://dicom.nema.org/dicom/dicomwsi/\" target=\"_blank\">DICOM Supplement 145, Whole Slide Imaging in Pathology (final text 2010); WG-26.</a></p>\n  <p><a href=\"https://doi.org/10.1016/j.jpi.2026.100657\" target=\"_blank\">Clunie DA, et al. Report on the 2025 DICOM WSI Connectathon. <em>J Pathol Inform</em>. 2026;21:100657.</a> <span class=\"annot\">32 implementers.</span> &middot; <a href=\"https://doi.org/10.1016/j.jpi.2026.100658\" target=\"_blank\">Cornish TC, et al. The evolving role of DICOM in digital pathology. <em>J Pathol Inform</em>. 2026;21:100658.</a></p>\n  <p><a href=\"https://wiki.ihe.net/index.php/Digital_Pathology_Workflow_-_Image_Acquisition\" target=\"_blank\">IHE PaLM, Digital Pathology Workflow — Image Acquisition (DPIA), Rev 1.3, Trial Implementation, 17 Dec 2024.</a></p>\n  <p><a href=\"https://doi.org/10.1186/s13073-025-01484-y\" target=\"_blank\">Angeloni M, … Fraggetta F. Closing the gap in the clinical adoption of computational pathology. <em>Genome Med</em>. 2025;17:60.</a></p>\n  <h4>Regulatory</h4>\n  <p><a href=\"https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices\" target=\"_blank\">FDA, Artificial Intelligence-Enabled Medical Devices list.</a> <span class=\"annot\">Page dated 16 Jun 2026; parsed 2 Sep 2026. 1,524 entries; Radiology 1,164; Pathology 9. FDA's caveat: “The list is not a comprehensive resource of AI-enabled medical devices.”</span></p>\n  <p><a href=\"https://innolitics.com/articles/ai-ml-in-digital-pathology-and-the-software-as-an-ivd-paradigm-snapshot/\" target=\"_blank\">Innolitics. AI/ML in digital pathology and the software-as-an-IVD paradigm: 2026 snapshot (28 Apr 2026).</a> <span class=\"annot\">51 devices; 7 WSI algorithms; reviewed as IVD under OHT7.</span></p>\n  <p><a href=\"https://www.fda.gov/medical-devices/software-medical-device-samd/good-machine-learning-practice-medical-device-development-guiding-principles\" target=\"_blank\">FDA / Health Canada / MHRA, Good Machine Learning Practice — 10 guiding principles (2021).</a> &middot; <a href=\"https://www.cap.org/advocacy/latest-news-and-practice-data/september-9-2025\" target=\"_blank\">CAP: “AI tools make predictions, pathologists make diagnoses” (Sep 2025).</a></p>\n  <h4>Publishing, Peer Review, and the Mirror</h4>\n  <p><a href=\"https://doi.org/10.1126/sciadv.adt3813\" target=\"_blank\">Kobak D, González-Márquez R, Horvát EÁ, Lause J. Delving into LLM-assisted writing in biomedical publications through excess vocabulary. <em>Sci Adv</em>. 2025;11(27):eadt3813.</a> <span class=\"annot\">≥13.5% of 2024 abstracts — a lower bound.</span> &middot; <a href=\"https://arxiv.org/abs/2608.10715\" target=\"_blank\">Holzwarth L, González-Márquez R, Kobak D. Most biomedical publications show signs of LLM-assisted writing. arXiv:2608.10715 (2026).</a> <span class=\"annot\">89% of 2025 papers — full text, a different measure.</span></p>\n  <p><a href=\"https://doi.org/10.1162/qss_a_00327\" target=\"_blank\">Hanson MA, Barreiro PG, Crosetto P, Brockington D. The strain on scientific publishing. <em>Quant Sci Stud</em>. 2024;5(4):823-843.</a> <span class=\"annot\">+47% articles 2016→2022 — the rise predates LLMs.</span> &middot; <a href=\"https://arxiv.org/abs/2512.06705\" target=\"_blank\">He Y, Bu Y. Academic journals' AI policies fail to curb the surge in AI-assisted academic writing. arXiv:2512.06705.</a></p>\n  <h4>Memex, Literate Programming, Explorable Explanations</h4>\n  <p><a href=\"https://www.theatlantic.com/magazine/archive/1945/07/as-we-may-think/303881/\" target=\"_blank\">Bush V. As We May Think. <em>The Atlantic</em>, July 1945.</a> &middot; <a href=\"https://www.dougengelbart.org/pubs/augment-3906.html\" target=\"_blank\">Engelbart DC. Augmenting Human Intellect (SRI, 1962).</a> &middot; <a href=\"https://doi.org/10.1145/800197.806036\" target=\"_blank\">Nelson TH (1965).</a></p>\n  <p><a href=\"https://doi.org/10.1093/comjnl/27.2.97\" target=\"_blank\">Knuth DE. Literate programming. <em>Comput J</em>. 1984;27(2):97-111.</a> &middot; <a href=\"https://worrydream.com/ExplorableExplanations/\" target=\"_blank\">Victor B. Explorable Explanations (2011).</a> &middot; <a href=\"https://github.com/marimo-team/marimo\" target=\"_blank\">marimo</a> &middot; <a href=\"https://posit.co/blog/announcing-quarto-a-new-scientific-and-technical-publishing-system\" target=\"_blank\">Quarto 1.0</a></p>\n  <p><a href=\"https://doi.org/10.1145/3287560.3287596\" target=\"_blank\">Mitchell M, et al. Model cards for model reporting. FAT* 2019.</a> &middot; <a href=\"https://doi.org/10.1145/3458723\" target=\"_blank\">Gebru T, et al. Datasheets for datasets. <em>CACM</em>. 2021;64(12):86-92.</a> &middot; <a href=\"https://doi.org/10.1197/jamia.M3092\" target=\"_blank\">Friedman CP. A “fundamental theorem” of biomedical informatics. <em>JAMIA</em>. 2009;16(2):169-170.</a></p>\n  <h4>Canal, Railroad, Right-of-Way</h4>\n  <p><a href=\"https://connecticuthistory.org/the-farmington-canal/\" target=\"_blank\">DeLuca R. New England's grand ambition: the Farmington Canal. ConnecticutHistory.org.</a> &middot; <a href=\"https://fchtrail.org/history/\" target=\"_blank\">Farmington Canal Heritage Trail — History.</a> <span class=\"annot\">Chartered 1822 (James Hillhouse, Yale treasurer); groundbreaking 4 Jul 1825; Northampton 1835; &gt;$1 M lost 1836; railroad authorized May 1846; canal closed 18 Jan 1848; trail from 1996.</span></p>\n  <h4>Method and Provenance of This Deck</h4>\n  <p>Every number rendered in this lecture is recorded in <em>assets/data/ai-os/verified-numbers.json</em> with a source id and a verification status (YES / PARTIAL / TODO). Values still marked TODO are deliberately not rendered. The reference registry, the visualization specifications and the build plan are in <em>docs/ai_operating_system/</em>.</p>\n  <p><a href=\"https://pubmed.ncbi.nlm.nih.gov/26262515/\" target=\"_blank\">Gershkovich P, Sinard JH. Customizing laboratory information systems: closing the functionality gap. <em>Adv Anat Pathol</em>. 2015;22(5):323-330.</a> &middot; <a href=\"https://xenonym.openpathology.org\" target=\"_blank\">Xenonym</a></p>\n</div>"
+      ],
+      "fragments": false
+    },
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions &amp; Discussion",
+      "subtitle": "What is the one question in your practice whose answer would change a decision — and what artifact, not necessarily a paper, would establish it?",
+      "contact": "Peter Gershkovich, MD. MHA<br>Director of Pathology Informatics &amp; Cancer Data Science<br>Yale University School of Medicine<br><br><em>A question to open the discussion:</em><br>“What is the one question in your practice whose answer would change a decision — and what artifact, not necessarily a paper, would establish it?”<br><br><em>And one this review could not answer:</em><br>“Is there a pathology-AI study with a patient-outcome endpoint? The fourth rung is still empty.”",
+      "qrCode": {
+        "src": "/assets/qr/openpathology-lectures.svg",
+        "url": "https://lectures.openpathology.org/",
+        "label": "Scan to view",
+        "caption": "lectures.openpathology.org"
+      }
+    },
+    {
+      "id": "tufte-timeline-optional",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "meta",
+      "isOptional": true,
+      "dockTitle": "Twenty-three years of being right",
+      "vizType": "tufte-timeline",
+      "vizConfig": {},
+      "speakerNotes": "Optional slide, for audiences that have not seen the OneIT talk. Tufte published The Cognitive Style of PowerPoint in 2003 and was right about all of it, and nothing changed for twenty years — because he never gave anyone anywhere to go. The switching cost stayed at ninety-five. What changed in 2023 was not the argument. It was the price of leaving."
+    }
+  ]
+}
