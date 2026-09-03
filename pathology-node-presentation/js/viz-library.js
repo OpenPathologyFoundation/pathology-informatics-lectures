@@ -6401,7 +6401,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', margin.left).attr('y', axisY - 10)
             .attr('font-size', '10px').attr('font-weight', '700')
-            .attr('fill', '#94a3b8').attr('letter-spacing', '1.5px')
+            .attr('fill', '#6b5c48').attr('letter-spacing', '1.5px')
             .text('IMMEDIATE ACTION');
         svg.append('text')
             .attr('x', margin.left + plotW).attr('y', axisY - 10)

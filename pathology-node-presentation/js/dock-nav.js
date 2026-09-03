@@ -19,7 +19,14 @@ var DockNav = (function () {
         data:        '#2980b9',
         ecosystem:   '#1d8348',
         ai:          '#c0392b',
-        interactive: '#8e44ad'
+        interactive: '#8e44ad',
+        // The remaining five styled badge values from intro.css — without
+        // these, half the dots on a Tufte-style deck render grey.
+        debate:      '#c0392b',
+        evidence:    '#16a085',
+        framework:   '#e67e22',
+        technical:   '#7d3c98',
+        meta:        '#2980b9'
     };
     var DEFAULT_COLOR = '#7f8c8d';
 

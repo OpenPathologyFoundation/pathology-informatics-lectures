@@ -90,6 +90,19 @@ A slide's `type` must match a renderer in `slide-engine.js` (`title`, `content`,
 `viz-library.js` registry.
 
 To create a new lecture, add a JSON file to `data/lectures/` and access it at `/lecture/<name>`.
+**[`pathology-node-presentation/docs/ENGINE.md`](pathology-node-presentation/docs/ENGINE.md) is the
+full contract**: slide types, the visualization API and its palettes, badges, polls, the test
+harness, and the traps worth knowing before you write a visualization.
+
+### Tests
+
+```bash
+cd pathology-node-presentation
+npm test            # Playwright suite (chromium-1280)
+npm run test:viz    # static analysis of every lecture's visualizations
+npm run test:links  # validate every URL in every lecture
+npm run shots       # screenshot a deck slide by slide, flag overflow
+```
 
 ## Deployment
 

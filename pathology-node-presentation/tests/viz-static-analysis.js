@@ -19,8 +19,39 @@ const path = require('path');
 
 // ─── CONFIG ──────────────────────────────────────────────────
 const VIZ_LIB_PATH = path.join(__dirname, '..', 'js', 'viz-library.js');
-const JSON_PATH = path.join(__dirname, '..', 'data', 'lectures', 'oneit.json');
+const LECTURE_DIR = path.join(__dirname, '..', 'data', 'lectures');
 const CSS_PATH = path.join(__dirname, '..', 'css', 'intro.css');
+
+// Which deck to analyze. Defaults to `oneit` so existing invocations are
+// unchanged; `--all` runs every lecture in turn and fails if any of them do.
+//   node tests/viz-static-analysis.js                 → oneit
+//   node tests/viz-static-analysis.js ai_operating_system
+//   node tests/viz-static-analysis.js --all
+const ARG = process.argv[2];
+
+if (ARG === '--all') {
+    const { spawnSync } = require('child_process');
+    const lectures = fs.readdirSync(LECTURE_DIR)
+        .filter(f => f.endsWith('.json'))
+        .map(f => f.replace(/\.json$/, ''))
+        .sort();
+    let failed = [];
+    lectures.forEach(name => {
+        console.log(`\n\n╔══ ${name} ${'═'.repeat(Math.max(2, 56 - name.length))}`);
+        const r = spawnSync(process.execPath, [__filename, name], { stdio: 'inherit' });
+        if (r.status !== 0) failed.push(name);
+    });
+    console.log(`\n\n${'═'.repeat(64)}`);
+    if (failed.length) {
+        console.log(`FAILED: ${failed.join(', ')}`);
+        process.exit(1);
+    }
+    console.log(`All ${lectures.length} lectures passed.`);
+    process.exit(0);
+}
+
+const LECTURE = ARG || 'oneit';
+const JSON_PATH = path.join(LECTURE_DIR, LECTURE + '.json');
 
 // ─── UTILITIES ───────────────────────────────────────────────
 
@@ -100,8 +131,10 @@ try { cssSrc = fs.readFileSync(CSS_PATH, 'utf8'); } catch(e) {}
 
 function extractFunctions(src) {
     const fns = {};
-    // Match function declarations: `function name(container, config) {`
-    const fnRegex = /function\s+(\w+)\s*\(\s*container\s*,\s*config\s*\)\s*\{/g;
+    // Match viz function declarations. `config` is optional: about a third of
+    // the library (the whole orch-* family) declares `function x(container)`,
+    // and skipping those silently removed them from every rule below.
+    const fnRegex = /function\s+(\w+)\s*\(\s*container\s*(?:,\s*config\s*)?\)\s*\{/g;
     let match;
     const starts = [];
     while ((match = fnRegex.exec(src)) !== null) {
@@ -123,20 +156,43 @@ function extractFunctions(src) {
     return fns;
 }
 
+/** Every top-level function in the library, whatever its signature. */
+function extractHelperBodies(src) {
+    const fns = {};
+    const fnRegex = /function\s+(\w+)\s*\([^)]*\)\s*\{/g;
+    let match;
+    while ((match = fnRegex.exec(src)) !== null) {
+        let depth = 1, pos = match.index + match[0].length;
+        const bodyStart = pos;
+        while (depth > 0 && pos < src.length) {
+            if (src[pos] === '{') depth++;
+            else if (src[pos] === '}') depth--;
+            pos++;
+        }
+        fns[match[1]] = src.substring(bodyStart, pos - 1);
+    }
+    return fns;
+}
+
 const vizFunctions = extractFunctions(vizSrc);
 const vizNames = Object.keys(vizFunctions);
 
 // ─── EXTRACT REGISTRY ────────────────────────────────────────
 
 function extractRegistry(src) {
-    const regMatch = src.match(/var\s+registry\s*=\s*\{([^}]+)\}/);
-    if (!regMatch) return {};
     const entries = {};
-    const lineRegex = /'([^']+)'\s*:\s*(\w+)/g;
-    let m;
-    while ((m = lineRegex.exec(regMatch[1])) !== null) {
-        entries[m[1]] = m[2];
+    // (a) the object literal
+    const regMatch = src.match(/var\s+registry\s*=\s*\{([^}]+)\}/);
+    if (regMatch) {
+        const lineRegex = /'([^']+)'\s*:\s*(\w+)/g;
+        let m;
+        while ((m = lineRegex.exec(regMatch[1])) !== null) entries[m[1]] = m[2];
     }
+    // (b) the `registry['name'] = fn;` assignments that carry every viz added
+    //     since the orchestration lecture — more than a third of the library.
+    const assignRegex = /registry\[\s*'([^']+)'\s*\]\s*=\s*(\w+)\s*;/g;
+    let a;
+    while ((a = assignRegex.exec(src)) !== null) entries[a[1]] = a[2];
     return entries;
 }
 
@@ -340,13 +396,30 @@ vizSlides.forEach(s => {
 
 section('SVG ViewBox & Proportionality');
 
+// Helpers that build the <svg> on a viz's behalf (viewBox and
+// preserveAspectRatio included). A viz that delegates to one of these is
+// compliant even though the attribute never appears in its own body.
+const STAGE_HELPERS = Object.keys(vizFunctions)
+    .concat(Object.entries(extractHelperBodies(vizSrc))
+        .filter(([, b]) => /viewBox/.test(b) && /preserveAspectRatio/.test(b))
+        .map(([n]) => n))
+    .filter((n, i, a) => a.indexOf(n) === i && /Stage$/i.test(n));
+
 Object.entries(vizFunctions).forEach(([fnName, body]) => {
+    const viaHelper = STAGE_HELPERS.find(h => new RegExp('\\b' + h + '\\s*\\(').test(body));
     const vbMatch = body.match(/viewBox['"]\s*,\s*['"](\d+)\s+(\d+)\s+(\d+)\s+(\d+)['"]/);
     if (!vbMatch) {
         // Try alternate format: '0 0 ' + W + ' ' + H
         const dynMatch = body.match(/viewBox.*?['"]0 0 /);
         if (dynMatch) {
             pass(`${fnName}() — dynamic viewBox (0 0 W H)`);
+        } else if (viaHelper) {
+            pass(`${fnName}() — viewBox via ${viaHelper}()`);
+        } else if (!/append\(\s*['"]svg['"]\s*\)/.test(body)) {
+            // Not every visualization is an SVG. consent-form-iframe embeds a
+            // real page; tat-2006-2026 draws a KPI grid in plain DOM. A viewBox
+            // rule has nothing to say about either.
+            pass(`${fnName}() — DOM-based visualization (no SVG to size)`);
         } else {
             fail(`${fnName}() — no viewBox found`);
         }
@@ -357,7 +430,7 @@ Object.entries(vizFunctions).forEach(([fnName, body]) => {
     pass(`${fnName}() — viewBox ${w}×${h} (${aspect.toFixed(2)}:1)`);
 
     // Check preserveAspectRatio present
-    if (body.includes('preserveAspectRatio')) {
+    if (body.includes('preserveAspectRatio') || viaHelper) {
         pass(`${fnName}() — preserveAspectRatio set`);
     } else {
         warn(`${fnName}() — missing preserveAspectRatio`);
@@ -381,17 +454,23 @@ vizSlides.forEach(s => {
         delays.push(parseInt(m[1]));
     }
 
+    // A viz may delegate its stagger to a shared helper (aiosReveal) rather
+    // than writing .delay() itself; that is still a stagger.
+    const STAGGER_HELPERS = /\baiosReveal\s*\(/;
+
     if (delays.length === 0) {
         // Check for computed delays (e.g., 300 + i * 100)
         const computedDelay = /\.delay\([^)]*\*[^)]*\)/g;
         if (computedDelay.test(body)) {
             pass(`"${s.vizType}" — uses computed staggered delays`);
+        } else if (STAGGER_HELPERS.test(body)) {
+            pass(`"${s.vizType}" — staggered via shared reveal helper`);
         } else {
             warn(`"${s.vizType}" — no animation delays found`);
         }
     } else {
         const uniqueDelays = new Set(delays);
-        if (uniqueDelays.size > 1 || /\.delay\([^)]*\*[^)]*\)/.test(body)) {
+        if (uniqueDelays.size > 1 || /\.delay\([^)]*\*[^)]*\)/.test(body) || STAGGER_HELPERS.test(body)) {
             pass(`"${s.vizType}" — staggered animation (${uniqueDelays.size} unique static delays)`);
         } else {
             warn(`"${s.vizType}" — all delays identical (${delays[0]}ms) — no stagger`);
