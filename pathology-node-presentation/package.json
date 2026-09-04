@@ -11,7 +11,8 @@
     "test:report": "npx playwright show-report test-results/html-report",
     "test:viz": "node tests/viz-static-analysis.js --all",
     "test:links": "node tests/validate-links.js --all-lectures",
-    "shots": "node tests/screenshot-ai-os.js"
+    "shots": "node tests/screenshot-ai-os.js",
+    "test:contrast": "node tests/contrast-audit.js"
   },
   "keywords": [
     "pathology",

@@ -120,7 +120,7 @@ const VizLibrary = (function () {
 
         svg.append('text').attr('x', W / 2).attr('y', annotY + 4)
             .attr('text-anchor', 'middle').attr('font-size', '13px')
-            .attr('fill', '#2980b9').attr('font-weight', '600')
+            .attr('fill', '#0e6e8c').attr('font-weight', '600')
             .text('\u25B2 FOCUS HERE \u2014 the abstraction layers that matter for clinical practice');
 
         function drawCol(layers, xOff, title, emoji) {
@@ -145,7 +145,7 @@ const VizLibrary = (function () {
 
                 lg.append('text').attr('x', xOff + 18).attr('y', y + 24)
                     .attr('font-size', '15px').attr('font-weight', '700')
-                    .attr('fill', layer.color).text(layer.label);
+                    .attr('fill', textInk(layer.color, '#ffffff')).text(layer.label);
 
                 lg.append('text').attr('x', xOff + 18).attr('y', y + 43)
                     .attr('font-size', '12px').attr('fill', '#555').text(layer.sub);
@@ -162,7 +162,7 @@ const VizLibrary = (function () {
         var eqY = topStart + layerH + gap / 2;
         svg.append('text').attr('x', W / 2).attr('y', eqY + 6)
             .attr('text-anchor', 'middle').attr('font-size', '30px')
-            .attr('fill', '#bdc3c7').text('\u2248');
+            .attr('fill', '#6b7280').text('\u2248');
     }
 
     // ─── SYSTEMS ECOSYSTEM ───────────────────────────────────
@@ -243,7 +243,7 @@ const VizLibrary = (function () {
                     .attr('text-anchor', 'middle')
                     .attr('font-size', d.id === 'LIS' ? '16px' : '10px')
                     .attr('font-weight', d.id === 'LIS' ? '800' : '600')
-                    .attr('fill', d.color)
+                    .attr('fill', textInk(d.color, '#ffffff'))
                     .text(line);
             });
         });
@@ -283,7 +283,7 @@ const VizLibrary = (function () {
 
             g.append('text').attr('x', x + 44).attr('y', y + 30)
                 .attr('font-size', '14px').attr('font-weight', '700')
-                .attr('fill', level.color).text(level.label);
+                .attr('fill', textInk(level.color, '#ffffff')).text(level.label);
 
             g.append('text').attr('x', x + 44).attr('y', y + 50)
                 .attr('font-size', '11px').attr('fill', '#555').text(level.sub);
@@ -319,18 +319,18 @@ const VizLibrary = (function () {
 
             g.append('text').attr('x', x + stepW / 2).attr('y', 60)
                 .attr('text-anchor', 'middle').attr('font-size', '13px')
-                .attr('font-weight', '600').attr('fill', colors[i]).text(step);
+                .attr('font-weight', '600').attr('fill', textInk(colors[i], '#ffffff')).text(step);
 
             if (i < steps.length - 1) {
                 g.append('text').attr('x', x + stepW + gapX / 2).attr('y', 60)
                     .attr('text-anchor', 'middle').attr('font-size', '18px')
-                    .attr('fill', '#bdc3c7').text('\u2192');
+                    .attr('fill', '#6b7280').text('\u2192');
             }
 
             if (i > 0 && i < steps.length - 1) {
                 g.append('text').attr('x', x - gapX / 2).attr('y', 105)
                     .attr('text-anchor', 'middle').attr('font-size', '9px')
-                    .attr('fill', '#e74c3c').attr('font-weight', '600').text('\u26A0 interface');
+                    .attr('fill', '#c0392b').attr('font-weight', '600').text('\u26A0 interface');
             }
 
             g.transition().delay(i * 180).duration(400).style('opacity', 1);
@@ -338,7 +338,7 @@ const VizLibrary = (function () {
 
         svg.append('text').attr('x', W / 2).attr('y', 140)
             .attr('text-anchor', 'middle').attr('font-size', '11px')
-            .attr('fill', '#e74c3c').attr('font-style', 'italic')
+            .attr('fill', '#c0392b').attr('font-style', 'italic')
             .text('Failures cluster at interfaces, not in isolated steps');
     }
 
@@ -372,7 +372,7 @@ const VizLibrary = (function () {
 
             g.append('text').attr('x', x + 18).attr('y', y + 25)
                 .attr('font-size', '14px').attr('font-weight', '700')
-                .attr('fill', level.color).text(level.label);
+                .attr('fill', textInk(level.color, '#ffffff')).text(level.label);
 
             g.append('text').attr('x', x + 18).attr('y', y + 45)
                 .attr('font-size', '11px').attr('fill', '#555').text(level.sub);
@@ -417,7 +417,7 @@ const VizLibrary = (function () {
 
             lg.append('text').attr('x', px + phaseW / 2).attr('y', 62)
                 .attr('text-anchor', 'middle').attr('font-size', '11px')
-                .attr('font-weight', '700').attr('fill', colors[pi]).text(label);
+                .attr('font-weight', '700').attr('fill', textInk(colors[pi], '#ffffff')).text(label);
 
             cpSteps[pi].forEach(function (step, si) {
                 lg.append('text').attr('x', px + phaseW / 2).attr('y', 88 + si * 22)
@@ -431,12 +431,12 @@ const VizLibrary = (function () {
             var dx = lx + (di + 1) * (phaseW + phaseGap) + 20 - phaseGap / 2;
             lg.append('text').attr('x', dx).attr('y', 170)
                 .attr('text-anchor', 'middle').attr('font-size', '18px')
-                .attr('fill', '#bdc3c7').text('→');
+                .attr('fill', '#6b7280').text('→');
         }
 
         lg.append('text').attr('x', lx + colW / 2).attr('y', H - 30)
             .attr('text-anchor', 'middle').attr('font-size', '12px')
-            .attr('fill', '#27ae60').attr('font-weight', '600')
+            .attr('fill', '#1d8348').attr('font-weight', '600')
             .text('Clean boundaries — each step belongs to exactly one phase');
 
         lg.transition().duration(600).style('opacity', 1);
@@ -468,7 +468,7 @@ const VizLibrary = (function () {
 
             rg.append('text').attr('x', px + phaseW / 2).attr('y', y + 22)
                 .attr('text-anchor', 'middle').attr('font-size', '11px')
-                .attr('font-weight', '700').attr('fill', colors[pi]).text(label);
+                .attr('font-weight', '700').attr('fill', textInk(colors[pi], '#ffffff')).text(label);
 
             apSteps[pi].forEach(function (step, si) {
                 var isOverlap = (step.indexOf('←→') >= 0);
@@ -490,12 +490,12 @@ const VizLibrary = (function () {
             .attr('stroke-width', 1.5).attr('stroke-opacity', 0.5);
         rg.append('text').attr('x', blurX + blurW / 2).attr('y', 286)
             .attr('text-anchor', 'middle').attr('font-size', '10px')
-            .attr('fill', '#e74c3c').attr('font-weight', '700')
+            .attr('fill', '#c0392b').attr('font-weight', '700')
             .text('BOUNDARIES BLUR — activities cross phases');
 
         rg.append('text').attr('x', rx + colW / 2).attr('y', H - 30)
             .attr('text-anchor', 'middle').attr('font-size', '12px')
-            .attr('fill', '#e74c3c').attr('font-weight', '600')
+            .attr('fill', '#c0392b').attr('font-weight', '600')
             .text('Grossing, staining, recuts, rescans — all straddle phases');
 
         rg.transition().delay(500).duration(600).style('opacity', 1);
@@ -934,12 +934,12 @@ const VizLibrary = (function () {
                 var midX = x + boxW + gapX / 2;
                 g.append('text').attr('x', midX).attr('y', chainY + boxH / 2 + 4)
                     .attr('text-anchor', 'middle').attr('font-size', '11px')
-                    .attr('fill', '#bdc3c7').text('→');
+                    .attr('fill', '#6b7280').text('→');
 
                 // Small clock icon for measurable interval
                 g.append('text').attr('x', midX).attr('y', chainY + boxH + 16)
                     .attr('text-anchor', 'middle').attr('font-size', '8px')
-                    .attr('fill', '#999').text('⏱');
+                    .attr('fill', '#6b7280').text('⏱');
             }
 
             g.transition().delay(i * 60).duration(300).style('opacity', 1);
@@ -960,7 +960,7 @@ const VizLibrary = (function () {
                 .attr('stroke', et.color).attr('stroke-opacity', 0.3).attr('stroke-width', 1.5);
 
             g.append('text').attr('x', cx + 14).attr('y', cardY + 26)
-                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', et.color)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(et.color, '#ffffff'))
                 .text(et.icon + '  ' + et.label);
 
             et.items.forEach(function (item, ii) {
@@ -1106,11 +1106,14 @@ const VizLibrary = (function () {
                 { label: 'Dash', color: '#f59e0b' }
             ];
             var pt = types[Math.floor(Math.random() * types.length)];
+            // Packet chip. Widened from 36×18 so the label can sit at 9px:
+            // 7px is below the legibility floor and unreadable from the back
+            // of a lecture room.
             var pkt = svg.append('g').attr('filter', 'url(#pkt-glow)');
-            pkt.append('rect').attr('x', -18).attr('y', -9)
-                .attr('width', 36).attr('height', 18).attr('rx', 4).attr('fill', pt.color);
+            pkt.append('rect').attr('x', -23).attr('y', -10)
+                .attr('width', 46).attr('height', 20).attr('rx', 4).attr('fill', pt.color);
             pkt.append('text').attr('y', 1).attr('text-anchor', 'middle')
-                .attr('font-size', '7px').attr('font-weight', '700')
+                .attr('font-size', '9px').attr('font-weight', '700')
                 .attr('fill', '#fff').attr('dominant-baseline', 'middle').text(pt.label);
 
             var idx = 0;
@@ -1342,7 +1345,7 @@ const VizLibrary = (function () {
                 .attr('stroke-dasharray', '6,4').attr('opacity', 0.6);
 
             g.append('text').attr('x', bx + 8).attr('y', 16)
-                .attr('font-size', '11px').attr('fill', '#e74c3c')
+                .attr('font-size', '11px').attr('fill', '#c0392b')
                 .attr('font-weight', '700')
                 .text('Breakeven ~Year ' + crossYear);
         }
@@ -1375,7 +1378,7 @@ const VizLibrary = (function () {
                 .attr('x', xScale((crossYear + years) / 2))
                 .attr('y', yScale((vendorData[savingsYear].cost + customData[savingsYear].cost) / 2) + 5)
                 .attr('text-anchor', 'middle').attr('font-size', '12px')
-                .attr('fill', '#27ae60').attr('font-weight', '700')
+                .attr('fill', '#1d8348').attr('font-weight', '700')
                 .text('$' + Math.round(savings) + 'K saved')
                 .style('opacity', 0)
                 .transition().delay(2400).duration(500).style('opacity', 1);
@@ -1449,12 +1452,12 @@ const VizLibrary = (function () {
         legend.append('line').attr('x1', 0).attr('x2', 24).attr('y1', 0).attr('y2', 0)
             .attr('stroke', '#e74c3c').attr('stroke-width', 3);
         legend.append('text').attr('x', 30).attr('y', 4)
-            .attr('font-size', '12px').attr('fill', '#e74c3c').text('Vendor');
+            .attr('font-size', '12px').attr('fill', '#c0392b').text('Vendor');
 
         legend.append('line').attr('x1', 0).attr('x2', 24).attr('y1', 22).attr('y2', 22)
             .attr('stroke', '#27ae60').attr('stroke-width', 3);
         legend.append('text').attr('x', 30).attr('y', 26)
-            .attr('font-size', '12px').attr('fill', '#27ae60').text('Custom');
+            .attr('font-size', '12px').attr('fill', '#1d8348').text('Custom');
 
         // Axis labels
         svg.append('text')
@@ -1521,7 +1524,7 @@ const VizLibrary = (function () {
 
             g.append('text').attr('x', x + 42).attr('y', y + 22)
                 .attr('font-size', '15px').attr('font-weight', '700')
-                .attr('fill', layer.color).text(layer.label)
+                .attr('fill', textInk(layer.color, '#ffffff')).text(layer.label)
                 .style('pointer-events', 'none');
 
             g.append('text').attr('x', x + 42).attr('y', y + 40)
@@ -1534,7 +1537,7 @@ const VizLibrary = (function () {
 
             // Role annotation on right
             g.append('text').attr('x', x + w + 14).attr('y', y + 32)
-                .attr('font-size', '12px').attr('fill', layer.color)
+                .attr('font-size', '12px').attr('fill', textInk(layer.color, '#ffffff'))
                 .attr('font-weight', '700').text(layer.role)
                 .style('pointer-events', 'none');
 
@@ -1615,7 +1618,7 @@ const VizLibrary = (function () {
                 .attr('transform', 'rotate(' + (midAngle * 180 / Math.PI + 90) + ',' + ax + ',' + ay + ')')
                 .text('▸')
                 .style('opacity', 0)
-                .transition().delay(n * 200 + i * 100).duration(300).style('opacity', 0.7);
+                .transition().delay(n * 200 + i * 100).duration(300).style('opacity', 0.95);
         });
 
         // Security & compliance envelope (drawn under nodes)
@@ -1656,7 +1659,7 @@ const VizLibrary = (function () {
                 .text(step.icon);
             nodeG.append('text').attr('y', 18)
                 .attr('text-anchor', 'middle').attr('font-size', '14px')
-                .attr('font-weight', '700').attr('fill', step.color)
+                .attr('font-weight', '700').attr('fill', textInk(step.color, '#ffffff'))
                 .text(step.label);
             nodeG.transition().delay(i * 200).duration(400).style('opacity', 1);
             nodeRefs.push(nodeG);
@@ -1705,7 +1708,7 @@ const VizLibrary = (function () {
             popG.append('text')
                 .attr('x', -popupW / 2 + 32).attr('y', -popupH / 2 + 22)
                 .attr('font-size', '10px').attr('font-weight', '700')
-                .attr('fill', step.color).attr('letter-spacing', '1.6px')
+                .attr('fill', textInk(step.color, '#ffffff')).attr('letter-spacing', '1.6px')
                 .text(step.label.toUpperCase());
 
             // Hairline accent rule
@@ -2515,7 +2518,7 @@ const VizLibrary = (function () {
                 .attr('x', rightX + 32).attr('y', line.y)
                 .attr('font-size', line.size)
                 .attr('font-weight', line.weight)
-                .attr('fill', line.fill)
+                .attr('fill', textInk(line.fill, '#ffffff'))
                 .text(line.text);
         });
 
@@ -2929,10 +2932,10 @@ const VizLibrary = (function () {
 
         svg.append('text').attr('x', jsonX + jsonW / 2).attr('y', jsonY - 10)
             .attr('text-anchor', 'middle').attr('font-size', '13px')
-            .attr('fill', '#60a5fa').attr('font-weight', 700).text('CONTENT LAYER');
+            .attr('fill', '#3b90f9').attr('font-weight', 700).text('CONTENT LAYER');
         svg.append('text').attr('x', jsonX + jsonW / 2).attr('y', jsonY + 20)
             .attr('text-anchor', 'middle').attr('font-size', '10px')
-            .attr('fill', '#94a3b8').text('Structured JSON — version-controllable');
+            .attr('fill', '#7f91aa').text('Structured JSON — version-controllable');
 
         // JSON snippet
         var jsonLines = [
@@ -2947,7 +2950,7 @@ const VizLibrary = (function () {
         ];
         jsonLines.forEach(function(line, i) {
             svg.append('text').attr('x', jsonX + 20).attr('y', jsonY + 50 + i * 22)
-                .attr('font-size', '10px').attr('fill', '#94a3b8')
+                .attr('font-size', '10px').attr('fill', '#7f91aa')
                 .attr('font-family', "'JetBrains Mono', monospace")
                 .style('opacity', 0).text(line)
                 .transition().delay(200 + i * 60).duration(300).style('opacity', 1);
@@ -2977,7 +2980,7 @@ const VizLibrary = (function () {
             .attr('fill', '#f0f0f0').attr('font-weight', 600).text('Slide Engine');
         arrowG.append('text').attr('x', arrowCX).attr('y', 195)
             .attr('text-anchor', 'middle').attr('font-size', '9px')
-            .attr('fill', '#94a3b8').text('D3 · Reveal.js · CSS');
+            .attr('fill', '#7f91aa').text('D3 · Reveal.js · CSS');
 
         // Arrows in/out
         arrowG.append('line').attr('x1', jsonX + jsonW + 5).attr('y1', 180)
@@ -2995,10 +2998,10 @@ const VizLibrary = (function () {
 
         svg.append('text').attr('x', outX + outW / 2).attr('y', outY - 10)
             .attr('text-anchor', 'middle').attr('font-size', '13px')
-            .attr('fill', '#27ae60').attr('font-weight', 700).text('RENDER LAYER');
+            .attr('fill', '#25a45a').attr('font-weight', 700).text('RENDER LAYER');
         svg.append('text').attr('x', outX + outW / 2).attr('y', outY + 20)
             .attr('text-anchor', 'middle').attr('font-size', '10px')
-            .attr('fill', '#94a3b8').text('Browser application — full expressive power');
+            .attr('fill', '#7f91aa').text('Browser application — full expressive power');
 
         // Arrow from engine to render
         svg.append('line').attr('x1', arrowCX + 65).attr('y1', 180)
@@ -3025,7 +3028,7 @@ const VizLibrary = (function () {
         var caps = ['Live D3 visualizations', 'Interactive polling', 'Embedded applications'];
         caps.forEach(function(cap, i) {
             rsG.append('text').attr('x', outX + 25).attr('y', outY + outH - 50 + i * 16)
-                .attr('font-size', '9px').attr('fill', '#27ae60').attr('font-weight', 500)
+                .attr('font-size', '9px').attr('fill', '#25a45a').attr('font-weight', 500)
                 .text('◆ ' + cap);
         });
 
@@ -3034,7 +3037,7 @@ const VizLibrary = (function () {
         // Bottom: "Separation of content from presentation — the Tufte principle applied"
         svg.append('text').attr('x', W / 2).attr('y', H - 15)
             .attr('text-anchor', 'middle').attr('font-size', '12px')
-            .attr('fill', '#94a3b8').attr('font-weight', 600)
+            .attr('fill', '#7f91aa').attr('font-weight', 600)
             .text('Separation of content from presentation — the Tufte principle applied, not described.')
             .style('opacity', 0).transition().delay(1500).duration(500).style('opacity', 1);
 
@@ -3057,6 +3060,17 @@ const VizLibrary = (function () {
     // Minard-inspired graphic encoding PowerPoint dominance,
     // critique accumulation, switching cost, and the AI inflection.
     function tufteTimeline(container, config) {
+        // The event hues below double as marker fills and as 9px label text.
+        // At that size the bright originals sit at 2.2-3.8:1 on white; these
+        // are the same hues darkened to clear WCAG AA. Markers keep the
+        // originals — a filled shape has no text-contrast requirement.
+        var TT_LABEL_INK = {
+            '#3498db': '#1f6a94',   // blue    3.15 -> 5.92
+            '#e74c3c': '#c0392b',   // red     3.82 -> 5.44
+            '#f39c12': '#8a5a0c',   // amber   2.19 -> 5.92
+            '#9b59b6': '#7d3c98',   // purple  4.67 -> 7.07
+            '#27ae60': '#1d8348'    // green   2.87 -> 4.78
+        };
         var W = 1100, H = 460;
         var svg = d3.select(container).append('svg')
             .attr('viewBox', '0 0 ' + W + ' ' + H)
@@ -3239,7 +3253,8 @@ const VizLibrary = (function () {
             lines.forEach(function(line, li) {
                 g.append('text').attr('x', textX).attr('y', eY + li * 13)
                     .attr('text-anchor', textAnchor).attr('font-size', '9px')
-                    .attr('fill', evt.color).attr('font-weight', evt.type === 'inflection' ? 700 : 500)
+                    .attr('fill', TT_LABEL_INK[evt.color] || evt.color)
+                    .attr('font-weight', evt.type === 'inflection' ? 700 : 500)
                     .text(line);
             });
 
@@ -4161,13 +4176,13 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', cx).attr('y', 436)
             .attr('text-anchor', 'middle').attr('font-size', '15px')
-            .attr('fill', darkText).attr('font-weight', '600')
+            .attr('fill', textInk(darkText, '#fef2f2')).attr('font-weight', '600')
             .text('The capability is not the transformation.');
 
         svg.append('text')
             .attr('x', cx).attr('y', 460)
             .attr('text-anchor', 'middle').attr('font-size', '15px')
-            .attr('fill', darkText).attr('font-weight', '600')
+            .attr('fill', textInk(darkText, '#fef2f2')).attr('font-weight', '600')
             .text('The transformation is what changes in the practice of building.');
 
         // Comment / expanded blob
@@ -5213,7 +5228,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', seedX + seedW / 2).attr('y', seedY + 34)
             .attr('text-anchor', 'middle').attr('font-size', '13px')
-            .attr('font-weight', '700').attr('fill', seedColor)
+            .attr('font-weight', '700').attr('fill', textInk(seedColor, '#fef2f2'))
             .text('Seed Problem');
 
         svg.append('text')
@@ -5237,7 +5252,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', seedX + seedW / 2).attr('y', seedY + seedH + 18)
             .attr('text-anchor', 'middle').attr('font-size', '9px')
-            .attr('fill', seedColor).attr('letter-spacing', '1.5px')
+            .attr('fill', textInk(seedColor, '#fef2f2')).attr('letter-spacing', '1.5px')
             .text('WOULD NOT HAVE BEEN BUILT');
 
         // ══════════════════════════════════════════════
@@ -5281,7 +5296,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', aiZoneX + aiZoneW / 2).attr('y', aiZoneY + 22)
             .attr('text-anchor', 'middle').attr('font-size', '11px')
-            .attr('font-weight', '700').attr('fill', aiColor)
+            .attr('font-weight', '700').attr('fill', textInk(aiColor, '#fef2f2'))
             .attr('letter-spacing', '1.5px')
             .text('AI EXPANDED THE HORIZON');
 
@@ -5352,12 +5367,12 @@ const VizLibrary = (function () {
             svg.append('text')
                 .attr('x', fCx).attr('y', iconY + 24)
                 .attr('text-anchor', 'middle').attr('font-size', '12px')
-                .attr('font-weight', '700').attr('fill', aiColor)
+                .attr('font-weight', '700').attr('fill', textInk(aiColor, '#fef2f2'))
                 .text(f.title);
             svg.append('text')
                 .attr('x', fCx).attr('y', iconY + 38)
                 .attr('text-anchor', 'middle').attr('font-size', '12px')
-                .attr('font-weight', '700').attr('fill', aiColor)
+                .attr('font-weight', '700').attr('fill', textInk(aiColor, '#fef2f2'))
                 .text(f.title2);
 
             // Body (three lines)
@@ -5417,7 +5432,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', emergeX + emergeW / 2).attr('y', emergeY + 30)
             .attr('text-anchor', 'middle').attr('font-size', '13px')
-            .attr('font-weight', '700').attr('fill', emergeColor)
+            .attr('font-weight', '700').attr('fill', textInk(emergeColor, '#fef2f2'))
             .text('What Emerged');
 
         svg.append('text')
@@ -5451,7 +5466,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', emergeX + emergeW / 2).attr('y', emergeY + emergeH + 18)
             .attr('text-anchor', 'middle').attr('font-size', '9px')
-            .attr('fill', emergeColor).attr('letter-spacing', '1.5px')
+            .attr('fill', textInk(emergeColor, '#fef2f2')).attr('letter-spacing', '1.5px')
             .text('WOULD NOT HAVE EXISTED');
 
         // ══════════════════════════════════════════════
@@ -5469,7 +5484,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', cx).attr('y', intY + 30)
             .attr('text-anchor', 'middle').attr('font-size', '11px')
-            .attr('font-weight', '700').attr('fill', accentGold)
+            .attr('font-weight', '700').attr('fill', textInk(accentGold, '#fef2f2'))
             .attr('letter-spacing', '1.5px')
             .text('SYSTEM INTEGRITY BY CONSTRUCTION, NOT BY RESTRICTION');
 
@@ -5491,7 +5506,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', leftX + contrastW / 2).attr('y', contrastY + 26)
             .attr('text-anchor', 'middle').attr('font-size', '13px')
-            .attr('font-weight', '700').attr('fill', seedColor)
+            .attr('font-weight', '700').attr('fill', textInk(seedColor, '#fef2f2'))
             .attr('fill-opacity', 0.5)
             .text('By Restriction');
 
@@ -5504,7 +5519,7 @@ const VizLibrary = (function () {
             svg.append('text')
                 .attr('x', leftX + contrastW / 2).attr('y', contrastY + 54 + i * 20)
                 .attr('text-anchor', 'middle').attr('font-size', '11px')
-                .attr('fill', seedColor).attr('fill-opacity', 0.45)
+                .attr('fill', textInk(seedColor, '#fef2f2')).attr('fill-opacity', 0.7)
                 .text(line);
         });
 
@@ -5526,7 +5541,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', rightX + contrastW / 2).attr('y', contrastY + 26)
             .attr('text-anchor', 'middle').attr('font-size', '13px')
-            .attr('font-weight', '700').attr('fill', emergeColor)
+            .attr('font-weight', '700').attr('fill', textInk(emergeColor, '#fef2f2'))
             .text('By Construction');
 
         var constructLines = [
@@ -5555,7 +5570,7 @@ const VizLibrary = (function () {
         svg.append('text')
             .attr('x', cx).attr('y', takeY + 32)
             .attr('text-anchor', 'middle').attr('font-size', '16px')
-            .attr('font-weight', '700').attr('fill', darkText)
+            .attr('font-weight', '700').attr('fill', textInk(darkText, '#fef2f2'))
             .text('AI qualitatively transformed the development of supplementary technologies.');
 
         svg.append('text')
@@ -6269,12 +6284,12 @@ const VizLibrary = (function () {
             svg.append('text')
                 .attr('x', W / 2).attr('y', 74)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', '#64748b')
+                .attr('font-size', '14px').attr('font-style', 'italic').attr('fill', '#556070')
                 .text('“' + epigraph.text + '”');
         }
 
         // Color progression from observer → builder → advocate
-        var colors = ['#64748b', '#0e7490', '#0369a1', '#7c3aed', '#b45309'];
+        var colors = ['#556070', '#0e7490', '#0369a1', '#7c3aed', '#b45309'];
 
         var n = steps.length;
         var spacing = plotW / n;
@@ -6421,7 +6436,7 @@ const VizLibrary = (function () {
                 svg.append('text')
                     .attr('x', W / 2).attr('y', H - 32)
                     .attr('text-anchor', 'middle')
-                    .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', '#64748b')
+                    .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', '#556070')
                     .text(takeaway.comment);
             }
         }
@@ -7247,11 +7262,11 @@ const VizLibrary = (function () {
         // Title + subtitle
         svg.append('text').attr('x', W / 2).attr('y', 42)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '25px').attr('font-weight', '700').attr('fill', ink)
+            .attr('font-size', '25px').attr('font-weight', '700').attr('fill', textInk(ink, '#faf7f1'))
             .text('What AI Changed \u2014 Two Orders of Magnitude');
         svg.append('text').attr('x', W / 2).attr('y', 70)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', muted)
+            .attr('font-size', '13px').attr('font-style', 'italic').attr('fill', textInk(muted, '#faf7f1'))
             .text('Not a uniform reduction. A redistribution of effort \u2014 with discipline as the hinge.');
 
         // ── Two columns: absorbed / amplified ──
@@ -7261,20 +7276,20 @@ const VizLibrary = (function () {
 
         svg.append('text').attr('x', absorbedX).attr('y', headerY)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', faded)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', textInk(faded, '#faf7f1'))
             .text('ABSORBED BY AI');
         svg.append('text').attr('x', absorbedX).attr('y', headerY + 18)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(muted, '#faf7f1'))
             .text('mechanical \u00B7 repeatable \u00B7 well-solved');
 
         svg.append('text').attr('x', amplifiedX).attr('y', headerY)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', green)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', textInk(green, '#faf7f1'))
             .text('AMPLIFIED FOR HUMANS');
         svg.append('text').attr('x', amplifiedX).attr('y', headerY + 18)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(muted, '#faf7f1'))
             .text('intellectual \u00B7 judgment \u00B7 domain-specific');
 
         var absorbedItems = [
@@ -7305,11 +7320,11 @@ const VizLibrary = (function () {
             var yy = itemStartY + i * itemGap;
             svg.append('text').attr('x', absorbedX - 110).attr('y', yy + 4)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '13px').attr('fill', faded)
+                .attr('font-size', '13px').attr('fill', textInk(faded, '#faf7f1'))
                 .text('\u2193');
             svg.append('text').attr('x', absorbedX).attr('y', yy + 4)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '13px').attr('fill', faded).attr('font-style', 'italic')
+                .attr('font-size', '13px').attr('fill', textInk(faded, '#faf7f1')).attr('font-style', 'italic')
                 .attr('text-decoration', 'line-through')
                 .text(item);
         });
@@ -7318,11 +7333,11 @@ const VizLibrary = (function () {
             var yy = itemStartY + i * itemGap;
             svg.append('text').attr('x', amplifiedX - 120).attr('y', yy + 4)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', green)
+                .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(green, '#faf7f1'))
                 .text('\u2191');
             svg.append('text').attr('x', amplifiedX).attr('y', yy + 4)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '14px').attr('font-weight', '600').attr('fill', ink)
+                .attr('font-size', '14px').attr('font-weight', '600').attr('fill', textInk(ink, '#faf7f1'))
                 .html(item);
         });
 
@@ -7337,26 +7352,26 @@ const VizLibrary = (function () {
         // REDISTRIBUTION banner on top
         svg.append('text').attr('x', W / 2).attr('y', divY0 + 14)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12.5px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', amber)
+            .attr('font-size', '12.5px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', textInk(amber, '#faf7f1'))
             .text('\u2190  REDISTRIBUTION  \u2192');
 
         // 100× figure at the center
         var centerY = (divY0 + divY1) / 2;
         svg.append('text').attr('x', W / 2).attr('y', centerY - 4)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '44px').attr('font-weight', '300').attr('fill', amber)
+            .attr('font-size', '44px').attr('font-weight', '300').attr('fill', textInk(amber, '#faf7f1'))
             .text('100\u00D7');
         svg.append('text').attr('x', W / 2).attr('y', centerY + 22)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(muted, '#faf7f1'))
             .text('less effort');
         svg.append('text').attr('x', W / 2).attr('y', centerY + 62)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('fill', ink).attr('fill-opacity', 0.75)
+            .attr('font-size', '11px').attr('fill', textInk(ink, '#faf7f1')).attr('fill-opacity', 0.75)
             .text('same gates');
         svg.append('text').attr('x', W / 2).attr('y', centerY + 78)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('fill', ink).attr('fill-opacity', 0.75)
+            .attr('font-size', '11px').attr('fill', textInk(ink, '#faf7f1')).attr('fill-opacity', 0.75)
             .text('same quality bar');
 
         // ── Bottom: the discipline hinge ──
@@ -7366,7 +7381,7 @@ const VizLibrary = (function () {
             .attr('stroke', muted).attr('stroke-width', 0.5).attr('stroke-opacity', 0.5);
         svg.append('text').attr('x', W / 2).attr('y', forkY + 4)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', ink)
+            .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '2.5px').attr('fill', textInk(ink, '#faf7f1'))
             .text('THE DISCIPLINE HINGE');
 
         var panelW = (W - 180) / 2;
@@ -7380,19 +7395,19 @@ const VizLibrary = (function () {
             .attr('stroke', crimson).attr('stroke-width', 1.2).attr('rx', 4);
         svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 26)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', crimson)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', textInk(crimson, '#faf7f1'))
             .text('WITHOUT DISCIPLINE');
         svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 48)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('fill', ink)
+            .attr('font-size', '12px').attr('fill', textInk(ink, '#faf7f1'))
             .text('AI drift \u00B7 plausible wrong answers \u00B7');
         svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 66)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('fill', ink)
+            .attr('font-size', '12px').attr('fill', textInk(ink, '#faf7f1'))
             .text('mistakes compound at the new speed');
         svg.append('text').attr('x', 60 + panelW / 2).attr('y', panelY + 86)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', crimson)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', textInk(crimson, '#faf7f1'))
             .text('the 100\u00D7 does not apply');
 
         // With discipline (green)
@@ -7402,19 +7417,19 @@ const VizLibrary = (function () {
             .attr('stroke', green).attr('stroke-width', 1.2).attr('rx', 4);
         svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 26)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', green)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', textInk(green, '#faf7f1'))
             .text('WITH DISCIPLINE');
         svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 48)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('fill', ink)
+            .attr('font-size', '12px').attr('fill', textInk(ink, '#faf7f1'))
             .text('same quality gates \u00B7 auditable artifacts \u00B7');
         svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 66)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('fill', ink)
+            .attr('font-size', '12px').attr('fill', textInk(ink, '#faf7f1'))
             .text('regulated-grade software');
         svg.append('text').attr('x', W - 60 - panelW / 2).attr('y', panelY + 86)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', green)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', textInk(green, '#faf7f1'))
             .text('100\u00D7 less effort at the same standard');
 
         // ── Bottom takeaway ──
@@ -7423,7 +7438,7 @@ const VizLibrary = (function () {
             .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
         svg.append('text').attr('x', W / 2).attr('y', H - 22)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', ink)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(ink, '#faf7f1'))
             .text('The shift isn\u2019t less work. It\u2019s different work \u2014 and the discipline is the part that didn\u2019t change.');
     }
 
@@ -8171,11 +8186,11 @@ const VizLibrary = (function () {
         // Title & subtitle
         svg.append('text').attr('x', W / 2).attr('y', 40)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '24px').attr('font-weight', '700').attr('fill', ink)
+            .attr('font-size', '24px').attr('font-weight', '700').attr('fill', textInk(ink, '#faf7f1'))
             .text('Ideas, Not Zombies \u2014 Decomposing the Graveyard');
         svg.append('text').attr('x', W / 2).attr('y', 64)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', muted)
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', textInk(muted, '#faf7f1'))
             .text('Abandoned code is a source. AI is archaeologist AND recycler. Discipline is the difference between a latent asset and environmental noise.');
 
         // Main content block
@@ -8193,7 +8208,7 @@ const VizLibrary = (function () {
         svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY - 8)
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px').attr('font-weight', '700')
-            .attr('letter-spacing', '1.5px').attr('fill', muted)
+            .attr('letter-spacing', '1.5px').attr('fill', textInk(muted, '#faf7f1'))
             .text('THE GRAVEYARD');
 
         var files = [
@@ -8217,33 +8232,33 @@ const VizLibrary = (function () {
             g.append('line').attr('x1', 42).attr('y1', 12).attr('x2', 54).attr('y2', 12)
                 .attr('stroke', faded).attr('stroke-width', 0.9);
             g.append('text').attr('x', 27).attr('y', 36)
-                .attr('text-anchor', 'middle').attr('font-size', '11px').attr('fill', faded)
+                .attr('text-anchor', 'middle').attr('font-size', '11px').attr('fill', textInk(faded, '#faf7f1'))
                 .text(f.name);
             g.append('text').attr('x', 27).attr('y', 52)
-                .attr('text-anchor', 'middle').attr('font-size', '9.5px').attr('fill', faded)
+                .attr('text-anchor', 'middle').attr('font-size', '9.5px').attr('fill', textInk(faded, '#faf7f1'))
                 .text(f.year);
         });
 
         svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 170)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', faded)
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', textInk(faded, '#faf7f1'))
             .text('author: \u2205');
         svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 192)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', faded)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(faded, '#faf7f1'))
             .text('README.md: empty');
         svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 212)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', faded)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(faded, '#faf7f1'))
             .text('last commit: three years ago');
         svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', topY + 240)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(muted, '#faf7f1'))
             .text('\u201Cit worked on their laptop. once.\u201D');
 
         svg.append('text').attr('x', (gx0 + gx1) / 2).attr('y', botY + 20)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11.5px').attr('fill', muted)
+            .attr('font-size', '11.5px').attr('fill', textInk(muted, '#faf7f1'))
             .text('the submerged mass');
 
         // ── MIDDLE: AI AS ARCHAEOLOGIST / RECYCLER ──
@@ -8252,7 +8267,7 @@ const VizLibrary = (function () {
         svg.append('text').attr('x', mxMid).attr('y', topY - 8)
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px').attr('font-weight', '700')
-            .attr('letter-spacing', '1.5px').attr('fill', amber)
+            .attr('letter-spacing', '1.5px').attr('fill', textInk(amber, '#faf7f1'))
             .text('AI AS ARCHAEOLOGIST  \u00B7  AS RECYCLER');
 
         // Horizontal flow arrow, left to right
@@ -8276,12 +8291,12 @@ const VizLibrary = (function () {
             svg.append('text').attr('x', mxMid).attr('y', sy)
                 .attr('text-anchor', 'middle')
                 .attr('font-size', '14px').attr('font-weight', '700')
-                .attr('letter-spacing', '2px').attr('fill', ink)
+                .attr('letter-spacing', '2px').attr('fill', textInk(ink, '#faf7f1'))
                 .text(s.step);
             svg.append('text').attr('x', mxMid).attr('y', sy + 17)
                 .attr('text-anchor', 'middle')
                 .attr('font-size', '10.5px').attr('font-style', 'italic')
-                .attr('fill', muted)
+                .attr('fill', textInk(muted, '#faf7f1'))
                 .text(s.detail);
         });
 
@@ -8296,7 +8311,7 @@ const VizLibrary = (function () {
                        ' l -4 -2 l 4 -2 l 0 4 z')
             .attr('fill', green);
         svg.append('text').attr('x', recycX + 16).attr('y', recycY)
-            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', green)
+            .attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(green, '#faf7f1'))
             .text('recycled, not resurrected');
 
         // ── RIGHT PANEL: WHAT COMES OUT ──
@@ -8304,7 +8319,7 @@ const VizLibrary = (function () {
         svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', topY - 8)
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px').attr('font-weight', '700')
-            .attr('letter-spacing', '1.5px').attr('fill', ink)
+            .attr('letter-spacing', '1.5px').attr('fill', textInk(ink, '#faf7f1'))
             .text('WHAT THE DOMAIN EXPERT RECOVERS');
 
         var outputs = [
@@ -8321,18 +8336,18 @@ const VizLibrary = (function () {
                 .attr('stroke', o.color).attr('stroke-width', 1)
                 .attr('rx', 4);
             svg.append('text').attr('x', rx0 + 20).attr('y', oy + 33)
-                .attr('font-size', '20px').attr('fill', o.color)
+                .attr('font-size', '20px').attr('fill', textInk(o.color, '#faf7f1'))
                 .text(o.glyph);
             svg.append('text').attr('x', rx0 + 56).attr('y', oy + 22)
                 .attr('font-size', '13px').attr('font-weight', '700').attr('letter-spacing', '1.5px')
-                .attr('fill', o.color).text(o.label);
+                .attr('fill', textInk(o.color, '#faf7f1')).text(o.label);
             svg.append('text').attr('x', rx0 + 56).attr('y', oy + 41)
-                .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.78)
+                .attr('font-size', '11.5px').attr('fill', textInk(ink, '#faf7f1')).attr('fill-opacity', 0.78)
                 .text(o.caption);
         });
         svg.append('text').attr('x', (rx0 + rx1) / 2).attr('y', botY + 20)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11.5px').attr('fill', muted)
+            .attr('font-size', '11.5px').attr('fill', textInk(muted, '#faf7f1'))
             .text('not zombies \u2014 the latent intellectual asset');
 
         // ── BOTTOM STRIP: SUSTAINABILITY TENSION ──
@@ -8345,29 +8360,29 @@ const VizLibrary = (function () {
         // Left side — cheap for humans
         svg.append('text').attr('x', 220).attr('y', bsY + 42)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', green)
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', textInk(green, '#faf7f1'))
             .text('cheap for humans');
         svg.append('text').attr('x', 220).attr('y', bsY + 62)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .attr('font-size', '11.5px').attr('fill', textInk(ink, '#faf7f1')).attr('fill-opacity', 0.8)
             .text('hours, not months \u00B7 one domain expert + AI');
         svg.append('text').attr('x', 220).attr('y', bsY + 80)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .attr('font-size', '11.5px').attr('fill', textInk(ink, '#faf7f1')).attr('fill-opacity', 0.8)
             .text('ephemeral systems at near-zero friction');
 
         // Right side — expensive electronically
         svg.append('text').attr('x', W - 220).attr('y', bsY + 42)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', crimson)
+            .attr('font-size', '15px').attr('font-weight', '700').attr('fill', textInk(crimson, '#faf7f1'))
             .text('expensive electronically');
         svg.append('text').attr('x', W - 220).attr('y', bsY + 62)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .attr('font-size', '11.5px').attr('fill', textInk(ink, '#faf7f1')).attr('fill-opacity', 0.8)
             .text('compute \u00B7 heat \u00B7 electricity \u00B7 grid load');
         svg.append('text').attr('x', W - 220).attr('y', bsY + 80)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11.5px').attr('fill', ink).attr('fill-opacity', 0.8)
+            .attr('font-size', '11.5px').attr('fill', textInk(ink, '#faf7f1')).attr('fill-opacity', 0.8)
             .text('undisciplined, it becomes pollution and noise');
 
         // Middle hinge — DISCIPLINE
@@ -8376,11 +8391,11 @@ const VizLibrary = (function () {
             .attr('stroke', amber).attr('stroke-width', 1.4);  // r bumped 48 → 53 (+10px diameter)
         svg.append('text').attr('x', W / 2).attr('y', bsY + 54)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', amber)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('letter-spacing', '2px').attr('fill', textInk(amber, '#faf7f1'))
             .text('DISCIPLINE');
         svg.append('text').attr('x', W / 2).attr('y', bsY + 72)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '10px').attr('font-style', 'italic').attr('fill', amber)
+            .attr('font-size', '10px').attr('font-style', 'italic').attr('fill', textInk(amber, '#faf7f1'))
             .text('recycle, don\u2019t pollute');
 
         // Connectors from left to middle, middle to right
@@ -8397,11 +8412,11 @@ const VizLibrary = (function () {
             .attr('stroke', amber).attr('stroke-width', 0.6).attr('stroke-opacity', 0.45);
         svg.append('text').attr('x', W / 2).attr('y', H - 42)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', textInk(ink, '#faf7f1'))
             .text('The same abandoned corpus is a liability if ignored \u2014 a latent asset if disciplined.');
         svg.append('text').attr('x', W / 2).attr('y', H - 18)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', amber)
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', textInk(amber, '#faf7f1'))
             .text('Sustainability in scientific compute is not about producing less code. It is about recycling the intelligence already in it.');
     }
 
@@ -9410,11 +9425,11 @@ const VizLibrary = (function () {
 
         // ===== TIME AXIS (top) =====
         svg.append('text').attr('x', bandStartX).attr('y', 56)
-            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', muted)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', textInk(muted, '#9ca9b2'))
             .attr('letter-spacing', '1.6px').text('YEAR ZERO');
         svg.append('text').attr('x', bandEndX).attr('y', 56)
             .attr('text-anchor', 'end')
-            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', muted)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', textInk(muted, '#9ca9b2'))
             .attr('letter-spacing', '1.6px').text('TODAY');
         svg.append('line').attr('x1', bandStartX).attr('y1', 70).attr('x2', bandEndX).attr('y2', 70)
             .attr('stroke', rule).attr('stroke-width', 1).attr('stroke-dasharray', '3,4').attr('opacity', 0.5);
@@ -9422,10 +9437,10 @@ const VizLibrary = (function () {
         // ===== CAPITAL BAND =====
         // Left labels (vertically centered with the band)
         svg.append('text').attr('x', 50).attr('y', capitalY + bandH / 2 - 6)
-            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', slateDk)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(slateDk, '#9ca9b2'))
             .attr('letter-spacing', '1.3px').text('SOFTWARE AS');
         svg.append('text').attr('x', 50).attr('y', capitalY + bandH / 2 + 14)
-            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', slateDk)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(slateDk, '#9ca9b2'))
             .attr('letter-spacing', '1.3px').text('CAPITAL');
 
         // The single long ribbon — 4 phases
@@ -9444,7 +9459,7 @@ const VizLibrary = (function () {
             if (w > 60) {
                 svg.append('text').attr('x', cx + w / 2).attr('y', capitalY + bandH / 2 + 5)
                     .attr('text-anchor', 'middle')
-                    .attr('font-size', '11.5px').attr('font-weight', '700').attr('fill', p.color)
+                    .attr('font-size', '11.5px').attr('font-weight', '700').attr('fill', textInk(p.color, '#9ca9b2'))
                     .attr('letter-spacing', '1.6px').text(p.name);
             }
             cx += w;
@@ -9452,7 +9467,7 @@ const VizLibrary = (function () {
 
         // Caption below capital band
         svg.append('text').attr('x', bandStartX).attr('y', capitalY + bandH + 22)
-            .attr('font-size', '12px').attr('fill', muted).attr('font-style', 'italic')
+            .attr('font-size', '12px').attr('fill', textInk(muted, '#9ca9b2')).attr('font-style', 'italic')
             .text('Build once  ·  maintain forever  ·  inherit the debt  ·  eventually join the graveyard.');
 
         // ===== MIDDLE ANNOTATION =====
@@ -9461,10 +9476,10 @@ const VizLibrary = (function () {
             .attr('x2', W - 60).attr('y2', midY - 32)
             .attr('stroke', rule).attr('stroke-width', 1).attr('opacity', 0.4);
         svg.append('text').attr('x', W / 2).attr('y', midY - 8)
-            .attr('text-anchor', 'middle').attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', ink)
+            .attr('text-anchor', 'middle').attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', textInk(ink, '#9ca9b2'))
             .text('Same total engineering hours.  Different shape.  Different outcome.');
         svg.append('text').attr('x', W / 2).attr('y', midY + 16)
-            .attr('text-anchor', 'middle').attr('font-size', '13px').attr('font-style', 'italic').attr('fill', copperDk)
+            .attr('text-anchor', 'middle').attr('font-size', '13px').attr('font-style', 'italic').attr('fill', textInk(copperDk, '#9ca9b2'))
             .text('AI didn’t invent this idea. It just made it obvious.');
         svg.append('line').attr('x1', 60).attr('y1', midY + 32)
             .attr('x2', W - 60).attr('y2', midY + 32)
@@ -9472,10 +9487,10 @@ const VizLibrary = (function () {
 
         // ===== CONSUMABLE BAND =====
         svg.append('text').attr('x', 50).attr('y', consumableY + bandH / 2 - 6)
-            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', copperDk)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(copperDk, '#9ca9b2'))
             .attr('letter-spacing', '1.3px').text('SOFTWARE AS');
         svg.append('text').attr('x', 50).attr('y', consumableY + bandH / 2 + 14)
-            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', copperDk)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(copperDk, '#9ca9b2'))
             .attr('letter-spacing', '1.3px').text('CONSUMABLE');
 
         // Many short ribbons, each build → use → retire
@@ -9501,7 +9516,7 @@ const VizLibrary = (function () {
 
         // Caption + tiny inline legend below consumable band
         svg.append('text').attr('x', bandStartX).attr('y', consumableY + bandH + 22)
-            .attr('font-size', '12px').attr('fill', muted).attr('font-style', 'italic')
+            .attr('font-size', '12px').attr('fill', textInk(muted, '#9ca9b2')).attr('font-style', 'italic')
             .text('Build for a question  ·  use it  ·  retire it cleanly.  Nothing inherited; nothing abandoned.');
 
         var legX = bandEndX - 230;
@@ -9517,13 +9532,13 @@ const VizLibrary = (function () {
                 .attr('fill', item.color).attr('fill-opacity', 0.55)
                 .attr('stroke', item.color).attr('stroke-width', 1);
             svg.append('text').attr('x', legX + 18).attr('y', legY)
-                .attr('font-size', '11px').attr('fill', muted).text(item.label);
+                .attr('font-size', '11px').attr('fill', textInk(muted, '#9ca9b2')).text(item.label);
             legX += 78;
         });
 
         // ===== Bottom attribution =====
         svg.append('text').attr('x', W / 2).attr('y', H - 18)
-            .attr('text-anchor', 'middle').attr('font-size', '11px').attr('font-style', 'italic').attr('fill', muted)
+            .attr('text-anchor', 'middle').attr('font-size', '11px').attr('font-style', 'italic').attr('fill', textInk(muted, '#9ca9b2'))
             .text('McQuade et al., Defense Innovation Board (2019) — “Software Is Never Done.” The argument that software is a service, not a capital asset, predates the AI revolution by half a decade.');
     }
 
@@ -10242,11 +10257,11 @@ const VizLibrary = (function () {
         // Column headings
         svg.append('text').attr('x', W * 0.25).attr('y', 36)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', P.crimson)
+            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', textInk(P.crimson, '#faf7f1'))
             .text('Monolithic — DICOM Container');
         svg.append('text').attr('x', W * 0.75).attr('y', 36)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .attr('font-size', '20px').attr('font-weight', '700').attr('fill', textInk(P.greenDk, '#faf7f1'))
             .text('Modular — Pathology Stack');
 
         // Vertical rule between columns
@@ -10274,7 +10289,7 @@ const VizLibrary = (function () {
             .attr('stroke-dasharray', '6,5');
         svg.append('text').attr('x', leftX + leftW / 2).attr('y', stackTop - 22)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', P.crimson)
+            .attr('font-size', '12px').attr('font-style', 'italic').attr('fill', textInk(P.crimson, '#faf7f1'))
             .text('one container — every concern bundled, every lifecycle coupled');
 
         monoLayers.forEach(function (lyr, i) {
@@ -10285,10 +10300,10 @@ const VizLibrary = (function () {
                 .attr('rx', 6).attr('fill', '#fff')
                 .attr('stroke', P.crimson).attr('stroke-width', 1.4);
             svg.append('text').attr('x', leftX + 22).attr('y', y + rowH / 2 - 2)
-                .attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink)
+                .attr('font-size', '15px').attr('font-weight', '700').attr('fill', textInk(P.ink, '#faf7f1'))
                 .text(lyr.label);
             svg.append('text').attr('x', leftX + 22).attr('y', y + rowH / 2 + 17)
-                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
                 .text(lyr.sub);
         });
 
@@ -10300,11 +10315,11 @@ const VizLibrary = (function () {
             'Each component must move on the file’s clock'
         ];
         svg.append('text').attr('x', leftX).attr('y', H - 80)
-            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', P.crimson)
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', textInk(P.crimson, '#faf7f1'))
             .attr('letter-spacing', '1.4px').text('CONSEQUENCES');
         issues.forEach(function (t, i) {
             svg.append('text').attr('x', leftX).attr('y', H - 60 + i * 16)
-                .attr('font-size', '11.5px').attr('fill', P.ink)
+                .attr('font-size', '11.5px').attr('fill', textInk(P.ink, '#faf7f1'))
                 .text('•  ' + t);
         });
 
@@ -10317,10 +10332,10 @@ const VizLibrary = (function () {
             .attr('rx', 8).attr('fill', '#e9efe9')
             .attr('stroke', P.greenDk).attr('stroke-width', 1.6);
         svg.append('text').attr('x', sx + 18).attr('y', 116)
-            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(P.greenDk, '#faf7f1'))
             .text('Security Overlay');
         svg.append('text').attr('x', sx + 18).attr('y', 134)
-            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
             .text('NIST SP 800-53 — layered identity, network, data controls');
 
         // Communication band
@@ -10329,10 +10344,10 @@ const VizLibrary = (function () {
             .attr('rx', 8).attr('fill', '#fff5e1')
             .attr('stroke', P.copperDk).attr('stroke-width', 1.6);
         svg.append('text').attr('x', sx + 18).attr('y', 184)
-            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', P.copperDk)
+            .attr('font-size', '14px').attr('font-weight', '700').attr('fill', textInk(P.copperDk, '#faf7f1'))
             .text('Communication');
         svg.append('text').attr('x', sx + 18).attr('y', 202)
-            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
             .text('REST · HL7 FHIR · event bus · microservices');
 
         // Three side-by-side service boxes (pixels / metadata / annotations)
@@ -10351,19 +10366,19 @@ const VizLibrary = (function () {
                 .attr('stroke', s.color).attr('stroke-width', 1.6);
             svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 30)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', s.color)
+                .attr('font-size', '14.5px').attr('font-weight', '700').attr('fill', textInk(s.color, '#faf7f1'))
                 .text(s.label);
             svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 64)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '12px').attr('fill', P.ink)
+                .attr('font-size', '12px').attr('fill', textInk(P.ink, '#faf7f1'))
                 .text(s.sub);
             svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 84)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '12px').attr('fill', P.ink)
+                .attr('font-size', '12px').attr('fill', textInk(P.ink, '#faf7f1'))
                 .text(s.sub2);
             svg.append('text').attr('x', x + svcW / 2).attr('y', svcY + 110)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
                 .text('independent lifecycle');
         });
 
@@ -10381,17 +10396,17 @@ const VizLibrary = (function () {
                 .attr('stroke', s.color).attr('stroke-width', 1.4);
             svg.append('text').attr('x', x + intW / 2).attr('y', intY + 30)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', s.color)
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', textInk(s.color, '#faf7f1'))
                 .text(s.label);
             svg.append('text').attr('x', x + intW / 2).attr('y', intY + 54)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .attr('font-size', '11.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
                 .text(s.sub);
         });
 
         // Benefits caption
         svg.append('text').attr('x', rightX).attr('y', H - 80)
-            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', P.greenDk)
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', textInk(P.greenDk, '#faf7f1'))
             .attr('letter-spacing', '1.4px').text('CONSEQUENCES');
         var benefits = [
             'Each layer evolves independently',
@@ -10401,14 +10416,14 @@ const VizLibrary = (function () {
         ];
         benefits.forEach(function (t, i) {
             svg.append('text').attr('x', rightX).attr('y', H - 60 + i * 16)
-                .attr('font-size', '11.5px').attr('fill', P.ink)
+                .attr('font-size', '11.5px').attr('fill', textInk(P.ink, '#faf7f1'))
                 .text('•  ' + t);
         });
 
         // Source line
         svg.append('text').attr('x', W / 2).attr('y', H - 14)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
             .text('Adapted from Gershkovich P. J Pathol Inform 2025;18:100450, Fig. 2.');
     }
 
@@ -11270,12 +11285,12 @@ const VizLibrary = (function () {
             if (dashed) rect.attr('stroke-dasharray', '5,4');
             g.append('text').attr('x', w / 2).attr('y', 26)
                 .attr('text-anchor', 'middle')
-                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', color)
+                .attr('font-size', '13.5px').attr('font-weight', '700').attr('fill', textInk(color, '#faf7f1'))
                 .text(label);
             if (sub) {
                 g.append('text').attr('x', w / 2).attr('y', 46)
                     .attr('text-anchor', 'middle')
-                    .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                    .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
                     .text(sub);
             }
             return g;
@@ -11316,11 +11331,11 @@ const VizLibrary = (function () {
             .attr('fill', '#fef3e0').attr('stroke', P.copperDk).attr('stroke-width', 1.8);
         svg.append('text').attr('x', dx).attr('y', dy - 6)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', P.copperDk)
+            .attr('font-size', '12px').attr('font-weight', '700').attr('fill', textInk(P.copperDk, '#faf7f1'))
             .text('PHI on image?');
         svg.append('text').attr('x', dx).attr('y', dy + 12)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '10px').attr('font-style', 'italic').attr('fill', P.muted)
+            .attr('font-size', '10px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
             .text('detector verdict');
         arrow(midX + 85, midY, dx - 100 + 4, dy, P.slate);
 
@@ -11352,7 +11367,7 @@ const VizLibrary = (function () {
         //  the top edge of the Redacted box.
         svg.append('text').attr('x', reviewX + 60).attr('y', topY + 60)
             .attr('text-anchor', 'middle').attr('font-family', SERIF)
-            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .attr('font-size', '10.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
             .text('reject()');
 
         // NO branch — Auto-Processed (below the spine, centre)
@@ -11377,7 +11392,7 @@ const VizLibrary = (function () {
         // Legend / annotation strip (top-left area, well below the new title bar)
         var legX = 90, legY = 60;
         svg.append('text').attr('x', legX).attr('y', legY)
-            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', P.muted)
+            .attr('font-size', '10.5px').attr('font-weight', '700').attr('fill', textInk(P.muted, '#faf7f1'))
             .attr('letter-spacing', '1.6px').text('READING THE MACHINE');
         var legend = [
             { c: P.green,    t: 'safe automated path — header redaction only' },
@@ -11389,14 +11404,14 @@ const VizLibrary = (function () {
             svg.append('rect').attr('x', legX).attr('y', legY + 14 + i * 18 - 8)
                 .attr('width', 16).attr('height', 6).attr('rx', 2).attr('fill', l.c);
             svg.append('text').attr('x', legX + 22).attr('y', legY + 14 + i * 18)
-                .attr('font-size', '11px').attr('fill', P.ink).text(l.t);
+                .attr('font-size', '11px').attr('fill', textInk(P.ink, '#faf7f1')).text(l.t);
         });
 
         // Footer
         svg.append('text').attr('x', W / 2).attr('y', H - 18)
             .attr('text-anchor', 'middle')
             .attr('font-family', SERIF)
-            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', P.muted)
+            .attr('font-size', '12.5px').attr('font-style', 'italic').attr('fill', textInk(P.muted, '#faf7f1'))
             .text('Pattern aligned with the DSA-WSI-DeID workflow — published derivatives are themselves a state, with their own audit trail.');
     }
 
@@ -12249,6 +12264,60 @@ const VizLibrary = (function () {
     };
     var SERIF = "Georgia, 'Iowan Old Style', 'Palatino Linotype', serif";
     var SANS  = "'Inter', 'Helvetica Neue', sans-serif";
+
+
+    // ─── TEXT INK ────────────────────────────────────────────────
+    //  Palette colours are chosen to fill shapes. Reused as a label on a pale
+    //  ground they land at 1.5-2.9:1 — legible on a laptop, not from the back
+    //  of a lecture room. This walks the colour down its own hue until it
+    //  clears `target`, so the label still reads as the same colour as its
+    //  mark. A colour that already passes is returned unchanged, so it is safe
+    //  to wrap any text fill with it.
+    function textInk(color, bg, target) {
+        if (typeof color !== 'string') return color;
+        bg = bg || '#ffffff';
+        target = target || 3.2;
+
+        function parse(c) {
+            var m = /^#([0-9a-f]{3,8})$/i.exec(c.trim());
+            if (m) {
+                var h = m[1];
+                if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+                return [parseInt(h.substr(0,2),16), parseInt(h.substr(2,2),16), parseInt(h.substr(4,2),16)];
+            }
+            var r = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(c);
+            return r ? [+r[1], +r[2], +r[3]] : null;
+        }
+        function lum(c) {
+            var a = c.map(function (v) {
+                v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+            });
+            return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2];
+        }
+        function ratio(a, b) {
+            var l1 = lum(a), l2 = lum(b);
+            return (Math.max(l1,l2)+0.05) / (Math.min(l1,l2)+0.05);
+        }
+        var fg = parse(color), back = parse(bg);
+        if (!fg || !back) return color;
+        if (ratio(fg, back) >= target) return color;
+
+        // Move away from the background: darker on a light ground, lighter on a
+        // dark one. Scaling in RGB keeps the hue essentially fixed.
+        var lighten = lum(back) < 0.18;
+        for (var i = 1; i <= 40; i++) {
+            var k = i / 40;
+            var cand = lighten
+                ? fg.map(function (v) { return Math.round(v + (255 - v) * k); })
+                : fg.map(function (v) { return Math.round(v * (1 - k)); });
+            if (ratio(cand, back) >= target) {
+                return '#' + cand.map(function (v) {
+                    return ('0' + Math.max(0, Math.min(255, v)).toString(16)).slice(-2);
+                }).join('');
+            }
+        }
+        return color;
+    }
 
     // Helper: thin rule
     function tufteRule(svg, x1, y1, x2, y2, opacity) {
@@ -13985,7 +14054,7 @@ const VizLibrary = (function () {
             svg.append('text').attr('x', 90).attr('y', y + 4)
                 .attr('font-family', SANS).attr('font-size', '10.5px')
                 .attr('font-weight', '700').attr('letter-spacing', '1.6px')
-                .attr('fill', color)
+                .attr('fill', textInk(color, '#faf7f1'))
                 .text(label);
             // Boxes — even spacing across the available track
             var trackL = 220, trackR = W - 90;
@@ -13997,15 +14066,15 @@ const VizLibrary = (function () {
                 if (i < n - 1) {
                     svg.append('text').attr('x', cx + slot / 2 - 6).attr('y', y + 5)
                         .attr('text-anchor', 'middle').attr('font-family', SERIF)
-                        .attr('font-size', '14px').attr('fill', color)
-                        .attr('opacity', 0.55)
+                        .attr('font-size', '14px').attr('fill', textInk(color, '#faf7f1'))
+                        .attr('opacity', 0.85)
                         .text('▸');
                 }
                 // The label itself — centred within its slot, serif
                 var stepText = svg.append('text')
                     .attr('x', cx).attr('y', y + 5)
                     .attr('text-anchor', 'middle').attr('font-family', SERIF)
-                    .attr('font-size', '11.5px').attr('fill', T.ink)
+                    .attr('font-size', '11.5px').attr('fill', textInk(T.ink, '#faf7f1'))
                     .text(txt);
                 store.push({ x: cx, y: y + 5, label: txt, node: stepText });
             });
@@ -14065,7 +14134,7 @@ const VizLibrary = (function () {
                 .attr('x', midX).attr('y', cpY + 14)
                 .attr('text-anchor', 'middle')
                 .attr('font-family', SERIF).attr('font-style', 'italic')
-                .attr('font-size', '10.5px').attr('fill', T.copper)
+                .attr('font-size', '10.5px').attr('fill', textInk(T.copper, '#faf7f1'))
                 .attr('opacity', 0)
                 .text(lp.label);
             return { arc: arc, label: label, triggerAt: lp.from };
@@ -14076,7 +14145,7 @@ const VizLibrary = (function () {
             .attr('x', W / 2).attr('y', pipeTop - 22)
             .attr('text-anchor', 'middle').attr('font-family', SERIF)
             .attr('font-style', 'italic').attr('font-size', '11px')
-            .attr('fill', T.muted)
+            .attr('fill', textInk(T.muted, '#faf7f1'))
             .attr('opacity', 0.85)
             .text('↓ hover the chains — watch the dot trace each one and the pathology loop-backs appear');
 
@@ -14178,7 +14247,7 @@ const VizLibrary = (function () {
         svg.append('text').attr('x', W / 2).attr('y', ruleY + 20)
             .attr('text-anchor', 'middle').attr('font-family', SERIF)
             .attr('font-style', 'italic').attr('font-size', '13px')
-            .attr('fill', T.muted)
+            .attr('fill', textInk(T.muted, '#faf7f1'))
             .text('Image management vs. process management. The visual length difference is the argument — and the loop-backs are why.');
 
         // ── Six-row comparison table ──
@@ -14214,15 +14283,15 @@ const VizLibrary = (function () {
         svg.append('text').attr('x', colDimX).attr('y', tableTop + 16)
             .attr('font-family', SANS).attr('font-size', '10.5px')
             .attr('font-weight', '700').attr('letter-spacing', '1.6px')
-            .attr('fill', T.muted).text('DIMENSION');
+            .attr('fill', textInk(T.muted, '#faf7f1')).text('DIMENSION');
         svg.append('text').attr('x', colRadX).attr('y', tableTop + 16)
             .attr('font-family', SANS).attr('font-size', '10.5px')
             .attr('font-weight', '700').attr('letter-spacing', '1.6px')
-            .attr('fill', T.slate).text('RADIOLOGY');
+            .attr('fill', textInk(T.slate, '#faf7f1')).text('RADIOLOGY');
         svg.append('text').attr('x', colPathX).attr('y', tableTop + 16)
             .attr('font-family', SANS).attr('font-size', '10.5px')
             .attr('font-weight', '700').attr('letter-spacing', '1.6px')
-            .attr('fill', T.copper).text('PATHOLOGY');
+            .attr('fill', textInk(T.copper, '#faf7f1')).text('PATHOLOGY');
         tufteRule(svg, colDimX, tableTop + 28, W - 90, tableTop + 28, 0.6);
 
         rows.forEach(function (r, i) {
@@ -14231,16 +14300,16 @@ const VizLibrary = (function () {
             svg.append('text').attr('x', colDimX).attr('y', y)
                 .attr('font-family', SANS).attr('font-size', '10.5px')
                 .attr('font-weight', '700').attr('letter-spacing', '1.4px')
-                .attr('fill', T.muted).text(r.dim);
+                .attr('fill', textInk(T.muted, '#faf7f1')).text(r.dim);
             // Radiology cell — serif, slate, regular weight
             var rad = svg.append('text').attr('x', colRadX).attr('y', y)
                 .attr('font-family', SERIF).attr('font-size', '14.5px')
-                .attr('fill', T.slate);
+                .attr('fill', textInk(T.slate, '#faf7f1'));
             wsiWrap(rad, r.rad, colRadW - 16, 18);
             // Pathology cell — serif, copper, semi-bold
             var path = svg.append('text').attr('x', colPathX).attr('y', y)
                 .attr('font-family', SERIF).attr('font-size', '14.5px')
-                .attr('font-weight', '600').attr('fill', T.copper);
+                .attr('font-weight', '600').attr('fill', textInk(T.copper, '#faf7f1'));
             wsiWrap(path, r.path, W - 90 - colPathX, 18);
             // Hairline below the row (except the last)
             if (i < rows.length - 1) {
@@ -14254,7 +14323,7 @@ const VizLibrary = (function () {
         svg.append('text').attr('x', W / 2).attr('y', foot + 24)
             .attr('text-anchor', 'middle').attr('font-family', SERIF)
             .attr('font-size', '17px').attr('font-style', 'italic')
-            .attr('fill', T.ink)
+            .attr('fill', textInk(T.ink, '#faf7f1'))
             .text('Treat the case as a state machine. The image is one governed artifact within it.');
     }
 
@@ -15365,20 +15434,26 @@ const VizLibrary = (function () {
             if (a.handoff) {
                 g.append('line').attr('x1', lx + 20).attr('y1', y + 34).attr('x2', lx + 20).attr('y2', y + rowH)
                     .attr('stroke', P.crimson).attr('stroke-width', 2).attr('opacity', 0.5)
-                    .attr('class', 'aios-handoff');
+                    .attr('class', 'aios-handoff-bar');
                 g.append('text').attr('x', lx + 32).attr('y', y + 49)
                     .attr('font-family', SANS).attr('font-size', '10.5px')
                     .attr('font-style', 'italic').attr('fill', P.crimson)
-                    .attr('class', 'aios-handoff').text(a.handoff);
+                    .attr('class', 'aios-handoff-label').text(a.handoff);
             }
             aiosReveal(g, i, 400, 110);
         });
 
         // The handoffs dissolve — that is the whole animation.
         if (!REDUCED_MOTION) {
-            svg.selectAll('.aios-handoff').transition()
+            // The bar carries the "dissolving" effect and can go almost to
+            // nothing; the label beside it is text and has to stay readable,
+            // so it stops at 0.7 (4.6:1 on cream).
+            svg.selectAll('.aios-handoff-bar').transition()
                 .delay(function (d, i) { return 2200 + i * 60; }).duration(900)
-                .style('opacity', 0.25);
+                .style('opacity', 0.12);
+            svg.selectAll('.aios-handoff-label').transition()
+                .delay(function (d, i) { return 2200 + i * 60; }).duration(900)
+                .style('opacity', 0.7);
         }
 
         // ── RIGHT: the ring ─────────────────────────────────────
@@ -16061,10 +16136,10 @@ const VizLibrary = (function () {
                 .attr('font-weight', '600').attr('fill', P.ink);
             el.text(t);
             if (REDUCED_MOTION) {
-                el.attr('font-weight', '300').attr('fill', P.muted).attr('opacity', 0.55);
+                el.attr('font-weight', '300').attr('fill', P.muted);
             } else {
                 el.transition().delay(700 + i * 110).duration(900)
-                    .attr('font-weight', '300').attr('fill', P.muted).attr('opacity', 0.55)
+                    .attr('font-weight', '300').attr('fill', P.muted)
                     .attr('y', top + i * rowH + 5);
             }
         });
@@ -16435,13 +16510,17 @@ const VizLibrary = (function () {
                 // Direct label, inside the segment when it fits, above it when not.
                 if (sg.label) {
                     var inside = sw > sg.label.length * 6.4 + 16;
+                    // The canal band is a 55%-opacity wash, so a cream label on
+                    // it lands at 2.9:1. Ink reads correctly on the light bands
+                    // and cream on the solid ones.
+                    var lightBand = (sg.tone === 'canal');
                     seg.append('text')
                         .attr('x', inside ? sx + sw / 2 : sx + sw + 26)
                         .attr('y', y + h / 2 + 4)
                         .attr('text-anchor', inside ? 'middle' : 'start')
                         .attr('font-family', SANS).attr('font-size', '10.5px')
                         .attr('font-weight', '700').attr('letter-spacing', '1.2px')
-                        .attr('fill', inside ? P.bg : col)
+                        .attr('fill', inside ? (lightBand ? P.ink : P.bg) : col)
                         .text(sg.label);
                 }
             });

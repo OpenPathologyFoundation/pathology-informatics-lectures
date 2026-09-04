@@ -364,6 +364,22 @@ vizSlides.forEach(s => {
     const MIXED_BG_LIGHT_ON_DARK = { 'blankPage': ['#e5e7eb', '#cbd5e1', '#9ca3af'] };
     const skipFills = MIXED_BG_LIGHT_ON_DARK[fnName] || [];
 
+    // This rule assumes one background per visualization, which is wrong for
+    // any viz that paints a card, chip or badge and then writes on it. Rather
+    // than skip those fills — which would stop checking them — declare the
+    // colour they actually sit on, so the ratio is still computed, just
+    // against the right thing. Each entry below was read out of the source and
+    // confirmed against the rendered page by tests/contrast-audit.js.
+    const LOCAL_BACKGROUNDS = {
+        // magnifier card is #f8fafc; the alert strip inside it is #fef2f2
+        caseTimeline:        { '#0f172a': '#f8fafc', '#1e293b': '#f8fafc', '#991b1b': '#fef2f2' },
+        // caption text sits on the amber chips/popups, not the slide
+        hershCaveats:        { '#fef3c7': '#92400e' },
+        // stage labels sit on the filled stage shapes (slate/copper/green, all dark)
+        regulatoryInversion: { '#faf7f1': '#1f3447' }
+    };
+    const localBg = LOCAL_BACKGROUNDS[fnName] || {};
+
     let issueCount = 0;
     texts.forEach(t => {
         if (!t.fill || !t.fill.startsWith('#')) return;
@@ -374,13 +390,14 @@ vizSlides.forEach(s => {
                         (t.fontSize && t.fontSize >= 14 && t.fontWeight && t.fontWeight >= 700);
         const threshold = isLarge ? WCAG_AA_LARGE : WCAG_AA_RATIO;
 
-        // Check against base slide background
-        const ratio = contrastRatio(t.fill, baseBg);
+        // Check against the colour this text is actually painted on
+        const bg = localBg[t.fill] || baseBg;
+        const ratio = contrastRatio(t.fill, bg);
         if (ratio < threshold) {
             const desc = t.text ? `"${t.text.substring(0, 30)}"` : `(${t.fontSize || '?'}px text)`;
             fail(
                 `"${s.vizType}" — contrast ${ratio.toFixed(1)}:1 < ${threshold}:1 — ${desc}`,
-                `fill=${t.fill} on bg=${baseBg}`
+                `fill=${t.fill} on bg=${bg}`
             );
             issueCount++;
         }
