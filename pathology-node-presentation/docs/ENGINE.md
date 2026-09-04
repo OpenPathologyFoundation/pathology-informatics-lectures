@@ -176,16 +176,24 @@ Protocol: the client emits `join-poll`, `vote` (`{lectureId, slideId, optionInde
 ## 8. Tests
 
 ```bash
-npm test          # Playwright, chromium-1280
-npm run test:all  # every viewport (1280 / 1440 / 1920)
-npm run test:viz  # static analysis, every lecture
-npm run test:links# link validation, every lecture
-npm run shots     # screenshot a deck slide by slide
+npm test              # Playwright, chromium-1280
+npm run test:all      # every viewport (1280 / 1440 / 1920)
+npm run test:viz      # static analysis, every lecture
+npm run test:links    # link validation, every lecture
+npm run test:contrast # measured WCAG contrast, every lecture (needs a server)
+npm run shots         # screenshot a deck slide by slide
 ```
 
 **`tests/viz-static-analysis.js`** parses `viz-library.js` as text — no browser. It checks JSON integrity (unique ids, known types, every `vizType` registered, every registry entry backed by a real function), font legibility, WCAG contrast, viewBox and aspect ratio, and animation discipline. Takes a lecture name (`node tests/viz-static-analysis.js ai_operating_system`), defaults to `oneit`, and `--all` runs every lecture and fails if any does.
 
 **`tests/validate-links.js`** follows redirects and checks for expected content markers. `--all-lectures` harvests every URL out of every lecture JSON rather than relying on the hand-maintained list at the top of the file. Publisher 403s are common and are reported as failures — read the output, don't just check the exit code.
+
+**`tests/contrast-audit.js`** measures contrast instead of inferring it. For every rendered SVG `<text>` it takes the glyph-box centre, asks the browser for the full paint stack there, composites those layers honouring `fill-opacity` and `opacity`, and computes the true ratio against the colour actually behind the glyph. Use it whenever the static rule and your eyes disagree — it is the tie-breaker, and the `LOCAL_BACKGROUNDS` entries above were confirmed with it.
+
+Two things it taught the codebase, worth remembering when writing a visualization:
+
+- **A translucent wash is not the colour you wrote.** A shape at `fill-opacity: 0.15` over a dark slide renders far lighter than its hex suggests; text in the same hue on top of it is fine, and reading the hex alone says otherwise.
+- **Opacity is a poor way to de-emphasize text.** Fading a label to 25% to show it "dissolving" leaves it at 1.6:1. Carry that meaning with font-weight, size or position and keep the colour solid — the effect survives and the text stays readable.
 
 **`tests/screenshot-ai-os.js`** drives a deck through Playwright, captures each slide at 1440×900, and reports console errors plus any element spilling outside the slide bounds. `LECTURE=<name> PORT=<port> node tests/screenshot-ai-os.js` works for any deck. This is the fastest way to catch label collisions in a new visualization.
 
