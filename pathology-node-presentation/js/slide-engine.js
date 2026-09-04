@@ -814,12 +814,70 @@ var SlideEngine = (function () {
         });
     }
 
+    /**
+     * Keep a visualization inside its box, and clear of its takeaway bar.
+     *
+     * Two problems compound here:
+     *
+     * 1. `.takeaway-accent` is `position: absolute; bottom: 16px`, so it sits
+     *    outside the flex flow and paints over the bottom of `.viz-container`.
+     * 2. A viz `<svg>` carries a viewBox but no width/height, so it is sized
+     *    from its own aspect ratio against the container width. At 1100x700 in
+     *    a 1120px-wide box that is 713px tall inside a 460px container. The
+     *    `max-height: 100%` in intro.css does not constrain an auto-sized SVG,
+     *    so the drawing overflows, gets clipped by the slide's `overflow:
+     *    hidden`, and runs under the takeaway.
+     *
+     * Together those hid parts of the drawing on 62 slides — whole rows of
+     * labels on a few. Reserve the bar's measured height, then size the SVG to
+     * what is left; `preserveAspectRatio` letterboxes the drawing so nothing
+     * distorts, it just scales to fit.
+     *
+     * offsetHeight/clientHeight are layout px, unaffected by Reveal's scaling
+     * transform, which is the same space as the values being set.
+     */
+    function fitVizToSlide(section) {
+        if (!section) return;
+        var viz = section.querySelector('.viz-container');
+        if (!viz) return;
+
+        // The bar is offset 16px from the padding box while the container ends
+        // at the content box, 20px in, so it intrudes (height - 4)px. The extra
+        // 10px keeps the drawing from touching it.
+        var bar = section.querySelector('.takeaway-accent');
+        viz.style.paddingBottom = bar
+            ? Math.max(0, Math.round(bar.offsetHeight - 4 + 10)) + 'px'
+            : '';
+
+        var svg = viz.querySelector('svg');
+        if (!svg) return;
+        var cs = getComputedStyle(viz);
+        var avail = viz.clientHeight
+                  - (parseFloat(cs.paddingTop) || 0)
+                  - (parseFloat(cs.paddingBottom) || 0);
+        if (!(avail > 40)) return;          // container not laid out yet
+        svg.style.maxHeight = 'none';       // beats the inline 80/88vh caps
+        svg.style.height = Math.round(avail) + 'px';
+        svg.style.width = '100%';
+    }
+
+    function fitAllVisualizations() {
+        Array.prototype.forEach.call(
+            document.querySelectorAll('.reveal .slides section'), fitVizToSlide);
+    }
+
     function initVizOnSlideChange() {
         if (typeof Reveal === 'undefined') return;
 
         Reveal.on('slidechanged', function (event) {
-            var vizAttr = event.currentSlide.getAttribute('data-viz');
-            if (!vizAttr || _rendered[vizAttr]) return;
+            var slide = event.currentSlide;
+            var vizAttr = slide.getAttribute('data-viz');
+            if (!vizAttr || _rendered[vizAttr]) {
+                // Already drawn (the queue dedups by vizType) — still re-fit,
+                // the canvas may have been rescaled since.
+                fitVizToSlide(slide);
+                return;
+            }
             _rendered[vizAttr] = true;
 
             // Find matching viz queue item
@@ -831,7 +889,13 @@ var SlideEngine = (function () {
                     }
                 }
             });
+            fitVizToSlide(slide);          // after render: the svg now exists
         });
+
+        fitAllVisualizations();
+
+        // The bar rewraps and the canvas rescales on resize.
+        window.addEventListener('resize', fitAllVisualizations);
 
         // Also check the initial slide
         var currentSlide = Reveal.getCurrentSlide();
@@ -848,6 +912,7 @@ var SlideEngine = (function () {
                     }
                 });
             }
+            fitVizToSlide(currentSlide);
         }
     }
 
