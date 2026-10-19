@@ -99,13 +99,17 @@ Cumulative times for a 48-minute delivery.
 
 ## 6. Takeaways and CTA
 
-1. **Pathologists are becoming designers of how pathology works.** The distance between recognizing what should happen and having infrastructure that makes it happen was never intellectual; it was the cost of implementation, and that cost has collapsed.
-2. **Two kinds of AI, kept separate.** AI inside the application proposes and needs task-appropriate evaluation; AI helping construct the application leaves no model in the loop. The most valuable built systems often should behave predictably.
-3. **A correct diagnosis is not a coherent clinical record.** Dialogue extends clinical attention over the relationships that make a diagnosis usable; which contradictions matter is a pathology question.
-4. **Infrastructure changes practice; say what the evidence is.** Seventy days to eight is a workflow result. AI changes how fast such infrastructure can be built, tested and revised.
-5. **Faster construction makes requirements, review and tests more valuable, not less** — and a quality system protects no one until it is executable. A green build that executes nothing is the failure mode AI makes cheap.
+Rewritten from the attendee's seat (2026-10-19), in the order of the hour; each card opens with the sentence to remember and the rest is support. The third is the sentence from the reframe slide, said for the second and last time.
 
-CTA: one recurring problem; what the system should do, what it must never do, what evidence would convince you. Bring the page to the people who can build it.
+1. **The prediction aimed at judgment and missed context.** One amended report in seven is a misinterpretation; the rest are the side, the patient, the missing part. Context is engineering, and nobody engineered it.
+2. **A correct diagnosis can sit in a wrong record, and noticing is nobody's step.** A check that reads across the documents is one more slice with different holes; which differences matter stays your call.
+3. **What changed is not only what computers can do for you, but what you can make your systems do.** Closing that distance used to cost a project. Now it costs a specification, a conversation and a test.
+4. **"AI" is two different things; ask which one.** A model that proposes inside an application and can be overruled, or a model that helped build one that now runs without it. The dependable systems are often the second kind.
+5. **Fast to build means more to verify, not less.** Ask which claim a system makes, from "it runs" to "patients did better", and what proves it. A green build that executed nothing proved nothing.
+
+CTA: one page for one recurring problem — what the system should do, what it must never do, what evidence would convince you. It needs no software, and it is the part nobody can write for you.
+
+The earlier five were the speaker's theses in the speaker's vocabulary ("task-appropriate evaluation", "a quality system protects no one until it is executable", "say what the evidence is"); the frozen-section result and the executable quality system stay on their own slides.
 
 ## 7. The live demonstration
 

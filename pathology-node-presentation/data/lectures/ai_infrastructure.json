@@ -2153,16 +2153,17 @@
       "transition": "convex",
       "title": "Key Takeaways",
       "items": [
-        "<strong>Pathologists are becoming designers of how pathology works.</strong> The 2016 prediction aimed at judgment and missed context. The distance between recognizing what should happen and having infrastructure that makes it happen was never intellectual; it was the cost of implementation, and that cost has collapsed.",
-        "<strong>Two kinds of AI, kept separate.</strong> AI inside the application proposes and needs task-appropriate evaluation; AI helping construct the application leaves no model in the loop. The most valuable built systems often should behave predictably.",
-        "<strong>A correct diagnosis is not a coherent clinical record.</strong> Dialogue extends clinical attention over the relationships that make a diagnosis usable — and which contradictions matter is a pathology question.",
-        "<strong>Infrastructure changes practice; say what the evidence is.</strong> Seventy days to eight is a workflow result. AI changes how fast such infrastructure can be built, tested and revised.",
-        "<strong>Faster construction makes requirements, review and tests more valuable, not less</strong> — and a quality system protects no one until it is executable. A green build that executes nothing is the failure mode AI makes cheap."
+        "<strong>The prediction aimed at judgment and missed context.</strong> One amended report in seven is a misinterpretation; the rest are the side, the patient, the missing part. Context is engineering, and nobody engineered it.",
+        "<strong>A correct diagnosis can sit in a wrong record, and noticing is nobody's step.</strong> A check that reads across the documents is one more slice with different holes; which differences matter stays your call.",
+        "<strong>What changed is not only what computers can do for you, but what you can make your systems do.</strong> Closing that distance used to cost a project. Now it costs a specification, a conversation and a test.",
+        "<strong>“AI” is two different things; ask which one.</strong> A model that proposes inside an application and can be overruled, or a model that helped build one that now runs without it. The dependable systems are often the second kind.",
+        "<strong>Fast to build means more to verify, not less.</strong> Ask which claim a system makes, from “it runs” to “patients did better”, and what proves it. A green build that executed nothing proved nothing."
       ],
       "cta": {
         "label": "Your challenge:",
-        "text": "Think of one recurring problem in your clinical, operational or research work that you have accepted because changing the software seemed harder than living with it. Write what the system should do, what it must never do, and what evidence would convince you that it works — and bring that page to the people who can build it."
-      }
+        "text": "One page for one recurring problem: what the system should do, what it must never do, what evidence would convince you. It needs no software, and it is the part nobody can write for you."
+      },
+      "speakerNotes": "Five sentences, in the order of the hour, and each is the first sentence of its card; the rest is support. The third is the sentence from the reframe slide, said here for the second and last time. The first two are what the room saw before the objectives; the fourth and fifth are what to ask of any system, including ours. Then the challenge, and stop talking. If the poll is still open, this is the moment to show it."
     },
     {
       "id": "sources",
