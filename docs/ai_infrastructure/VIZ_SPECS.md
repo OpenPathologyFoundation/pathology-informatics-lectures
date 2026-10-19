@@ -13,7 +13,7 @@
 
 | Slide | vizType | Config |
 |---|---|---|
-| 5 objectives | `learning-objectives-config` | `objectives[] = {verb, text}` |
+| 5 objectives | `learning-objectives-config` | `objectives[] = {verb, text}`, optional `margin` (node inset, default 130) and `textWidth` (statement wrap width, default 215); the wave drops to clear a statement above it that wraps past four lines |
 | 18 (optional) | `ibis-flow` | `{ hideHeader: true }` |
 | 22 Xenonym | `xenonym-browser` | `{}` |
 | 23 claims ladder | `evidence-ladder` | `rungs[] = {rung, claim, evidence, source, empty}`, `verbs[] = {verb, detail}` — new content, same shape |
