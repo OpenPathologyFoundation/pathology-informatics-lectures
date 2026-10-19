@@ -14768,28 +14768,43 @@ const VizLibrary = (function () {
     //    config.objectives = [{ verb, text }]
     function learningObjectivesConfig(container, config) {
         var W = 1280, H = 620, P = TUFTE;
+        var c = config || {};
         var svg = aiosStage(container, W, H);
-        var objs = (config && config.objectives) || [];
+        var objs = c.objectives || [];
 
         tufteTitleBlock(svg, 90, 78, W - 180,
-            (config && config.title) || 'Learning objectives',
-            (config && config.subtitle) || 'Five claims you should be able to make, and defend, by the end of the hour.');
+            c.title || 'Learning objectives',
+            c.subtitle || 'Five claims you should be able to make, and defend, by the end of the hour.');
 
         if (!objs.length) {
             aiosNote(svg, 90, 160, 900, 'No objectives supplied in vizConfig.objectives.', P.crimson, 14);
             return;
         }
 
-        var mL = 130, mR = 130;
+        var mL = c.margin || 130, mR = c.margin || 130, tw = c.textWidth || 215;
         var spacing = (W - mL - mR) / (objs.length - 1);
-        var baseY = 292, amp = 44;
+        var amp = 44;
+
+        // Wrap every statement first to learn its height, so the wave can
+        // sit low enough that the tallest statement above it clears the
+        // title block instead of running into the rule.
+        var texts = objs.map(function (o, i) {
+            var t = svg.append('text').attr('x', mL + i * spacing).attr('y', 0)
+                .attr('text-anchor', 'middle').attr('font-family', SERIF)
+                .attr('font-size', '13px').attr('fill', P.ink);
+            wsiWrap(t, o.text || '', tw, 18);
+            return { sel: t, lines: t.selectAll('tspan').size() || 1 };
+        });
+        var maxUp = 1;
+        texts.forEach(function (t, i) { if (i % 2 === 0) maxUp = Math.max(maxUp, t.lines); });
+        var baseY = 292 + Math.max(0, maxUp - 4) * 20;
 
         objs.forEach(function (o, i) {
             o.cx = mL + i * spacing;
             o.cy = baseY + (i % 2 === 0 ? -amp : amp);
         });
 
-        // The connecting trail — drawn first, behind the nodes.
+        // The connecting trail — drawn before the nodes so it sits behind them.
         var lineGen = d3.line()
             .x(function (d) { return d.cx; })
             .y(function (d) { return d.cy; })
@@ -14817,15 +14832,10 @@ const VizLibrary = (function () {
 
             // Verb above the statement in both directions — reading order
             // should not flip depending on which way the wave went.
-            var t = svg.append('text').attr('x', o.cx).attr('y', 0)
-                .attr('text-anchor', 'middle').attr('font-family', SERIF)
-                .attr('font-size', '13px').attr('fill', P.ink);
-            wsiWrap(t, o.text || '', 215, 18);
-            var lines = t.selectAll('tspan').size() || 1;
-
+            var t = texts[i].sel, lines = texts[i].lines;
             var textTop = up ? (o.cy - 40 - (lines - 1) * 18) : (o.cy + 74);
             t.attr('y', textTop);
-            wsiWrap(t, o.text || '', 215, 18);
+            wsiWrap(t, o.text || '', tw, 18);
 
             g.append('text').attr('x', o.cx).attr('y', textTop - 20)
                 .attr('text-anchor', 'middle').attr('font-family', SANS)
@@ -14838,7 +14848,7 @@ const VizLibrary = (function () {
         });
 
         aiosNote(svg, 90, H - 46, W - 180,
-            (config && config.footnote) ||
+            c.footnote ||
             'The progression is deliberate: each objective is only reachable once the one before it is settled.',
             P.muted, 13);
     }

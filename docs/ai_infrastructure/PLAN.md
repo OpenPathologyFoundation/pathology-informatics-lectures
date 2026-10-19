@@ -35,11 +35,15 @@ That is the one revealing failure the talk needs, and it generalizes to Dialogue
 
 ## 3. Learning objectives (`learning-objectives-config`)
 
-1. **Distinguish** AI operating inside an application (Dialogue proposes a flag) from AI helping construct an application (Hedgehog has no model in the loop at runtime) — and why the most valuable built systems often should behave predictably.
-2. **Translate** a workflow problem into an explicit requirement, a working behavior and a test of that behavior — the move that turns clinical intent into something a system can enforce and audit.
-3. **Read** an infrastructure result honestly: 70 → 8 days and 35% → 75% are workflow results, not evidence of an AI effect.
-4. **Separate** a record that satisfies a schema, a system that passes a test, a verified requirement, a capability validated in use, and an improved outcome — and locate each of the four systems on that ladder.
-5. **Write** a one-page statement for one recurring problem: what the system should do, what it must never do, and what evidence would convince you that it works.
+Written from the attendee's seat (rewritten 2026-10-19): what a pathologist in the room will be able to do afterwards, in the order the hour takes them. None of the five is a software skill; the fifth is the assignment.
+
+1. **Recognize** a wrong record under a correct diagnosis — side, plausibility, completeness, a pasted sentence — and say which differences matter, which is a pathology question (the cold open; the questions-for-pathologists slide).
+2. **Name** the workaround in their own week that exists only because changing the software seemed harder than living with the problem, and say why that is no longer true (three questions; the distance and what closed it).
+3. **Distinguish** a model that proposes inside an application (evaluate it; the pathologist decides) from a model that helps build an application that then runs without it (two kinds of AI; Dialogue against Hedgehog).
+4. **Ask** which of five claims a system is making — it runs, its tests pass, it meets its requirements, it changed practice, patients did better — and what would prove each, whoever built it (the objection, the green build, the claims ladder).
+5. **Write** one page for one recurring problem: what the system should do, what it must never do, what evidence would convince them — the one part of the work nobody can do for them (where knowledge enters; clinically led; the closing exercise).
+
+The earlier set (distinguish · translate · read · separate · write) was the builder's list: translating a problem into a requirement and a test, and separating a schema-valid record from a passing test, are things the room will not do, and "read an infrastructure result honestly" is a caveat, not a skill. Those points stay in the talk as guardrails on the slides that carry them.
 
 ## 4. Design principles carried over from the earlier decks
 

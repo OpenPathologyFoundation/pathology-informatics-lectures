@@ -900,32 +900,34 @@
       "vizType": "learning-objectives-config",
       "vizConfig": {
         "title": "Learning objectives",
-        "subtitle": "Five things you should be able to do by the end of the hour — the last one on paper.",
+        "subtitle": "Five things you will be able to do by the end of the hour. None of them is writing software. The last one is writing a page.",
+        "margin": 210,
+        "textWidth": 240,
         "objectives": [
           {
+            "verb": "Recognize",
+            "text": "A wrong record under a correct diagnosis — side, plausibility, completeness, a pasted sentence — and say which differences matter, which is a pathology question."
+          },
+          {
+            "verb": "Name",
+            "text": "The workaround in your own week that exists only because changing the software seemed harder than living with the problem — and why that is no longer true."
+          },
+          {
             "verb": "Distinguish",
-            "text": "AI operating inside an application from AI helping construct one — and why the most valuable built systems often should behave predictably."
+            "text": "A model that proposes inside an application — you evaluate it, you decide — from a model that helps build an application that then runs without it."
           },
           {
-            "verb": "Translate",
-            "text": "A workflow problem into an explicit requirement, a working behavior, and a test of that behavior."
-          },
-          {
-            "verb": "Read",
-            "text": "An infrastructure result honestly: seventy days to eight is a workflow result, not evidence of an AI effect."
-          },
-          {
-            "verb": "Separate",
-            "text": "A schema-valid record, a passing test, a verified requirement, a capability validated in use, and an improved outcome."
+            "verb": "Ask",
+            "text": "Which of five claims a system makes — it runs, its tests pass, it meets its requirements, it changed practice, patients did better — and what would prove each, whoever built it."
           },
           {
             "verb": "Write",
-            "text": "One page for one recurring problem: what the system should do, what it must never do, and what evidence would convince you."
+            "text": "One page for one recurring problem: what the system should do, what it must never do, what evidence would convince you — the one part of this work nobody can do for you."
           }
         ],
-        "footnote": "The verbs are in order. The fifth is the assignment, and it is the only one that requires no software."
+        "footnote": "In the order the hour takes them. The first you have just done with three cases; the fifth is the assignment, and it needs no software."
       },
-      "speakerNotes": "Read the five verbs, not the five sentences. Distinguish, translate, read, separate, write. The last is the assignment: one page, one recurring problem, three questions. Everything before it earns the right to ask."
+      "speakerNotes": "Read the five verbs, not the five sentences: recognize, name, distinguish, ask, write. They are in the order of the hour. The first you have just done with the three cases, and the point of it is the second half of the sentence: which differences matter is a pathology question. The second is the next slide, and it asks each of you for one workaround. The third is the distinction that stops the word AI from explaining everything. The fourth is what to ask of any system, including ours. The fifth is the assignment. Say it plainly: nobody in this room is being asked to program. You are being asked to say what the system should do, what it must never do, and what would convince you — and that is the part nobody else can write."
     },
     {
       "id": "three-questions",
