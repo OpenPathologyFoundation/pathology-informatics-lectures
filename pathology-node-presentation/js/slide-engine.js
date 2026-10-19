@@ -592,6 +592,15 @@ var SlideEngine = (function () {
                         if (left + tipW > slideW - 20) {
                             left = rowLeft - tipW - 12;
                         }
+                        // A row that spans the slide leaves no room on either
+                        // side; the flip above would land off-slide to the
+                        // left. Drop below the row instead, or above it when
+                        // the row sits near the bottom.
+                        if (left < 10) {
+                            left = Math.min(rowLeft + 48, slideW - tipW - 20);
+                            top = rowTop + rowH + 8;
+                            if (top + tipH > slideH - 20) top = rowTop - tipH - 8;
+                        }
                         // Clamp bottom
                         if (top + tipH > slideH - 20) {
                             top = slideH - tipH - 20;

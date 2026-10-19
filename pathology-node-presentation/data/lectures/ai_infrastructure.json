@@ -1,0 +1,2191 @@
+{
+  "meta": {
+    "title": "Modern AI & Transformation of Clinical, Operational & Research Infrastructure in Pathology",
+    "shortTitle": "AI & Pathology Infrastructure",
+    "presenter": "Peter Gershkovich, MD. MHA",
+    "institution": "Yale University School of Medicine",
+    "date": "2026",
+    "theme": {
+      "primary": "#1f1a14",
+      "secondary": "#3d5b73",
+      "accent": "#a36015"
+    },
+    "glossary": [
+      {
+        "term": "Dialogue",
+        "definition": "A Yale-built, web-based quality-control application that compares a draft pathology report against the patient's record — requisition, clinical notes, operative report, imaging, prior reports — before the report is finalized, and shows the pathologist what disagrees. In pilot since 2025; one click before sign-out."
+      },
+      {
+        "term": "Hedgehog",
+        "definition": "A Yale specimen-custody application built in 2023–2025 after two spreadsheet-based tracking systems failed. Manifests travel with specimens between the operating room and the laboratory and stay open until the receiving party acknowledges them. Large language models helped write its specifications and code; none of them runs inside it."
+      },
+      {
+        "term": "IBIS",
+        "definition": "Interactive Biomedical Inquiry System — an open-source search engine for anatomic pathology that turns a natural-language question into an inspectable Lucene query over structured and free-text case data, shows its interpretation and confidence, and waits for approval before executing. Built on synthetic data outside the institution."
+      },
+      {
+        "term": "Xenonym",
+        "definition": "An open-source generator of synthetic patient and staff records that sound like records, belong to nobody, and — in stress mode — include the values that break pipelines: empty strings, injection strings, diacritics, improbable dates. It establishes that a pipeline survives contact with data, not that the data are clinically plausible."
+      },
+      {
+        "term": "WBC ΔΣ",
+        "definition": "A keyboard-driven manual differential white-cell counter (also called the MDC), open source, with a full medical-device-style quality system: 71 user requirements, 207 system requirements, 56 hazards, 1,172 tests, and an append-only log of every claim that stopped being true."
+      },
+      {
+        "term": "MDC",
+        "definition": "Manual Differential Counter — the working name of WBC ΔΣ in the residents' lectures and in the repository's own code."
+      },
+      {
+        "term": "FSLink",
+        "definition": "A Yale application (2012–) that links the operating room and the frozen-section area: the frozen-section diagnosis is entered once, sent to the OR for acknowledgement, and uploaded automatically to the laboratory information system."
+      },
+      {
+        "term": "POinT",
+        "definition": "Pathology Orders in Transit — a Yale application (2018–) that links the LIS with the EHR's ordering modules and tracks a specimen from the moment of biopsy or resection to its arrival in the laboratory."
+      },
+      {
+        "term": "RTSE",
+        "definition": "Repetitive Task Scheduling Engine — Yale's workflow-orchestration engine (2007–), running the department's scheduled jobs: targeted reminders, clinical alerts, rare-event detection, system checks and data-integrity verification."
+      },
+      {
+        "term": "REALM",
+        "definition": "Rapidly Evolving Agile Laboratory Modules — the umbrella name for the assembly of small applications, on premises and in the cloud, that Yale Pathology Informatics runs alongside the commercial LIS."
+      },
+      {
+        "term": "LIS",
+        "definition": "Laboratory information system — the system of record for specimens, slides and reports. It records what happened. It rarely coordinates what must happen next."
+      },
+      {
+        "term": "EHR",
+        "definition": "Electronic health record — organized around encounters and orders rather than around what a pathologist needs to make a diagnosis."
+      },
+      {
+        "term": "HL7",
+        "definition": "Health Level Seven — the messaging standard through which laboratory and hospital systems exchange orders, results and documents. Exchange, not coordination."
+      },
+      {
+        "term": "requisition",
+        "definition": "The form that accompanies a specimen to the laboratory: who the patient is, what was taken, from where, and why. One of the documents a coherence check reads."
+      },
+      {
+        "term": "operative note",
+        "definition": "The surgeon's or proceduralist's account of what was done and what was seen. It may be dictated but unsigned when the specimen arrives."
+      },
+      {
+        "term": "laterality",
+        "definition": "Left or right. A laterality error in a report is one of the most consequential and most mechanical mistakes a document check can catch."
+      },
+      {
+        "term": "amended report",
+        "definition": "A pathology report corrected after release. Yale's 2014 study of 60 amended reports found that in seven cases the ordering and treating physicians differed, and the amendment reached the treating physician's chart in only one."
+      },
+      {
+        "term": "discrepancy",
+        "definition": "A disagreement between two statements about the same patient, specimen or finding. Which discrepancies matter — and which are only differences in wording — is a pathology question, not a programming detail."
+      },
+      {
+        "term": "frozen section",
+        "definition": "An intraoperative consultation in which tissue is frozen, cut and read within minutes so the surgeon can act. The permanent section, read days later, is the reference against which it is scored."
+      },
+      {
+        "term": "FSQA",
+        "definition": "Frozen-section quality assurance — the scoring of each frozen-section diagnosis against the permanent diagnosis, with the source of any discrepancy categorized and the discrepancy documented in the final report."
+      },
+      {
+        "term": "hard stop",
+        "definition": "A required step the system will not let you skip. In the frozen-section QA program, scoring at sign-out became a hard stop six months after go-live."
+      },
+      {
+        "term": "specimen custody",
+        "definition": "Who has a specimen, where it is, and who has acknowledged receiving it — a chain that a spreadsheet can describe but cannot enforce."
+      },
+      {
+        "term": "manifest",
+        "definition": "A list of specimens travelling together from one location to another, created at the source and closed only when the receiving party acknowledges it."
+      },
+      {
+        "term": "handoff",
+        "definition": "The transfer of a specimen, a case or a task from one person or place to another. In most laboratory systems it is implicit; in an orchestrated one it has a state, an owner and a deadline."
+      },
+      {
+        "term": "acknowledgement",
+        "definition": "A positive confirmation by the receiving party that something arrived. The difference between a message delivered and a step completed."
+      },
+      {
+        "term": "orchestration",
+        "definition": "A layer that knows what must happen next in a workflow, who must do it, by when, and what to do when nobody does. Distinct from exchanging messages between systems."
+      },
+      {
+        "term": "behavioral interoperability",
+        "definition": "Whether systems can coordinate the next step in the work, not merely exchange information about it. Asked as a practical question: who acts, who confirms, what happens when nobody does."
+      },
+      {
+        "term": "state machine",
+        "definition": "A model in which an object is always in exactly one named state and moves between states only through defined transitions. A handoff that must be acknowledged is a state machine with three states."
+      },
+      {
+        "term": "deterministic kernel",
+        "definition": "The part of a system whose behavior is fixed by its rules and tests rather than by a model's judgment. The place where routine operational decisions should live."
+      },
+      {
+        "term": "large language model",
+        "definition": "A model trained on text that can read, compare, summarize, translate and generate language and code. Inside an application it proposes; in a build pipeline it constructs. The two uses carry different evaluation burdens."
+      },
+      {
+        "term": "agentic coding",
+        "definition": "Software development in which an AI session plans, writes, runs and tests code toward a stated goal. Capable, thorough, and without memory of the previous session — which is why executable quality controls matter."
+      },
+      {
+        "term": "URS",
+        "definition": "User requirements specification — what must be true, stated by the people who will use the system, each with a clinical rationale. The document only a domain expert can write."
+      },
+      {
+        "term": "SRS",
+        "definition": "System requirements specification — testable statements of system behavior derived from the user requirements."
+      },
+      {
+        "term": "FMEA",
+        "definition": "Failure mode and effects analysis — a risk analysis that lists each way a system could fail, scores severity, occurrence and detectability, and names the control for each."
+      },
+      {
+        "term": "traceability matrix",
+        "definition": "A table linking every requirement to the tests that verify it and the hazards it mitigates, in both directions. Only meaningful when it is generated from the artifacts rather than typed."
+      },
+      {
+        "term": "IEC 62304",
+        "definition": "The international standard for medical-device software life-cycle processes: planning, requirements, architecture, verification, risk management and change control."
+      },
+      {
+        "term": "design history file",
+        "definition": "The controlled set of documents that records how a device was designed, verified and changed. For WBC ΔΣ it is public and inspectable."
+      },
+      {
+        "term": "verification",
+        "definition": "Evidence that the software does what its requirements say. Verification against a copy of the implementation establishes nothing about the implementation that ships."
+      },
+      {
+        "term": "validation",
+        "definition": "Evidence that the software serves its intended use in practice. A measured interval, a documented rate, a change in the work — not a demonstration."
+      },
+      {
+        "term": "revert-check",
+        "definition": "A discipline for new tests: remove the fix, and the test must fail with the original symptom. Twice in the counter's history it found the test wrong before it found the code wrong."
+      },
+      {
+        "term": "drift",
+        "definition": "The decay of a repository's statements about itself: documents, comments, procedures and counts that stop agreeing with the code and with each other. Acute when capable but stateless sessions do the work."
+      },
+      {
+        "term": "executable quality system",
+        "definition": "A quality management system whose controls run in the build — generated counts, consistency gates, provenance-stamped evidence — so that drift fails the build instead of waiting for a reviewer."
+      },
+      {
+        "term": "closure sweep",
+        "definition": "The rule that closing anything — a hazard, a gap, an open item — means touching everything that speaks about it. Closing without sweeping is how most drift incidents happened."
+      },
+      {
+        "term": "synthetic data",
+        "definition": "Records generated to resemble real ones without describing any real person. They let systems be built and tested outside the institution's security perimeter, and brought inside only along the governed pathway."
+      },
+      {
+        "term": "stress mode",
+        "definition": "Xenonym's mode that deliberately generates the values that break systems — empty, oversized, injected, accented, improbable — so the pipeline meets them in a test rather than in production."
+      },
+      {
+        "term": "schema",
+        "definition": "The declared shape of a record: which fields exist and what types they hold. A record that satisfies a schema has the right shape; nothing more is established."
+      },
+      {
+        "term": "Lucene",
+        "definition": "The query language beneath Elasticsearch: fields, boolean operators, wildcards and ranges. IBIS translates a natural-language question into it and shows the result before running it."
+      },
+      {
+        "term": "natural-language search",
+        "definition": "Asking a database a question in ordinary language. The useful part is not the fluency of the answer but the inspectable query that sits between the question and the result."
+      },
+      {
+        "term": "cohort",
+        "definition": "The set of patients, specimens or reports that meets a definition. Which of the three units is being counted decides the number."
+      },
+      {
+        "term": "confirmation dialog",
+        "definition": "In IBIS, the step that shows the interpretation, the confidence, the extracted entities and the generated query, and waits for the user to approve before anything executes."
+      },
+      {
+        "term": "applied informatics team",
+        "definition": "The small, accountable group between IT and the clinicians that hears a question, sharpens it, builds inside the security perimeter, verifies, and owns the artifact afterwards."
+      },
+      {
+        "term": "functionality gap",
+        "definition": "Something important, technically attainable, and absent from the vendor system — Gershkovich and Sinard, 2015. The place where custom infrastructure begins."
+      },
+      {
+        "term": "PHI",
+        "definition": "Protected health information. It never enters a prompt and never leaves the institution's perimeter; the systems in this talk were built on synthetic data for that reason."
+      },
+      {
+        "term": "intended use",
+        "definition": "The defined purpose a tool is validated for. A coherence check validated for laterality and site is not thereby validated for diagnosis."
+      },
+      {
+        "term": "Build as You Speak",
+        "definition": "The organizing idea of the earlier lectures in this series: when the cost of building collapses, the domain expert can articulate intent directly to working tools. This talk is about what that does to clinical practice."
+      },
+      {
+        "term": "Swiss cheese model",
+        "definition": "James Reason’s picture of how systems fail: each defensive layer is a slice with holes that open, close and move; no single hole causes harm, and harm needs the holes in several layers to line up. BMJ 2000;320:768–770."
+      },
+      {
+        "term": "sentinel event",
+        "definition": "The Joint Commission’s term for a patient-safety event that results in death, permanent harm, or severe temporary harm. Wrong-surgery events were the second most frequently reported category in 2024, after falls."
+      },
+      {
+        "term": "never event",
+        "definition": "A serious, largely preventable adverse event that should not occur if available safeguards are in place; wrong-site, wrong-patient and wrong-procedure surgery are the standard examples."
+      },
+      {
+        "term": "wrong-site surgery",
+        "definition": "An operation on the wrong side, the wrong level or the wrong structure. In the Joint Commission’s review of 2024, 68% of wrong-surgery events were wrong-site, and incorrect laterality was cited in over half of those."
+      },
+      {
+        "term": "specimen provenance",
+        "definition": "Whether a tissue specimen actually came from the patient whose name it carries. Occult provenance complications, switching and contamination, are measured by DNA comparison and were found in roughly one percent of prostate biopsies in a 2013 study."
+      },
+      {
+        "term": "prophecy vs. specification",
+        "definition": "Two forms of a claim about the future. A prophecy names an outcome and a date and gives no mechanism, so it cannot be checked until the date passes. A specification describes what a system would have to do, so it can be read backwards from its conclusion and checked step by step — and can be wrong in its particulars and still useful."
+      },
+      {
+        "term": "misinterpretation / misidentification",
+        "definition": "The two defect types that matter most in the Meier taxonomy of amended reports. A misinterpretation changes the diagnosis; a misidentification attaches a correct diagnosis to the wrong patient, specimen or site. With specimen defects and report defects they are the four categories of the CAP Q-Probes benchmark on the opening slide."
+      },
+      {
+        "term": "Q-Probes",
+        "definition": "The College of American Pathologists’ voluntary, multi-institution quality benchmarking studies. The 2014 study of 73 institutions supplies the amended-report split on the opening slide; the 1998 study of 359 laboratories is the older benchmark."
+      },
+      {
+        "term": "automation bias",
+        "definition": "The tendency to accept a machine’s output in place of one’s own check — Mukherjee’s parent whose child has spell-check and never learns to spell. The reason a coherence check asks the pathologist to decide and records the decision."
+      }
+    ]
+  },
+  "slides": [
+    {
+      "id": "title",
+      "type": "title",
+      "transition": "zoom",
+      "title": "Modern AI &amp; Transformation of Clinical, Operational &amp; Research Infrastructure in Pathology",
+      "subtitle": "From pathologists as users of information systems to pathologists as designers of how pathology works",
+      "presenter": "Peter Gershkovich, MD. MHA",
+      "institution": "Yale University School of Medicine",
+      "date": "2026"
+    },
+    {
+      "id": "coi",
+      "type": "content",
+      "transition": "fade",
+      "title": "Conflict of Interest Disclosure",
+      "bullets": [
+        "Consultant for Applicate Technologies Inc.",
+        "This presentation is intended solely for educational purposes. All content reflects the presenter's independent views and does not represent the official position of any institution or vendor."
+      ],
+      "fragments": false
+    },
+    {
+      "id": "the-prediction",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "The prediction",
+      "vizType": "prophecy-vs-context",
+      "vizConfig": {
+        "title": "The prediction.",
+        "subtitle": "Toronto, October 2016. The generous version of it expires this month.",
+        "quote": {
+          "lines": [
+            "It’s just completely obvious that in five years deep learning is going to do better than radiologists.",
+            "It might be ten years."
+          ],
+          "blunt": "In the hospital talk itself: “They should stop training radiologists now.”",
+          "who": "Geoffrey Hinton, to Siddhartha Mukherjee · The New Yorker, 3 April 2017 · on stage in Toronto, 27 October 2016"
+        },
+        "extension": {
+          "label": "Carried into pathology",
+          "text": "In the future, learning algorithms will make pathological diagnoses.",
+          "who": "Hinton, the same essay"
+        },
+        "timeline": {
+          "start": {
+            "label": "October 2016",
+            "note": "the prediction"
+          },
+          "five": {
+            "label": "2021",
+            "note": "five years"
+          },
+          "ten": {
+            "label": "October 2026",
+            "note": "ten years · this month"
+          }
+        },
+        "later": {
+          "label": "Ten years later",
+          "items": [
+            {
+              "lead": "1,239",
+              "text": "diagnostic radiology residency positions in the 2026 Match, the most in five years; 98% filled."
+            },
+            {
+              "lead": "636",
+              "text": "pathology residency positions in the 2026 Match; 634 of them filled."
+            },
+            {
+              "lead": "260 → 400+",
+              "text": "radiologists at the Mayo Clinic, 2016 to 2025."
+            },
+            {
+              "lead": "May 2025",
+              "text": "Hinton, to The New York Times: wrong on the timing, not the direction; he had spoken only about image analysis."
+            }
+          ]
+        },
+        "split": {
+          "label": "What actually sends a report back",
+          "source": "1,688 amended surgical pathology reports · 73 institutions · CAP Q-Probes, 2014",
+          "judgment": {
+            "pct": 14.6,
+            "label": "misinterpretation",
+            "note": "the judgment the prediction aimed at"
+          },
+          "context": {
+            "pct": 85.4,
+            "label": "identification, specimen and report defects",
+            "note": "the context nobody engineered",
+            "parts": [
+              {
+                "pct": 13.3,
+                "label": "misidentification"
+              },
+              {
+                "pct": 13.7,
+                "label": "specimen defects"
+              },
+              {
+                "pct": 58.4,
+                "label": "other report defects"
+              }
+            ]
+          }
+        },
+        "thesis": "The prediction aimed at the hardest thing and missed the easiest. Judgment is scarce, and the room knows it. Context is engineering — and nobody engineered it.",
+        "epigram": {
+          "text": "The algorithm can solve a case. It cannot build a case.",
+          "who": "Mukherjee, the same essay"
+        },
+        "source": "Mukherjee, The New Yorker 3 Apr 2017 · Creative Destruction Lab 27 Oct 2016 · NRMP 2026 Match · Lohr, NYT 14 May 2025 · Volmar et al, Arch Pathol Lab Med 2014",
+        "hint": "click"
+      },
+      "speakerNotes": "THE OPENING, about three minutes, two clicks. Read the quote and let the hedge sit; it is on the slide because it is fair. Attribution matters in this room: the lines are Hinton’s. Mukherjee carried them, and his own conclusion ran the other way, toward augmentation and the danger of automation bias. Do not argue with the person; argue with the form of the claim. A dated outcome with no mechanism cannot be read backwards and checked step by step. Bush and Licklider were wrong in most of their particulars and still useful, because they described mechanisms. You would never give a patient a prognosis with a date and no mechanism. Click: ten years later. The most diagnostic radiology positions in five years and nearly all of them filled; 636 pathology positions; the Mayo Clinic went from about 260 radiologists to more than 400; and in May 2025 the author of the prediction told the Times he had been wrong on the timing, not the direction, and had spoken only about image analysis. Click: what actually sends a report back. In the 2014 Q-Probes benchmark, one amended report in seven changed the interpretation; the taxonomy paper puts the fraction between a quarter and three in ten. Either way, most amendments are identification, specimen and report defects: a side, a part, a sentence that belongs to another case. The prediction aimed at judgment, the hardest thing, and missed context, the easiest. Judgment is scarce and the room knows it. Context is engineering, and nobody engineered it. That sentence is the talk. If you have split the department’s own amendments by the same taxonomy, put the department’s numbers here in place of the benchmark; it is the strongest slide you can show. Two places a hostile listener will stand: wrong-site surgery is mostly an operating-room process failure, so keep the pathology version narrow, the amendment that arrives after the surgery because the side on the report was wrong; and define the missing component by what Dialogue needed that the model did not supply: reading the case before sign-out, sitting at the right point in the workflow, and a record of what it caught.",
+      "takeaway": {
+        "text": "The 2016 prediction aimed at judgment. What sends a report back is mostly context: identification, specimen and report defects. Judgment is scarce; context is engineering.",
+        "comment": "Prophecy against specification. The quarrel is with the form of the claim, not the person: a dated outcome with no mechanism cannot be read backwards and checked step by step, and the hedge stays on the slide because it was fairly made. Everything this hour claims is stated as a mechanism — what it took to build, what it caught, what most places still lack — and carries no date."
+      }
+    },
+    {
+      "id": "prediction-cost",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "evidence",
+      "theme": "light",
+      "isOptional": true,
+      "title": "What the Prediction Cost First",
+      "subtitle": "Three surveys of medical students, 2018–2020: the cost arrived years before any measurable benefit",
+      "cards": [
+        {
+          "icon": "↓",
+          "label": "Canada, March 2018",
+          "value": "1 in 6",
+          "description": "Of students who would otherwise rank radiology first, one in six would not consider it because of anxiety about AI; 48.6% of first-choice students said AI caused anxiety. 322 respondents, all 17 medical schools.",
+          "accentColor": "#7a1f1a"
+        },
+        {
+          "icon": "↓",
+          "label": "United Kingdom, 2019",
+          "value": "49%",
+          "description": "Less likely to consider a career in radiology because of AI. 484 students from 19 medical schools; only 45 had received any teaching on AI.",
+          "accentColor": "#7a1f1a"
+        },
+        {
+          "icon": "↓",
+          "label": "United States, 2020",
+          "value": "1 in 6",
+          "description": "Of students who would have chosen radiology first, one in six did not because of AI; about half of those with radiology in their top three remained concerned. 32 medical schools.",
+          "accentColor": "#7a1f1a"
+        },
+        {
+          "icon": "↺",
+          "label": "The prediction, revisited",
+          "value": "May 2025",
+          "description": "Hinton to The New York Times: wrong on the timing, not the direction; AI will make radiologists “a whole lot more efficient in addition to improving accuracy.”",
+          "accentColor": "#6b5c48"
+        }
+      ],
+      "speakerNotes": "OPTIONAL, one minute. The anxiety you remember in the residents’ room was measured. Canada, 2018: one in six students who would have ranked radiology first would not, because of AI; nearly half of the first-choice students called it a source of anxiety. The United Kingdom a year later: 49% of 484 students less likely to consider radiology. The United States in 2020: one in six again. The prediction had a measurable cost years before it had a measurable benefit. Then the author’s own revision in 2025. No commentary needed; the four numbers do the work. Cut this slide first if the hour is tight. The 2025 quotation is as reported by AuntMinnie and The Decoder from Lohr’s Times piece of 14 May 2025; the Times text itself was not checked, so present it as reported.",
+      "takeaway": {
+        "text": "The prediction had a measurable cost years before it had a measurable benefit.",
+        "comment": "Three surveys of medical students, 2018 to 2020 — Gong (Canada), Sit (United Kingdom), Reeder and Lee (United States) — asked the same question and got the same answer: students who would have chosen radiology were turning away because of AI, one in six in Canada and the United States, nearly half less likely in the United Kingdom. The prediction did not have to be right to have an effect. It had to be heard by people choosing a specialty, and it was heard years before its author revised it."
+      }
+    },
+    {
+      "id": "cold-open-case",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "interactive",
+      "dockTitle": "A case, not an architecture diagram",
+      "vizType": "case-coherence",
+      "vizConfig": {
+        "title": "What does not agree?",
+        "subtitle": "Three cases, three documents each. Read them the way you would at sign-out, before anything is highlighted.",
+        "banner": "Synthetic cases — no patients",
+        "prompt": "Before anything is revealed: what does not agree — and which of the differences would you act on?",
+        "summary": "Three kinds of disagreement: side, plausibility, completeness. Three differences in wording that were not errors. Telling them apart is a pathology question — and it is where this hour begins.",
+        "cases": [
+          {
+            "label": "Breast core biopsy",
+            "tabLabel": "Breast core",
+            "documents": [
+              {
+                "label": "Requisition",
+                "lines": [
+                  {
+                    "text": "62-year-old woman. Screening mammogram: 1.2 cm spiculated mass, BI-RADS 4."
+                  },
+                  {
+                    "text": "Specimen: LEFT breast, 10 o’clock, ultrasound-guided core needle biopsy.",
+                    "key": "laterality",
+                    "tag": "Left"
+                  },
+                  {
+                    "text": "Clinical question: rule out carcinoma."
+                  },
+                  {
+                    "text": "Three cores submitted in formalin.",
+                    "key": "wording",
+                    "tag": "3 cores"
+                  }
+                ]
+              },
+              {
+                "label": "Operative note",
+                "lines": [
+                  {
+                    "text": "Procedure: ultrasound-guided core biopsy of the left breast mass at 10 o’clock, 4 cm from the nipple.",
+                    "key": "laterality",
+                    "tag": "Left"
+                  },
+                  {
+                    "text": "Findings: hypoechoic 1.2 cm lesion corresponding to the mammographic abnormality."
+                  },
+                  {
+                    "text": "Three core samples obtained; a marker clip was placed; specimen sent to pathology.",
+                    "key": "wording",
+                    "tag": "three samples"
+                  }
+                ]
+              },
+              {
+                "label": "Draft pathology report",
+                "lines": [
+                  {
+                    "text": "RIGHT BREAST, 10 O’CLOCK, CORE NEEDLE BIOPSY:",
+                    "key": "laterality",
+                    "tag": "Right"
+                  },
+                  {
+                    "text": "Invasive ductal carcinoma, Nottingham grade 2."
+                  },
+                  {
+                    "text": "Ductal carcinoma in situ, intermediate grade, present."
+                  },
+                  {
+                    "text": "Tumor measures at least 0.9 cm in the cores. See synoptic report."
+                  }
+                ]
+              }
+            ],
+            "flag": {
+              "label": "System flag",
+              "title": "Laterality disagrees between the draft report and both source documents.",
+              "confidence": "confidence: high · sources shown",
+              "lines": [
+                "Requisition: LEFT breast, 10 o’clock · Operative note: left breast, 10 o’clock · Draft report: RIGHT BREAST, 10 O’CLOCK.",
+                "Core count is expressed differently (three cores / three core samples) but does not conflict. Not raised."
+              ]
+            },
+            "decision": {
+              "label": "Pathologist decision",
+              "options": [
+                "Accept the flag; correct the header before release",
+                "Dismiss, with a reason the system will learn from",
+                "Open the three source documents side by side"
+              ]
+            },
+            "lesson": "Side. The diagnosis is right and the record is wrong — and everything downstream reads the header, not the histology."
+          },
+          {
+            "label": "Prostate biopsy",
+            "tabLabel": "Prostate biopsy",
+            "documents": [
+              {
+                "label": "Requisition",
+                "lines": [
+                  {
+                    "text": "30-year-old man. PSA 8.4 ng/mL.",
+                    "key": "plausibility",
+                    "tag": "Age 30"
+                  },
+                  {
+                    "text": "MRI: PI-RADS 4 lesion, left peripheral zone, 1.1 cm.",
+                    "key": "wording",
+                    "tag": "peripheral zone"
+                  },
+                  {
+                    "text": "Specimen: MRI-targeted cores, left (3), and systematic cores (12)."
+                  },
+                  {
+                    "text": "Clinical question: rule out carcinoma."
+                  }
+                ]
+              },
+              {
+                "label": "Urology note",
+                "lines": [
+                  {
+                    "text": "30 M with rising PSA, 4.1 → 8.4 ng/mL over 18 months.",
+                    "key": "plausibility",
+                    "tag": "Age 30"
+                  },
+                  {
+                    "text": "Target: left PZ, 1.1 cm, PI-RADS 4.",
+                    "key": "wording",
+                    "tag": "left PZ"
+                  },
+                  {
+                    "text": "MRI-US fusion biopsy: 3 targeted cores and 12 systematic cores. Tolerated well; results in clinic."
+                  }
+                ]
+              },
+              {
+                "label": "Draft pathology report",
+                "lines": [
+                  {
+                    "text": "A. PROSTATE, LEFT PERIPHERAL ZONE, TARGETED CORES:"
+                  },
+                  {
+                    "text": "Prostatic adenocarcinoma, Gleason score 3+4=7 (Grade Group 2), in 2 of 3 cores, up to 40% of core length.",
+                    "key": "plausibility",
+                    "tag": "Grade Group 2"
+                  },
+                  {
+                    "text": "B. PROSTATE, SYSTEMATIC CORES: Benign prostatic tissue in 12 of 12 cores."
+                  },
+                  {
+                    "text": "Perineural invasion: not identified."
+                  }
+                ]
+              }
+            ],
+            "flag": {
+              "label": "System flag",
+              "title": "The documents agree — and the diagnosis is exceptional for the stated age.",
+              "confidence": "confidence: moderate · plausibility check",
+              "lines": [
+                "Requisition and urology note both give the age as 30. Grade Group 2 adenocarcinoma at 30 is rare enough that a registration or labeling error is the likelier explanation.",
+                "Verify identity and date of birth against the registration record before release. Left PZ and left peripheral zone are the same thing. Not raised."
+              ]
+            },
+            "decision": {
+              "label": "Pathologist decision",
+              "options": [
+                "Check the date of birth and MRN against the registration record",
+                "Age confirmed: release, with a comment on the unusual age",
+                "Dismiss the flag, with a reason"
+              ]
+            },
+            "lesson": "Plausibility. Nothing disagreed. Agreement among documents is not a record that makes sense — and this check needs what a pathologist knows."
+          },
+          {
+            "label": "Colon biopsies",
+            "tabLabel": "Colon biopsies",
+            "documents": [
+              {
+                "label": "Requisition",
+                "lines": [
+                  {
+                    "text": "58-year-old woman. Screening colonoscopy. Two containers received."
+                  },
+                  {
+                    "text": "A: Sigmoid colon, polyp, snare polypectomy."
+                  },
+                  {
+                    "text": "B: Cecum, cold biopsies × 3, patchy erythema.",
+                    "key": "omission",
+                    "tag": "Part B"
+                  }
+                ]
+              },
+              {
+                "label": "Endoscopy note",
+                "lines": [
+                  {
+                    "text": "1.2 cm pedunculated polyp in the sigmoid colon, snared and retrieved — container A.",
+                    "key": "wording",
+                    "tag": "pedunculated"
+                  },
+                  {
+                    "text": "Patchy erythema in the cecum; three cold biopsies — container B.",
+                    "key": "omission",
+                    "tag": "Part B"
+                  },
+                  {
+                    "text": "Withdrawal time 9 minutes; preparation adequate."
+                  }
+                ]
+              },
+              {
+                "label": "Draft pathology report",
+                "lines": [
+                  {
+                    "text": "A. COLON, SIGMOID, POLYPECTOMY: Tubular adenoma with low-grade dysplasia. Negative for high-grade dysplasia or malignancy."
+                  },
+                  {
+                    "text": "Gross: a 1.2 cm polyp on a stalk, bisected and entirely submitted.",
+                    "key": "wording",
+                    "tag": "on a stalk"
+                  },
+                  {
+                    "text": "Comment: Clinical correlation with the mammographic findings is recommended.",
+                    "key": "remnant",
+                    "tag": "Remnant"
+                  }
+                ]
+              }
+            ],
+            "flag": {
+              "label": "System flag",
+              "title": "Two things: Part B was received and is not reported, and one sentence belongs to another case.",
+              "confidence": "confidence: high · two flags",
+              "lines": [
+                "Requisition and endoscopy note both record container B (cecum, biopsies × 3); the draft reports Part A only.",
+                "“Clinical correlation with the mammographic findings” in a colon case is a copy-and-paste remnant. Pedunculated and on a stalk are the same thing. Not raised."
+              ]
+            },
+            "decision": {
+              "label": "Pathologist decision",
+              "options": [
+                "Open the case: was Part B grossed, embedded and sectioned?",
+                "Delete the remnant sentence and re-read the comment",
+                "Dismiss, with a reason"
+              ]
+            },
+            "lesson": "Completeness and remnants. What was received must be answered; what was pasted must be read — these are the errors amendments are made of."
+          }
+        ]
+      },
+      "speakerNotes": "THE CASES, right after the prediction: three cases, about four minutes. The prediction aimed at judgment; here is what actually goes wrong. Case 1: say nothing for ten seconds; let the room read; ask what does not agree. Someone finds the side. Click: the laterality lines turn crimson and an amber pair appears, three cores against three core samples. Ask which of the two they would act on; that is the first lesson, which contradictions matter is a pathology question. Click for the flag, click for the decision, which is the pathologist’s. Click for case 2 and ask the same question. Nothing disagrees. Let the silence run; someone will say the age. A Grade Group 2 adenocarcinoma in a 30-year-old whose requisition and urology note both say 30 is not a document mismatch, it is an implausibility, and the likeliest explanation is a registration error that propagated into every document. This is the check that needs what a pathologist knows. Case 3: Part B was received, accessioned, and never reported, and the comment recommends mammographic correlation in a colon case. Two flags, one of them the error that amendments are made of. The closing line ties the three together: side, plausibility, completeness, and three wording differences that were not errors. All cases are synthetic; the banner says so. The breast case mirrors a real October 2025 catch at Yale.",
+      "takeaway": {
+        "text": "A correct diagnosis is not the same as a coherent clinical record.",
+        "comment": "Every diagnosis in the three drafts is right, and every record has a defect the slide cannot show: a side, an age the diagnosis does not fit, a container that was received and never reported, a sentence pasted from another case. Everything downstream — the surgeon, the tumor board — reads the header, the age and the comment, not the histology. This hour is not about whether AI can recognize cancer. It is about another layer of scrutiny over the relationships that make a diagnosis clinically usable."
+      }
+    },
+    {
+      "id": "not-hypothetical",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "This is not hypothetical",
+      "vizType": "harm-record",
+      "vizConfig": {
+        "title": "This is not hypothetical.",
+        "subtitle": "Documented cases in which the record, not the histology, was wrong — and what finally caught it.",
+        "yearLabel": "Year · place",
+        "columns": {
+          "confused": "What was confused",
+          "happened": "What happened",
+          "caught": "What caught it"
+        },
+        "cases": [
+          {
+            "year": "2007",
+            "place": "Long Island, NY",
+            "confused": "Two women’s breast biopsy samples mislabeled at a reference laboratory; the state health department traced it to one technician’s labeling.",
+            "happened": "A 35-year-old had a double mastectomy for a cancer she did not have. The other woman was told she had none.",
+            "caught": "After the surgery, when the laboratory’s error came to light."
+          },
+          {
+            "year": "2008",
+            "place": "St. Louis Park, MN",
+            "confused": "The wrong kidney was listed as cancerous on the chart weeks before surgery; every later step followed the chart.",
+            "happened": "The healthy kidney was removed from a cancer patient. The hospital accepted full responsibility.",
+            "caught": "After the operation. The surgical safety steps had all been followed."
+          },
+          {
+            "year": "2010",
+            "place": "Boston, MA",
+            "confused": "Two men’s prostate biopsies confused at a private pathology laboratory.",
+            "happened": "One, 60, had a prostatectomy for a cancer he did not have. The other, 53, was told he was clear; eight months later his cancer had reached a lymph node.",
+            "caught": "A second biopsy at a different laboratory, and a disclosure letter admitting the slides were mixed up."
+          },
+          {
+            "year": "2015",
+            "place": "New Haven, CT",
+            "confused": "The eighth rib carried a precancerous lesion and had been marked with metal coils and dye. The seventh was removed.",
+            "happened": "A second operation the same day, and a lawsuit over what the patient was told afterwards.",
+            "caught": "A post-operative X-ray: the markers were still in place."
+          },
+          {
+            "year": "2025",
+            "place": "Jonesboro, GA",
+            "confused": "Another patient’s endometrial biopsy labeled as hers, the lawsuit alleges; how is still unclear.",
+            "happened": "A hysterectomy at 43 for an aggressive cancer that DNA analysis later showed was not hers.",
+            "caught": "A DNA analysis, four months after surgery. Lawsuit filed August 2026; allegations unproven."
+          },
+          {
+            "year": "2025",
+            "place": "Marietta, OH",
+            "confused": "The right leg was marked for amputation. The left was amputated.",
+            "happened": "A 74-year-old veteran became a double amputee when the intended surgery followed four months later. The hospital called it an “avoidable event”.",
+            "caught": "The team realized during the procedure."
+          }
+        ],
+        "statsLabel": "The scale",
+        "stats": [
+          {
+            "value": "127",
+            "label": "wrong-surgery events reported to the Joint Commission in 2024, up 13%; 68% wrong-site, laterality in over half; 36% permanent harm"
+          },
+          {
+            "value": "4.3 per 1,000",
+            "label": "surgical specimens with an identification error at one academic center: 91 of 21,351; more often for biopsies and outpatients"
+          },
+          {
+            "value": "0.26% · 0.67%",
+            "label": "prostate biopsies switched between patients · contaminated with another patient’s tissue, in about 13,000 biopsies from 54 practices"
+          },
+          {
+            "value": "182 of 253",
+            "label": "laboratory adverse events in the Veterans Health Administration that were patient misidentification, at every stage of testing"
+          }
+        ],
+        "caption": "Every one was caught by a layer nobody had designed as a check: the pathology of what was removed, a post-operative X-ray, a second biopsy, a DNA test.",
+        "source": "Public news reports 2007–2026 (see sources) · Joint Commission sentinel event review of 2024 · Makary 2007 · Pfeifer and Liu 2013 · Dunn and Moga 2010"
+      },
+      "speakerNotes": "Six cases, all public, none of them about the microscope. In every one the histology was read correctly and the record around it was wrong: a label, a chart entry, a side, a container. Long Island 2007: two biopsies swapped at a reference lab; a double mastectomy for a cancer that belonged to someone else. St. Louis Park 2008: the wrong kidney listed as cancerous on the chart weeks before surgery, and every later step followed the chart; the hospital said the safety steps had been followed, which is the point. Boston 2010: two men’s prostate biopsies confused; one lost a prostate he did not need to lose, the other’s cancer reached a node while he was told he was clear. New Haven 2015, our own town: the rib was marked with coils and dye and the wrong one came out; the post-operative X-ray caught it. Georgia 2025: a hysterectomy at 43 for a cancer that DNA testing later said was not hers; a lawsuit, allegations unproven, say so. Ohio 2025: the right leg marked, the left amputated; included because the marking was right and the layers still failed. Then the scale: 127 wrong-surgery events reported to the Joint Commission last year, up for the third year running, laterality in over half of the wrong-site cases; four identification errors per thousand surgical specimens at one academic center; a quarter of a percent of prostate biopsies switched between patients. And the sentence on the caption: every one of these was caught by a layer nobody had designed as a check. Pfeifer and Liu’s data came from Strand Analytical Laboratories, which markets the DNA test; say so if asked.",
+      "takeaway": {
+        "text": "Every one of these was caught by a layer nobody had designed as a check. The histology was right; the record was wrong.",
+        "comment": "Six public cases from 2007 to 2025, none of them about the microscope. In each the histology was read correctly and the record around it was wrong — a label, a chart entry, a side, a container — and the error was found by something that happened to lie downstream: the pathology of what was removed, a post-operative X-ray, a second biopsy, a DNA test. The scale is from the Joint Commission’s review of 2024 and three published series; the prostate-biopsy figures rest on data supplied by a laboratory that sells the DNA test."
+      }
+    },
+    {
+      "id": "swiss-cheese",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "dockTitle": "Why they get through",
+      "vizType": "swiss-cheese",
+      "vizConfig": {
+        "title": "Why they get through.",
+        "subtitle": "Every layer has holes, and each layer assumes the one before it checked. Click to put a layer that reads across the documents in before release.",
+        "errorLabel": "One error",
+        "harm": "Harm",
+        "flag": "Flag · the pathologist decides",
+        "layers": [
+          {
+            "label": "Registration and requisition",
+            "hole": "age typed as 30; the side typed from memory"
+          },
+          {
+            "label": "Accessioning",
+            "hole": "two containers received, one part logged"
+          },
+          {
+            "label": "Grossing",
+            "hole": "the side copied from the requisition"
+          },
+          {
+            "label": "Histology",
+            "hole": "blocks and slides labeled from the cassette"
+          },
+          {
+            "label": "Sign-out",
+            "hole": "the diagnosis is right; the header is not re-read"
+          },
+          {
+            "label": "Report release",
+            "hole": "the EHR takes what it is given"
+          },
+          {
+            "label": "Surgeon and tumor board",
+            "hole": "the header is what gets read"
+          }
+        ],
+        "inserted": {
+          "after": 4,
+          "label": "Coherence check",
+          "note": "reads across the documents; holes of its own: what is not in the record, what it reads wrong",
+          "holes": [
+            [
+              0.32,
+              0.2,
+              11
+            ],
+            [
+              0.7,
+              0.8,
+              12
+            ]
+          ]
+        },
+        "quote": {
+          "text": "Reason’s picture: the defences of a system are slices of Swiss cheese, each with holes that open, close and move. No single hole causes harm. Harm needs the holes to line up.",
+          "who": "after Reason J, Human error: models and management. BMJ 2000;320:768–770"
+        },
+        "caption": "The inserted layer is not a slice without holes. It is a slice with different holes — which is why the pathologist’s decision stays."
+      },
+      "speakerNotes": "James Reason’s model, drawn for our own process. Seven layers between the clinic and the surgeon, and every one has holes: the age typed wrong at registration, the second container never logged, the side copied from the requisition at the grossing bench, the cassette label trusted at the microtome, the header not re-read at sign-out, the EHR taking what it is given, the surgeon reading the header. Watch the line. One error, and every layer assumes the layer before it checked. Nobody noticed, because noticing was nobody’s step. Click. A layer that reads across the documents goes in before release. Look at where its holes are: not on the line. It cannot see what is not in the record, and it will sometimes read wrong, which is exactly why the flag goes to a pathologist and does not close the case by itself. The model is an argument for a different slice, not for a perfect one.",
+      "takeaway": {
+        "text": "Each layer assumes the one before it checked. A coherence check is a slice with different holes, not a slice without holes.",
+        "comment": "After Reason J, BMJ 2000;320:768–770, paraphrased. Reason’s person approach asks who mislabeled the specimen; his system approach asks why no later layer could see it. Every layer in a pathology case was built to catch its own class of error and inherits whatever the layer before it passed on. A check that reads across the documents is one more slice with its own holes — what is not in the record, what it misreads — which is why the flag goes to a pathologist and does not close the case by itself."
+      }
+    },
+    {
+      "id": "reframe",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "A Different Question",
+      "fragments": false,
+      "subtitle": "Most of the AI conversation in pathology asks one thing. This hour asks another.",
+      "left": {
+        "heading": "The Usual Question",
+        "bullets": [
+          "Can a computer recognize what we recognize on a slide?",
+          "Models, benchmarks, AUROC — the computer as a <strong>reader</strong>",
+          "The pathologist as a <strong>user</strong> of whatever is delivered",
+          "Progress measured by what the model can do"
+        ]
+      },
+      "right": {
+        "heading": "Today's Question",
+        "highlight": true,
+        "bullets": [
+          "What happens when we can translate our knowledge of <strong>how pathology should work</strong> into systems that actually work that way?",
+          "Clinical expertise becoming working capability — without every useful idea first becoming a large software project",
+          "The pathologist as a <strong>designer</strong> of how the work runs",
+          "Progress measured by what the pathologist can make the system do"
+        ]
+      },
+      "speakerNotes": "Much of the discussion about AI in pathology asks whether a computer can recognize what we recognize on a slide. Today I want to ask a different question: what happens when we can translate our knowledge of how pathology should work into systems that actually work that way? Three working systems from one department will carry the argument — one clinical, one operational, one research — and then a fourth, the smallest, will answer the objection the first three provoke. This is the sentence the room should leave with. Say it once here, once at the end, and not in between.",
+      "takeaway": {
+        "text": "Modern AI is changing not only what computers can do for pathologists, but what pathologists can make their systems do.",
+        "comment": "Two readings of “AI in pathology”. The usual one asks what a model can recognize on a slide, which is a question about capability, answered with benchmarks. Today’s asks what a pathologist can now get a system to do — specify it, build it, test it, revise it — which is a question about infrastructure, answered with working systems. The three that follow are from one department; the fourth answers the objection they provoke."
+      }
+    },
+    {
+      "id": "objectives",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "dockTitle": "Learning objectives",
+      "vizType": "learning-objectives-config",
+      "vizConfig": {
+        "title": "Learning objectives",
+        "subtitle": "Five things you should be able to do by the end of the hour — the last one on paper.",
+        "objectives": [
+          {
+            "verb": "Distinguish",
+            "text": "AI operating inside an application from AI helping construct one — and why the most valuable built systems often should behave predictably."
+          },
+          {
+            "verb": "Translate",
+            "text": "A workflow problem into an explicit requirement, a working behavior, and a test of that behavior."
+          },
+          {
+            "verb": "Read",
+            "text": "An infrastructure result honestly: seventy days to eight is a workflow result, not evidence of an AI effect."
+          },
+          {
+            "verb": "Separate",
+            "text": "A schema-valid record, a passing test, a verified requirement, a capability validated in use, and an improved outcome."
+          },
+          {
+            "verb": "Write",
+            "text": "One page for one recurring problem: what the system should do, what it must never do, and what evidence would convince you."
+          }
+        ],
+        "footnote": "The verbs are in order. The fifth is the assignment, and it is the only one that requires no software."
+      },
+      "speakerNotes": "Read the five verbs, not the five sentences. Distinguish, translate, read, separate, write. The last is the assignment: one page, one recurring problem, three questions. Everything before it earns the right to ask."
+    },
+    {
+      "id": "three-questions",
+      "type": "interactive-list",
+      "transition": "fade",
+      "title": "Three Questions From an Ordinary Week",
+      "epigraph": {
+        "text": "Recognizing what should happen is not the same as having infrastructure that makes it happen.",
+        "attribution": "the claim of this hour"
+      },
+      "items": [
+        {
+          "number": 1,
+          "question": "Why can't the system check whether these documents describe the same clinical story?",
+          "detail": "Clinical. The requisition, the operative note, the imaging, the prior reports and the draft all describe one patient. Today the reconciliation happens in the pathologist's head, under time pressure, and nothing records that it happened."
+        },
+        {
+          "number": 2,
+          "question": "Why can't we make the specimen-handling process work the way we know it should?",
+          "detail": "Operational. A specimen leaves the operating room and arrives in the laboratory — or does not. Twice, a spreadsheet stood in for a system. Nothing in a spreadsheet can insist that someone acknowledge receipt."
+        },
+        {
+          "number": 3,
+          "question": "Why can't I turn this clinical question into a reproducible search of our own experience?",
+          "detail": "Research. The observation at sign-out — we seem to be seeing more of these — dies in the analyst queue, or becomes a different question that the data happened to be able to answer."
+        },
+        {
+          "number": 4,
+          "question": "Why do I still compensate for all of this by hand?",
+          "detail": "All three. Because changing the software seemed harder than living with the problem. That was an economic fact, not a technical one — and it is the fact that has changed."
+        }
+      ],
+      "speakerNotes": "Hover each question: the detail names the compensation pathologists make today. These are three manifestations of the same problem. Recognizing what should happen is not the same as having infrastructure that makes it happen. The fourth question is the honest one, and the next slide is about why its answer changed. Do not let the room hear this as a complaint about vendors; the distance was rational, and the argument is that the cost moved.",
+      "takeaway": {
+        "text": "Three manifestations of one distance: between knowing what should happen and having infrastructure that makes it happen.",
+        "comment": "This is not a complaint about vendors. The distance was rational: for twenty years, closing it cost more than the problem was worth — a software project, a budget line, a vendor queue — so every department compensated by hand and called it workflow. The argument of the hour is that the cost moved, not that anyone was wrong."
+      }
+    },
+    {
+      "id": "intent-to-behavior",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "framework",
+      "dockTitle": "The distance, and what closed it",
+      "vizType": "intent-to-behavior",
+      "vizConfig": {
+        "title": "Recognizing what should happen is not the same as having infrastructure that makes it happen.",
+        "subtitle": "Three distances from one department, and what closed them. Click to change the economics.",
+        "knowLabel": "What you know should happen",
+        "distanceLabel": "The distance",
+        "insteadLabel": "What happens instead",
+        "nowLabel": "What happens now",
+        "before": {
+          "cost": "a software project · a budget line · a vendor queue · months to years"
+        },
+        "after": {
+          "cost": "a specification · a conversation · a test · weeks"
+        },
+        "rows": [
+          {
+            "domain": "Clinical",
+            "know": "Before this report goes out, the requisition, the operative note and the diagnosis should describe the same patient, the same side, the same site.",
+            "instead": "The pathologist reconciles them from memory, under time pressure, and nothing records that it happened.",
+            "system": "Dialogue",
+            "now": "Compares the draft against the record before release and shows what it flagged, and why, for the pathologist to accept or dismiss."
+          },
+          {
+            "domain": "Operational",
+            "know": "A specimen that leaves the operating room should be seen to arrive, by name, at the next pair of hands.",
+            "instead": "A shared spreadsheet, maintained by whoever remembers. It failed twice.",
+            "system": "Hedgehog",
+            "now": "Manifests that stay open until the receiving party acknowledges them. Custody becomes a record, not a recollection."
+          },
+          {
+            "domain": "Research",
+            "know": "The observation at sign-out should become a question our own archive can answer this week.",
+            "instead": "A ticket to the analyst queue, weeks of waiting, and a compromise question the data happened to fit.",
+            "system": "IBIS",
+            "now": "A natural-language question becomes an inspectable query over our own cases, refined in the same sitting."
+          }
+        ],
+        "caption": "The distance was never intellectual. It was the cost of turning intent into working behavior — and that cost has collapsed."
+      },
+      "speakerNotes": "Left column: what every pathologist in the room already knows should happen. Right column: the compensation. The crimson bracket in the middle is the distance, and until recently its label was a software project, a budget line, a vendor queue, months to years. Click. The bracket shrinks to a specification, a conversation and a test, and the right column becomes three systems that exist. Dialogue, Hedgehog, IBIS. Each will get its own slide. The point of this one is that they are the same move made three times.",
+      "takeaway": {
+        "text": "The bottleneck was never recognizing the problem. It was the cost of making the system behave accordingly — and that cost moved.",
+        "comment": "These were always buildable — by a funded team over a year, which is why they were not built. The claim is economic: the price of turning a stated intention into working, tested behavior fell from a project to a specification, a conversation and a test. The Build-as-You-Speak talks made the same claim for research tools; here the consequences are clinical, and so is the standard of evidence."
+      }
+    },
+    {
+      "id": "dialogue-scrutiny-layer",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "ai",
+      "dockTitle": "Dialogue — another layer of scrutiny",
+      "vizType": "scrutiny-layer",
+      "vizConfig": {
+        "title": "Another layer of scrutiny, inserted where the record is still correctable.",
+        "subtitle": "What Dialogue reads, what it flags, and what stays with the pathologist.",
+        "inserted": "the inserted layer",
+        "rail": [
+          "Draft report",
+          "Coherence check",
+          "Release"
+        ],
+        "sourcesLabel": "What it reads",
+        "sources": [
+          "Requisition",
+          "Clinical notes",
+          "Operative report",
+          "Imaging",
+          "Prior pathology reports"
+        ],
+        "flagsLabel": "What it can be asked to flag",
+        "flags": [
+          "Laterality and site",
+          "Identity and labeling",
+          "Plausibility: age, sex, history",
+          "Completeness: every part reported",
+          "Copy-and-paste remnants",
+          "Specimen description vs. gross"
+        ],
+        "loopLabel": "The loop",
+        "loop": [
+          "The pathologist clicks an icon before finalizing; the check runs against the record.",
+          "Each flag is accepted or dismissed, and rated. The informatics team adjusts the application from that feedback.",
+          "Minor differences that do not affect the diagnosis are ignored by design."
+        ],
+        "today": "Today: one click before sign-out",
+        "planned": "Planned: automatic checks against all known records",
+        "quote": {
+          "text": "We are not replacing anyone or anything.",
+          "who": "Peter Gershkovich · Yale School of Medicine news, 23 October 2025"
+        },
+        "theorem": {
+          "text": "A person working in partnership with an information resource is 'better' than that same person unassisted.",
+          "who": "Friedman CP · JAMIA 2009 · the fundamental theorem of biomedical informatics"
+        }
+      },
+      "speakerNotes": "Now the architecture, after the case has earned it. A rail the room already knows: draft, release. One station inserted between them, in copper. Above it, what it reads: the requisition, the clinical notes, the operative report, imaging, prior pathology reports. Below it, what it flags: laterality, site, identity, copy-and-paste remnants, diagnosis against history. To the right, the loop: one click before sign-out today, automatic checks planned; every flag accepted or dismissed and rated, and the informatics team adjusts the application from that. The quote is the sentence I said to the Yale news office and I meant it. The theorem beneath it is Friedman's, from 2009, and it is the whole design in one line. Be precise about the flag list: laterality and site are live in the pilot today; identity and labeling, specimen description, copy-and-paste remnants and plausibility are the classes the design targets and have not been shown live. Say explicitly what is not on this slide: no sensitivity, no specificity, no amendment rate. The honest version of the argument is stronger for saying so.",
+      "takeaway": {
+        "text": "Dialogue extends clinical attention over the relationships that make a diagnosis usable. It does not replace clinical judgment.",
+        "comment": "What is not on this slide: a sensitivity, a specificity, an amendment rate. Dialogue is in pilot, with every flag accepted or dismissed and rated, and the application adjusted from that feedback. The laterality catch is an illustrative clinical success, not a performance evaluation. The measurement that would settle it is the department’s own amendment split, before and after — and the argument is stronger for saying so than for implying a number."
+      }
+    },
+    {
+      "id": "why-not-routine",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "ai",
+      "dockTitle": "Why it is not routine, and what Dialogue does",
+      "vizType": "feasibility-map",
+      "vizConfig": {
+        "title": "The capability is not the hard part.",
+        "subtitle": "A language model matched radiologists at finding inserted report errors, side confusion included: 82.7% against 80–89%. So why is a coherence check not routine?",
+        "left": {
+          "label": "Why it is not routine",
+          "items": [
+            {
+              "lead": "The documents live in five systems.",
+              "text": "Requisition, clinical notes, operative report, imaging and prior reports sit in the LIS, the EHR, the PACS and a scanner. Nothing assembles them at sign-out."
+            },
+            {
+              "lead": "The error is in free text.",
+              "text": "Side, age, parts and pasted sentences are prose, not fields. A rule cannot read them; a pathologist can, under time pressure, from memory."
+            },
+            {
+              "lead": "Patient data cannot leave the perimeter.",
+              "text": "A public model is not an option. The check needs a model the institution hosts and has approved for high-risk data."
+            },
+            {
+              "lead": "A noisy checker is ignored.",
+              "text": "Flag every difference in wording and the icon stops being clicked within a week. Specificity is a design requirement, not a tuning detail."
+            },
+            {
+              "lead": "It must run before release, not after.",
+              "text": "Amendments do not follow the patient: in the 2014 study, one of seven reached the treating physician’s chart."
+            },
+            {
+              "lead": "Nobody is accountable for a machine’s opinion.",
+              "text": "Unless a pathologist decides, the decision is recorded, and someone owns the next version."
+            }
+          ]
+        },
+        "right": {
+          "label": "What Dialogue does",
+          "items": [
+            {
+              "lead": "Assembles them.",
+              "text": "Pulls the requisition, clinical notes, operative report, imaging and prior pathology reports into one check of the draft."
+            },
+            {
+              "lead": "Reads them.",
+              "text": "A language model compares the draft against the record. Live today: laterality and site. By design: identity, specimen description, copy-and-paste, plausibility."
+            },
+            {
+              "lead": "Inside the perimeter.",
+              "text": "A model hosted inside the institution's perimeter, on services approved for high-risk data. No record leaves the institution."
+            },
+            {
+              "lead": "Ignores the minor.",
+              "text": "Differences that do not affect the diagnosis are not raised. Each flag shows the lines it compared. Ratings tune the prompts by error class."
+            },
+            {
+              "lead": "One click before sign-out.",
+              "text": "In the pilot the pathologist clicks an icon before finalizing. Planned: automatic checks against all known records."
+            },
+            {
+              "lead": "Proposes; the pathologist decides.",
+              "text": "Accept, dismiss with a reason, rate. The informatics team adjusts the application from the feedback. Nothing is released by the model."
+            }
+          ]
+        },
+        "caption": "The flags that still need the pathologist’s knowledge: which contradictions matter, whether a diagnosis is plausible for this patient, and when to ask rather than proceed.",
+        "source": "Gertz RJ et al. Radiology 2024: GPT-4 found 124 of 150 inserted errors; senior radiologists 89.3%, attendings and residents 80.0% · Yale School of Medicine news, 23 Oct 2025 · Parkash 2014"
+      },
+      "speakerNotes": "The objection from the engineer in the room: if a model can read, why has nobody done this? The reading is the easy part. Gertz and colleagues inserted 150 errors into 100 radiology reports, side confusion among them, and GPT-4 found 124; the senior radiologists found 134, the attendings and residents 120, and the model was faster and cheaper per report than any of them. Single institution, inserted errors, radiology not pathology; the point is narrow: reading across text is no longer the bottleneck. Everything on the left is. The documents live in five systems and nothing assembles them at sign-out. The error is prose. The record cannot leave the perimeter. A noisy checker is ignored within a week. The check has to run before release, because amendments do not follow the patient. And nobody is accountable for a machine’s opinion unless a pathologist decides. The right-hand column is what Dialogue does about each one, and every item is a design decision, not a model property. Name the missing component the way you would in a hallway: AI engineering — reading the case before sign-out, sitting at the right point in the workflow, and a record of what it caught. None of that is the model. The ‘by design’ flag classes have not been shown live; the public account of Dialogue is the 23 Oct 2025 news article.",
+      "takeaway": {
+        "text": "The capability is not the hard part. The missing component is engineering — assembly, perimeter, noise, timing and accountability — and each is a design decision.",
+        "comment": "Gertz and colleagues (Radiology 2024) inserted 150 errors into radiology reports, side confusion included; GPT-4 found 124, in the radiologists’ range, faster and cheaper per report. Reading is no longer the bottleneck. Everything on the left is — assembly, free text, the perimeter, noise, timing, accountability — and every answer on the right is a design decision, not a model property. Some of Dialogue’s flag classes are live in the pilot; the rest are by design, and the slide says which."
+      }
+    },
+    {
+      "id": "why-amendments",
+      "type": "infographic",
+      "transition": "fade",
+      "badge": "evidence",
+      "theme": "light",
+      "title": "Why the Cheapest Amendment Is the One Never Issued",
+      "subtitle": "A 2014 study of where amended reports go, and the 2025 account of the tool built to prevent them",
+      "cards": [
+        {
+          "icon": "§",
+          "label": "Amended reports tracked",
+          "value": "60",
+          "description": "Yale, 2014: amended surgical pathology reports followed to the responsible care provider.",
+          "accentColor": "#3d5b73"
+        },
+        {
+          "icon": "≠",
+          "label": "Ordering vs. treating physician",
+          "value": "7 of 60",
+          "description": "Had a discrepancy between the ordering and the treating physician — every one a malignant diagnosis.",
+          "accentColor": "#7a1f1a"
+        },
+        {
+          "icon": "◌",
+          "label": "Reached the treating chart",
+          "value": "1 of 7",
+          "description": "The amended report was in the treating physician's chart in only one case. Neither EHR could alert the team.",
+          "accentColor": "#7a1f1a"
+        },
+        {
+          "icon": "⚑",
+          "label": "Caught before release",
+          "value": "Laterality",
+          "description": "October 2025: a breast-biopsy laterality error flagged by Dialogue before the report went out — otherwise an amendment.",
+          "accentColor": "#a36015"
+        },
+        {
+          "icon": "◷",
+          "label": "Concept to usable tool",
+          "value": "≈ 9 months",
+          "description": "About three months to create, six more to make usable; a pilot with feedback and rating built in from the start.",
+          "accentColor": "#0e3f2c"
+        },
+        {
+          "icon": "?",
+          "label": "What it is not",
+          "value": "Not yet validated",
+          "description": "No sensitivity, specificity or amendment-rate effect has been published. An illustrative success, not a performance claim.",
+          "accentColor": "#6b5c48"
+        }
+      ],
+      "speakerNotes": "Why prevention rather than a better amendment workflow. In 2014 we followed sixty amended reports. In seven the ordering and treating physicians were different people — all malignant diagnoses — and the amended report was in the treating physician's chart in exactly one. No harm was documented, and neither EHR had any way to alert the team. Amendments do not reliably follow the patient. Then the 2025 account: a laterality error caught before release, nine months from concept to usable tool, feedback and rating built in. And the sixth card, which I want on the slide rather than in my mouth: not yet validated. Nothing has been published about sensitivity, specificity or the amendment rate. The 2025 Yale news article names the developers and the catch but gives no counts.",
+      "takeaway": {
+        "text": "Amended reports do not reliably follow the patient. Preventing the error before release is worth more than any amendment workflow.",
+        "comment": "Parkash and colleagues, Am J Clin Pathol 2014;142:58–63, followed sixty amended reports to the physician responsible for the patient. In seven cases the ordering and treating physicians differed; the amended report was in the treating chart in one, and neither EHR could alert the team. An amendment is issued; whether it reaches the person treating the patient is another matter. Hence prevention before release rather than a better amendment workflow. The 2025 account of Dialogue’s first catch reports the catch, not a rate."
+      }
+    },
+    {
+      "id": "questions-for-pathologists",
+      "type": "two-column",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "The Questions That Require Your Expertise",
+      "fragments": false,
+      "subtitle": "When implementation becomes easier, defining the right behavior becomes the expert work",
+      "left": {
+        "heading": "What the System Can Be Made to Do",
+        "bullets": [
+          "Compare the draft against every document it is given, every time, without fatigue",
+          "Surface laterality, site, identity and specimen mismatches with the lines it compared",
+          "Ignore wording differences that do not change the diagnosis",
+          "Record what it flagged, what you decided, and why",
+          "Improve from your ratings"
+        ]
+      },
+      "right": {
+        "heading": "What Only a Pathologist Can Decide",
+        "highlight": true,
+        "bullets": [
+          "<strong>Which contradictions matter</strong> — and which are differences in wording",
+          "<strong>Whether the diagnosis is plausible for this patient</strong> — and if not, whether the error is in the diagnosis or in the identity",
+          "<strong>What information was actually available</strong> to the system when it flagged, or failed to flag",
+          "<strong>What you should see</strong> before accepting or dismissing a flag",
+          "<strong>When the system should ask</strong> for clarification rather than proceed"
+        ]
+      },
+      "speakerNotes": "This is the intellectual tension of the hour, and it is the reason a grand-rounds audience is the right one. When implementation gets cheap, defining the right behavior gets more important, not less. What counts as a discrepancy? Three cores against three core samples is not one; left against right is. Is a Grade Group 2 adenocarcinoma plausible at 30, and if not, is the error in the slide or in the wristband? What information did the system actually have: was the operative note signed yet? What should you see before you dismiss a flag, the system’s reading or the source lines? When should it stop and ask? These are substantive pathology questions. The programming is the easy part now. If there is time, ask the room for one more item for the right-hand column. There is always one, and it is usually better than mine.",
+      "takeaway": {
+        "text": "What counts as a discrepancy is a substantive pathology question, not a programming detail.",
+        "comment": "The right-hand column is never finished, and every item on it is a judgment before it is a rule. Whether a Grade Group 2 adenocarcinoma at thirty is implausible or merely unusual, whether a missing part is an omission or a decision, whether a pasted sentence is a shortcut or an error — each is something only a pathologist can decide, and once written down it becomes a specification a system can be tested against."
+      }
+    },
+    {
+      "id": "operational-turn",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "workflow",
+      "dockTitle": "Hedgehog — the operational turn",
+      "vizType": "custody-translation",
+      "vizConfig": {
+        "title": "A handoff is not complete because somebody typed a destination.",
+        "subtitle": "Specimen custody between the operating room and intake — the moment clinical intent becomes something a system can enforce and audit.",
+        "left": {
+          "heading": "The spreadsheet version",
+          "states": [
+            "Collected in the OR",
+            "Destination entered",
+            "Assumed received"
+          ],
+          "gap": "The gap where specimens were lost: a destination was typed, nobody was asked to confirm, and the sheet could not insist. Two Excel-based systems failed this way."
+        },
+        "right": {
+          "heading": "The Hedgehog version",
+          "states": [
+            "Collected in the OR",
+            "In transit",
+            "Received"
+          ],
+          "transitions": [
+            "sent",
+            "acknowledge"
+          ],
+          "guard": "unacknowledged past the threshold → alert sender and receiver"
+        },
+        "cards": [
+          {
+            "stage": "Workflow problem",
+            "text": "Specimens went missing between the operating room and pathology intake. Ad-hoc, Excel-based tracking failed twice: nothing enforced a consistent workflow, so custody had gaps."
+          },
+          {
+            "stage": "Explicit requirement",
+            "text": "A handoff is not complete merely because somebody entered a destination. The receiving party must acknowledge receipt, and an open handoff stays visible until they do.",
+            "tag": "illustrative formulation"
+          },
+          {
+            "stage": "Working behavior",
+            "text": "A manifest is created at the source, travels with the specimens, and remains open and visible to both ends until the receiver acknowledges it by name."
+          },
+          {
+            "stage": "Test of the behavior",
+            "text": "Given a manifest sent and not acknowledged within the threshold, the system must alert the sender and the receiving location — and the test fails if it does not."
+          }
+        ],
+        "caption": "Large language models contributed to the requirements, the architecture, the code and the security review of Hedgehog. None of them decides, at runtime, whether a specimen has arrived."
+      },
+      "speakerNotes": "The first important turn of the talk: AI does not have to make a clinical decision to change clinical care. It can help us build the system that makes the intended workflow possible. Hedgehog exists because specimens went missing and two spreadsheets failed. The spreadsheet version, on the left, has a gap drawn into it: a destination typed, nobody asked to confirm. The Hedgehog version has a transition called acknowledge and a guard under it. The audience does not need a code tour. It needs to see where the laboratory's knowledge changed the design — the requirement card, which I have labelled illustrative because it is my formulation of the rule, not a quotation from a document. Problem, requirement, behavior, test. That is the translation, and it is the same four cards for every system in this talk. No usage statistics are published; claim none.",
+      "takeaway": {
+        "text": "AI does not have to make a clinical decision to change clinical care. It can help build the system that makes the intended workflow possible.",
+        "comment": "Hedgehog was built between 2023 and 2025 after two Excel-based tracking systems failed. Language models turned stated goals into formatted specifications, critiqued the architecture, generated working frameworks within hours and challenged the developers on security. At runtime no model is involved: a manifest is open or acknowledged, and nothing probabilistic decides which. No usage statistics are published, and the slide claims none."
+      }
+    },
+    {
+      "id": "fsqa-results",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "Frozen-section QA — real numbers from one lab",
+      "vizType": "fsqa-before-after",
+      "vizConfig": {
+        "title": "Seventy days to eight.",
+        "subtitle": "Frozen-section quality assurance before and after the workflow was built into sign-out — one laboratory, one published study.",
+        "beforeLabel": "Before",
+        "afterLabel": "After",
+        "nsLabel": "Not significant",
+        "pairs": [
+          {
+            "label": "Days from frozen section to QA scoring",
+            "before": "70",
+            "after": "8",
+            "unit": "mean days",
+            "p": "P = 8.26 × 10⁻⁷",
+            "significant": true
+          },
+          {
+            "label": "Discrepancies documented in the final report",
+            "before": "35%",
+            "after": "75%",
+            "unit": "of discrepant cases",
+            "p": "P = .0003",
+            "significant": true
+          },
+          {
+            "label": "Frozen vs. permanent discrepancy rate",
+            "before": "3.2%",
+            "after": "2.2%",
+            "unit": "of frozen sections",
+            "p": "P = .07",
+            "significant": false
+          }
+        ],
+        "factsLabel": "The program",
+        "facts": [
+          {
+            "value": "Oct 2022",
+            "label": "new workflow live"
+          },
+          {
+            "value": "9 mo · 8 mo",
+            "label": "before and after periods"
+          },
+          {
+            "value": "2,960",
+            "label": "frozen sections after, in 1,805 cases"
+          },
+          {
+            "value": "4,390",
+            "label": "blocks"
+          },
+          {
+            "value": "> 95%",
+            "label": "pathologist use of the scoring tool"
+          },
+          {
+            "value": "6 months",
+            "label": "then a required hard stop at sign-out"
+          }
+        ],
+        "banner": "These are infrastructure and workflow results — not evidence of an AI effect. The software predates the AI-assisted era. What AI changes is how fast such infrastructure can be built, tested and revised.",
+        "source": "Gibson JA, Mutnick N, Gershkovich P, Sinard J. Software solution for integration of frozen section quality assurance into daily practice. Am J Clin Pathol 2025;163(5):794–802"
+      },
+      "speakerNotes": "Real numbers from our own laboratory, published this year. Frozen-section QA built into sign-out: scoring at the moment of sign-out, a reason required for disagreement, automated e-mail to the frozen-section pathologist, a weekly review module, and after six months a hard stop. Mean time from frozen section to QA scoring: seventy days to eight. Discrepancies documented in the final report: thirty-five percent to seventy-five. The discrepancy rate itself went from 3.2 to 2.2 percent and that was not significant, and it is drawn dashed so nobody has to take my word for it. Now the sentence in the crimson box. These are infrastructure and workflow results. They are not evidence of an AI effect, and anyone who tells you otherwise about their own numbers is confusing two clocks. We already knew that changing infrastructure changes practice. The new question is how AI-assisted engineering changes our ability to build, test and revise it.",
+      "takeaway": {
+        "text": "We already knew that changing infrastructure changes practice. The question now is how AI-assisted engineering changes our ability to build, test and revise it.",
+        "comment": "Gibson, Mutnick, Gershkovich and Sinard, Am J Clin Pathol 2025;163:794–802. The program is ordinary infrastructure, none of it AI: FSLink, a scoring module inside CoPath (agree, margin assurance, defer, disagree with a reason), an automated e-mail to the frozen-section pathologist, a weekly review module and a quarterly M&M conference. Build the intended workflow into sign-out and practice follows — seventy days to eight. What AI changes is how quickly such a program can be built, tested and revised."
+      }
+    },
+    {
+      "id": "exchange-vs-coordinate",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "ecosystem",
+      "dockTitle": "Exchange, or coordinate?",
+      "vizType": "exchange-vs-coordinate",
+      "vizConfig": {
+        "title": "Exchange a message, or coordinate the next step?",
+        "subtitle": "Behavioral interoperability, asked as a practical question rather than as a standards vocabulary.",
+        "left": {
+          "heading": "Exchange",
+          "hub": "LIS",
+          "spokes": [
+            "EHR",
+            "Operating room",
+            "Billing",
+            "Portal",
+            "Outreach client"
+          ],
+          "note": "Every spoke receives a copy of the same message. Nobody owns what must happen next, who must acknowledge it, or when silence becomes a problem."
+        },
+        "right": {
+          "heading": "Coordinate",
+          "layer": "The orchestration layer",
+          "holds": [
+            "what must happen next",
+            "who must acknowledge, and by when",
+            "what to do when nobody does"
+          ],
+          "nodes": [
+            {
+              "label": "Operating room",
+              "via": "FSLink",
+              "both": true
+            },
+            {
+              "label": "Frozen section",
+              "via": "FSLink",
+              "both": true
+            },
+            {
+              "label": "Pathology intake",
+              "via": "POinT"
+            },
+            {
+              "label": "Histology and labs",
+              "via": "Hedgehog"
+            }
+          ],
+          "outputs": [
+            {
+              "label": "acknowledgement required, by name",
+              "via": ""
+            },
+            {
+              "label": "reminders and escalation",
+              "via": "RTSE"
+            },
+            {
+              "label": "rare-event detection",
+              "via": "RTSE"
+            }
+          ],
+          "note": "FSLink sends the frozen-section diagnosis to the OR and waits for acknowledgement; POinT follows orders in transit; Hedgehog holds custody open; RTSE runs the reminders. Twenty years of one department's answer to the question."
+        },
+        "caption": "Standards that describe the container are necessary. The laboratory's problem is the contract around it: who acts, who confirms, and what happens when nobody does."
+      },
+      "speakerNotes": "The interoperability argument, introduced as a practical question rather than as standards terminology. On the left, exchange: the LIS sends a message and everybody gets a copy. On the right, a layer that holds state — what must happen next, who must acknowledge, what to do when nobody does — and the systems that have been doing this at Yale for years: FSLink waiting for the OR to acknowledge a frozen-section diagnosis, POinT following an order in transit, Hedgehog holding custody open, RTSE running the reminders and rare-event detection. The fur-coat paper makes the long version of this argument. The short version is on the caption. The FSLink acknowledgement step is described in the AJCP 2025 frozen-section paper.",
+      "takeaway": {
+        "text": "Exchanging a message is not the same as coordinating the next step. The second is what the laboratory actually needs.",
+        "comment": "Gershkovich P. Wearing a fur coat in the summertime: should digital pathology redefine medical imaging? J Pathol Inform 2025;18:100450. A message tells the next system that something happened. Coordination tells the next person what to do about it, by when, and what happens if they do not — and keeps the record that they did. FSLink is the smallest example: a frozen-section diagnosis sent to the operating room waits for acknowledgement, and silence becomes an event rather than an absence. Standards describe the envelope; the laboratory’s problem is the contract."
+      }
+    },
+    {
+      "id": "two-kinds-of-ai",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "ai",
+      "dockTitle": "Two kinds of AI",
+      "vizType": "two-kinds-of-ai",
+      "vizConfig": {
+        "title": "Two kinds of AI, and they are not the same thing.",
+        "subtitle": "One proposes inside a running application. The other helps build an application that then runs without it. Hover any element.",
+        "left": {
+          "heading": "AI inside the application",
+          "app": "Application · Dialogue",
+          "inputs": [
+            "Requisition",
+            "Clinical notes",
+            "Operative report",
+            "Imaging",
+            "Prior reports"
+          ],
+          "model": "LLM",
+          "modelSub": "proposes",
+          "output": "proposed flags, with the lines compared",
+          "decider": "the pathologist decides",
+          "deciderDetail": "accept · dismiss · rate",
+          "note": "Its outputs need evaluation appropriate to the task: which flags matter, which are noise, and what it could not see.",
+          "hover": {
+            "model": "Reads the documents it is given and proposes where they disagree. It does not release, correct or amend anything.",
+            "output": "Each flag carries the lines it compared, so the pathologist can check the system's reading against the sources.",
+            "decider": "The clinical decision stays with the pathologist. The rating feeds the informatics team, who adjust the application."
+          }
+        },
+        "right": {
+          "heading": "AI helping construct the application",
+          "stages": [
+            {
+              "label": "Intended behavior, stated by the laboratory",
+              "hover": "A handoff is complete only when the receiving party acknowledges it. Stated by the people who lost specimens, not by the model."
+            },
+            {
+              "label": "Explicit requirements and acceptance tests",
+              "hover": "What it must do, what it must never do, and what evidence would show it works."
+            },
+            {
+              "label": "Code · tests · documentation",
+              "ai": true,
+              "tag": "AI session",
+              "hover": "The session writes the scaffolding, the handlers, the test skeletons and the documents — and has no memory of the previous session."
+            }
+          ],
+          "tool": "Hedgehog",
+          "toolNote": "no model in the loop at runtime",
+          "review": "engineering review and validation",
+          "note": "The resulting software behaves predictably. It still requires engineering review and validation — but no model makes its routine decisions.",
+          "hover": {
+            "tool": "A custody manifest is open or acknowledged. Nothing probabilistic decides which; that is the point.",
+            "review": "AI-written code is reviewed, tested against the shipped build, and traced to a requirement before anyone relies on it."
+          }
+        },
+        "bottom": "Some of the most valuable systems AI helps us build should behave predictably, without an AI model making their routine operational decisions."
+      },
+      "speakerNotes": "You have now seen both. On the left, a model runs inside the application: Dialogue reads, proposes, and a pathologist decides. Its outputs need evaluation appropriate to the task, which flags matter, which are noise, what it could not see. On the right, a model helped build the application and then left: Hedgehog has no model in the loop at runtime; a manifest is open or acknowledged and nothing probabilistic decides which. The resulting software still needs engineering review and validation, but it behaves predictably, and for a custody system predictable is the whole point. This is the one distinction I would ask you to keep, because it stops the word AI from becoming an explanation for everything that follows.",
+      "takeaway": {
+        "text": "The goal is dependable functionality, not the maximum amount of AI in the workflow.",
+        "comment": "For the people who came to hear about AI, the counterintuitive version: some of the most valuable systems AI helps us build should behave predictably, with no model making their routine operational decisions. A model inside the application proposes and must be evaluated for what it misses; a model that helped build the application has left by the time it runs, and what remains is ordinary software that can be tested. The orchestration lecture called the second kind the deterministic kernel. Same idea, plainer words."
+      }
+    },
+    {
+      "id": "poll",
+      "type": "poll",
+      "transition": "fade",
+      "title": "Poll: What Have You Learned to Live With?",
+      "prompt": "Which recurring problem have you accepted because changing the software seemed harder than living with it?",
+      "options": [
+        "A report–record mismatch I check in my head",
+        "A specimen or slide handoff tracked on paper or in a spreadsheet",
+        "A clinical question I could not turn into a search",
+        "A QA process that runs weeks after the fact",
+        "A workaround so old I stopped noticing it",
+        "None — our systems do what we need"
+      ],
+      "note": "Scan the code to answer. We return to the results before the close — and the last option is a legitimate answer."
+    },
+    {
+      "id": "ibis-live",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "interactive",
+      "dockTitle": "IBIS — live demo",
+      "vizType": "ibis-interpretation",
+      "vizConfig": {
+        "title": "The important output is not a fluent answer.",
+        "subtitle": "It is an inspectable, reproducible connection between a clinical question and the evidence — shown, then changed in front of you.",
+        "questionLabel": "The question, as asked",
+        "question": "Lung adenocarcinoma cases with a BRAF mutation in patients over sixty",
+        "interpretationLabel": "Interpretation — what it understood",
+        "interpretation": "Lung adenocarcinoma cases carrying a BRAF variant in the sequencing report, in patients aged 60 or older at accession.",
+        "entitiesLabel": "Entities it extracted",
+        "entities": [
+          "diagnosis: lung adenocarcinoma",
+          "gene: BRAF",
+          "age at accession: 60 or older",
+          "unit: cases"
+        ],
+        "queryLabel": "Generated query — what it will search",
+        "querySegments": [
+          {
+            "t": "variant.gene:BRAF AND finalDiagnosis:(lung AND adenocarcinoma)",
+            "br": true
+          },
+          {
+            "t": "AND ",
+            "first": true
+          },
+          {
+            "t": "ageAtAccession:[60 TO *]",
+            "change": "ageAtAccession:[70 TO *]"
+          }
+        ],
+        "confidenceLabel": "Confidence",
+        "confidence": "0.95",
+        "approve": "Review and approve before executing",
+        "refine": {
+          "label": "Refine — change one criterion",
+          "instruction": "Only patients seventy or older.",
+          "interpretation": "Lung adenocarcinoma cases carrying a BRAF variant in the sequencing report, in patients aged 70 or older at accession.",
+          "note": "One clause changed and nothing else did. The count changes with it — and the reason is visible, reproducible, and yours to question."
+        },
+        "exposesLabel": "What the demo should expose",
+        "exposes": [
+          "Are we retrieving patients, specimens, or reports? The unit decides the number.",
+          "Does the term occur in the final diagnosis, or only in the clinical history? The field decides the meaning.",
+          "Are amendments and repeat specimens counted the way you intended? The policy decides the cohort."
+        ],
+        "liveHint": "If the live instance is up, run this question now, then the refinement. If it is not, this slide is the demonstration: the intermediate is the point."
+      },
+      "speakerNotes": "LIVE DEMO. Run-book: open the IBIS instance (local or VPN); the seed data are synthetic. Type the question exactly as on the slide. Do not click approve yet — point at the interpretation, the entities, the generated query and the confidence. Say: this is what it understood, this is what it will search. Approve. Then type the refinement — only patients seventy or older — and show that one clause changed and the count changed with it. If the instance is down, click the slide: the same two states render from the slide itself, and do not apologize. The climax is not that it understood English. The climax is a clinically meaningful refinement whose effect you can see and defend. Then the right margin: patients, specimens or reports; final diagnosis or clinical history; amendments and repeats. Show each as a supported capability or as a visible limitation. Never as assumed solved. Field names on the slide are illustrative; the live instance shows its own.",
+      "takeaway": {
+        "text": "The climax is not that it understood English. It is a clinically meaningful refinement whose effect you can see and defend.",
+        "comment": "The field names are illustrative. No result count is shown because the count depends on questions the sentence leaves open: patients, specimens or reports; the final diagnosis or the clinical history; amendments and repeat specimens in or out. The interpretation and the generated query are where those questions become visible and where the pathologist settles them — before anything runs. A fluent answer would have hidden all three."
+      }
+    },
+    {
+      "id": "what-it-means-for-research",
+      "type": "content",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "What This Means for Research",
+      "subtitle": "Not a more convenient search box — a shorter, more iterative path from an observation at sign-out to a question that can be investigated",
+      "bullets": [
+        "<strong>The observation survives.</strong> “We seem to be seeing more of these” becomes a query the same afternoon, by the person who noticed, instead of a ticket that outlives the thought.",
+        "<strong>The question shapes the data</strong>, not the other way round. Refine the definition five times in one sitting instead of defending the first one for two weeks.",
+        "<strong>The unit is yours to decide.</strong> Patients, specimens, or reports; final diagnosis or clinical history; amendments and repeats — the vendor’s data model used to answer these for you, silently.",
+        "<strong>The artifact is reproducible.</strong> The generated query goes in the methods section; a reviewer can re-run it against the same archive.",
+        "<strong>The safety pathway is the same one.</strong> Built on synthetic data outside the institution, brought inside through security review; no PHI ever reaches a model."
+      ],
+      "fragments": false,
+      "speakerNotes": "For the research faculty in the room. The demonstration was not about a more convenient search box. It was about a shorter, more iterative path from an observation at sign-out to a question that can be investigated, by the person who noticed, in the same sitting. The unit question that the vendor’s data model used to answer silently, patients or specimens or reports, is now yours. The query is an artifact you can put in a methods section. And the pathway in is the same responsible one every system in this talk took: synthetic data outside, security review on the way in, no PHI near a model. If a research colleague asks whether IBIS is validated: it is a search engine over data you already have, and its output is a query you can read; the validation question is whether the query says what you meant.",
+      "takeaway": {
+        "text": "You are not offering a more convenient search box. You are shortening the path from an observation at sign-out to an investigable question.",
+        "comment": "Is IBIS validated? It is a search engine over data the department already holds, and its output is a query you can read. The validation question is therefore whether the query says what you meant — which is why the intermediate is shown rather than hidden, and why the result is reproducible by anyone holding the same query against the same archive. The observation survives, the unit is yours, and the method is an artifact rather than a memory."
+      }
+    },
+    {
+      "id": "ibis-architecture",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "isOptional": true,
+      "dockTitle": "IBIS — how it was built (optional)",
+      "vizType": "ibis-flow",
+      "vizConfig": {
+        "hideHeader": true
+      },
+      "speakerNotes": "OPTIONAL. For an audience that has not seen the earlier talks: the top half is what the investigator does; the bottom half is the pathway — built outside the institution on entirely synthetic data, in a Docker-based Elasticsearch stack that has never touched PHI; open source, adapted to the internal data model, Enterprise GitHub, security review, continuous integration. Skip if the room has heard it.",
+      "takeaway": {
+        "text": "Built outside the institution on synthetic data; brought inside along the responsible pathway. No SQL was written, and nothing here has touched PHI.",
+        "comment": "Both are engineering decisions, not luck: designed outside the institution against synthetic records in a stack that has never held a patient, then brought inside through the pathway that governs any software touching clinical data — open-source components adapted to the internal data model, Enterprise GitHub, security review, continuous integration. The same route applies to every system in this talk, including the ones built in weeks."
+      }
+    },
+    {
+      "id": "the-objection",
+      "type": "infographic",
+      "transition": "convex",
+      "badge": "evidence",
+      "theme": "light",
+      "title": "The Objection: You Can Build This Quickly. How Do You Know It Behaves Correctly?",
+      "subtitle": "The smallest clinical application in the portfolio carries the largest quality system — <a href='https://mdc.openpathology.org' target='_blank'>mdc.openpathology.org</a> · <a href='https://github.com/OpenPathologyFoundation/tessera' target='_blank'>OpenPathologyFoundation/tessera</a>",
+      "cards": [
+        {
+          "icon": "⌨",
+          "label": "WBC ΔΣ",
+          "value": "A counter",
+          "description": "Keyboard-driven manual differential: press a key, the count increments; percentages, confidence intervals, a report ready for the LIS.",
+          "accentColor": "#3d5b73"
+        },
+        {
+          "icon": "◎",
+          "label": "Data handling",
+          "value": "Browser only",
+          "description": "No server-side patient data and no external request; the accession number is the only identifier entered.",
+          "accentColor": "#0e3f2c"
+        },
+        {
+          "icon": "§",
+          "label": "Requirements",
+          "value": "71 · 207",
+          "description": "71 user requirements, each with a clinical rationale; 207 testable system requirements derived from them.",
+          "accentColor": "#a36015"
+        },
+        {
+          "icon": "△",
+          "label": "Hazards",
+          "value": "56",
+          "description": "FMEA risk analysis — severity, occurrence, detectability — each hazard traced to a control and to a test.",
+          "accentColor": "#7a1f1a"
+        },
+        {
+          "icon": "✓",
+          "label": "Tests",
+          "value": "1,172",
+          "description": "Three layers and three browser engines: unit tests on the shipped engine, behaviour in a DOM, system tests in Chromium, Firefox and WebKit.",
+          "accentColor": "#0e3f2c"
+        },
+        {
+          "icon": "⇄",
+          "label": "Traceability",
+          "value": "100%",
+          "description": "Bidirectional: every requirement to a test to a hazard and back. The counts are generated, not typed — because typed counts drifted.",
+          "accentColor": "#5b2d71"
+        }
+      ],
+      "speakerNotes": "The objection the first three systems should provoke: you can build this quickly; how do you know it behaves correctly? I will answer with the smallest application I have. A manual differential counter — press a key, the count goes up. Seventy-one user requirements, two hundred and seven system requirements, fifty-six hazards, eleven hundred and seventy-two tests, one hundred percent traceability. Every artifact is in a public repository. It is simple on purpose. The safety envelope around it is the part worth studying — and the next two slides are about where that envelope failed before it held. Counts are the README’s generated qms:fact fields at v2.24.0 (23 Aug 2026). The residents’ lecture quoted 156 tests and 47 requirements; those were true in February 2026 and are superseded. Say so if a resident remembers.",
+      "takeaway": {
+        "text": "The application is simple on purpose. The safety envelope around it is the part worth studying — including where it failed.",
+        "comment": "The counts are the counter’s own, generated from its quality-management records at version 2.24.0 (23 August 2026) rather than typed, because typed counts drifted. They have grown since this material was first shown in February 2026, when there were 156 tests and 47 requirements. An application this simple exists to make the envelope around it legible: requirements with a clinical rationale, hazards traced to controls, tests that execute the shipped code, and a public record of where all of that failed first."
+      }
+    },
+    {
+      "id": "green-build",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "The green build",
+      "vizType": "green-build",
+      "vizConfig": {
+        "title": "A green build is not the same as a tested application.",
+        "subtitle": "The counter's own public record of what 100% passing meant — and what it took to make the number mean something. Click.",
+        "baseline": {
+          "label": "v2.0 baseline · Feb 2026",
+          "headline": "379 tests · 100% passing",
+          "tests": 379,
+          "executing": "0 of 379 executed the application",
+          "executingNote": "Half re-implemented the algorithms inside the test file and verified the copy. The rest asserted that the source code contained particular substrings.",
+          "defectsLabel": "Fourteen defects behind the green build",
+          "defects": [
+            "Export and import buttons wired to nothing",
+            "Percentages that never summed to 100",
+            "User input reaching a clinical report unescaped",
+            "Spreadsheet-formula injection in the CSV export"
+          ],
+          "source": "DCR-004, Verification Integrity Remediation, 4 Aug 2026 · OpenPathologyFoundation/tessera"
+        },
+        "rebuilt": {
+          "label": "Rebuilt · August 2026",
+          "layers": [
+            {
+              "name": "Unit",
+              "what": "the shipped calculation module, called directly",
+              "count": ""
+            },
+            {
+              "name": "Behaviour",
+              "what": "the real application driven in a DOM: phase machine, keyboard handler, autosave, configuration",
+              "count": "722 Node tests across unit and behaviour"
+            },
+            {
+              "name": "System",
+              "what": "the deployed application over HTTP in Chromium, Firefox and WebKit: clipboard, offline reload, printing",
+              "count": "450 browser tests"
+            }
+          ],
+          "total": "1,172 tests · 0 failures · 7 documented skips",
+          "rulesLabel": "Two rules that have held since",
+          "rules": [
+            "No verification layer may execute a copy of the implementation.",
+            "Every new test is revert-checked: remove the fix, and the test must fail with the original symptom. Twice this found the test wrong before it found the code wrong."
+          ],
+          "source": "TR-001 v4.2, evidence run 23 Aug 2026 · README generated facts, v2.24.0"
+        }
+      },
+      "speakerNotes": "Here is the revealing failure, and it is mine. The v2.0 baseline: three hundred and seventy-nine tests, one hundred percent passing, every one of these green squares. Click. Zero of them executed the application. Half re-implemented the algorithms inside the test file and verified the copy; the rest checked that the source code contained certain strings. Click again. Fourteen real defects sat behind that green build: export buttons wired to nothing, percentages that never summed to a hundred, user input reaching a clinical report unescaped, formula injection in the CSV export. The suite that certified the build could not have caught any of them. On the right, what it took: three layers that execute the shipped code, in three browsers, and two rules — no layer verifies a copy, and every new test is revert-checked. A system that passes a test is not the same as a system whose tests execute it. This is the failure mode that AI-assisted development makes cheap, and it is why the next slide exists. If challenged on 379: it is from DCR-004 §1; TR-001’s comparison table records 191 at the same baseline. The point survives either number.",
+      "takeaway": {
+        "text": "A system that passes a test is not the same as a system whose tests execute it. Verification theater is the failure mode AI makes cheap.",
+        "comment": "The 379 figure is from the project’s own change record (DCR-004); a later technical report counts 191 tests at the same baseline. The argument survives either number: none of them executed the application. A green build is a statement about the tests, not about the software. It becomes a statement about the software only when the tests are shown to reach it — which is what the two rules on the right enforce, and what revert-checking proved twice by finding the test wrong before the code."
+      }
+    },
+    {
+      "id": "drift-log",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "technical",
+      "dockTitle": "Locally correct, globally false",
+      "vizType": "drift-log",
+      "vizConfig": {
+        "title": "Locally correct, globally false.",
+        "subtitle": "Every claim the counter's repository made that had stopped being true — logged append-only, with the guard that now prevents its class.",
+        "incidents": {
+          "total": 52,
+          "prevented": 42,
+          "asOf": "as of 23 Aug 2026",
+          "totalLabel": "52 incidents logged",
+          "preventedLabel": "42 now prevented by a check that fails the build"
+        },
+        "headline": {
+          "claim": "The operating procedure told the technologist to press A for blasts.",
+          "truth": "The shipped keyboard layout had A as monocytes. Nobody ever wrote a false sentence: the layout changed, and the procedure was not swept.",
+          "where": "Drift log row 31 · SOP-001 §5.5 against templates.json · fixed in DCR-038"
+        },
+        "causeLabel": "Root cause",
+        "incidentLabel": "Representative incident",
+        "guardLabel": "Now enforced by",
+        "taxonomy": [
+          {
+            "cause": "Counted quantities kept by hand",
+            "incident": "\"49 user requirements, 22 hazards, 579 tests\" against 69, 51 and the runners — nine wrong figures in one review",
+            "guard": "Generated counts; the build fails on disagreement"
+          },
+          {
+            "cause": "Two writers for one fact",
+            "incident": "Test totals in four documents, three disagreeing: 1,039 with 3 skips against 939 with 7",
+            "guard": "One writer: the evidence run rewrites marked fields"
+          },
+          {
+            "cause": "Closure not swept",
+            "incident": "A hazard closed in the risk analysis, still open in the index; one document contradicting itself ten lines apart",
+            "guard": "Closure-coherence gate that knows no hazard by name"
+          },
+          {
+            "cause": "Version advanced in one place",
+            "incident": "Three product versions live at once: 2.7.1, 2.14.0 and a cache key at 2.3.0",
+            "guard": "Version-coherence gate across manifest, design file and cache key"
+          },
+          {
+            "cause": "Evidence without provenance",
+            "incident": "An \"Approved\" test-evidence bundle generated from code that existed in no commit",
+            "guard": "Commit hash and tree state stamped; a dirty tree refuses to write"
+          },
+          {
+            "cause": "Unguarded prose",
+            "incident": "The working agreement cited 21 incidents when the log held 23; a stack table named the wrong delivery mechanism",
+            "guard": "Not yet prevented — and the log says so",
+            "open": true
+          }
+        ],
+        "mechanismsLabel": "What worked: the quality system made executable",
+        "mechanisms": [
+          {
+            "lead": "One writer per fact.",
+            "text": "Every counted quantity has exactly one generated source."
+          },
+          {
+            "lead": "Gates as classes, not instances.",
+            "text": "The build fails when any two documents disagree."
+          },
+          {
+            "lead": "Evidence with provenance.",
+            "text": "Every bundle records the commit and whether the tree was clean."
+          },
+          {
+            "lead": "A closure sweep.",
+            "text": "Closing anything means sweeping everything that speaks about it."
+          }
+        ],
+        "caption": "Nothing here was careless. Each session answered the question it was asked and never asked what else says this. Memory is an engineering problem — and the quality system was the solution, once it was compiled."
+      },
+      "speakerNotes": "Fifty-two incidents in which the repository asserted something that had stopped being true, logged append-only, forty-two now prevented by a check that fails the build. The headline: the operating procedure said press A for blasts; the shipped layout had A as monocytes. Nobody wrote a false sentence. The layout changed, correctly, with tests, and the procedure was not swept. In a hematology laboratory the distance between blasts and monocytes is the distance between leukemia and a normal marrow. The taxonomy: counts kept by hand, two writers for one fact, closures not swept, versions advanced in one place, evidence without provenance — and one row, in crimson, still unguarded. What fixed it was not a better model. The quality system had existed from the start, as prose, and caught nothing. It started catching things when it became code.",
+      "takeaway": {
+        "text": "The quality system caught nothing while it was prose. It started catching things when it became code that fails the build.",
+        "comment": "The transferable lesson: treat AI sessions as capable staff who rotate every conversation, and give them what regulated laboratories learned to give rotating staff — document control, change records, a closure checklist, and verification that depends on nobody’s memory. Nothing here was careless; each session answered the question it was asked and never asked what else says this. None of it requires a medical context, and all of it is cheaper than the incident it prevents."
+      }
+    },
+    {
+      "id": "xenonym-stress",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "interactive",
+      "title": "Xenonym — The Records That Break Pipelines",
+      "subtitle": "Live at <a href='https://xenonym.openpathology.org' target='_blank'>xenonym.openpathology.org</a> — synthetic test cases in a realistic mode and a stress mode",
+      "vizType": "xenonym-browser",
+      "vizConfig": {},
+      "speakerNotes": "Sixty seconds. Every system in this talk was built on synthetic data outside the institution. Xenonym is where the test cases come from: names that sound like names and belong to nobody, and in stress mode, the ones that break pipelines — the empty string, the injection string, the diacritics, the improbable date. Say what it establishes and what it does not. A schema-conforming synthetic record proves your pipeline accepts the shape. It does not prove the record is clinically plausible, and it is not a privacy guarantee. The next harness to build is the one Dialogue needs: records that are individually valid and mutually inconsistent. Xenonym has no cross-record consistency feature; do not claim one.",
+      "takeaway": {
+        "text": "Schema-conforming synthetic data establish neither clinical validity nor a privacy guarantee. They establish that your pipeline survives contact with data.",
+        "comment": "Xenonym generates records that are each valid against the schema, including the ones that break pipelines; it has no notion of consistency between records. The test set Dialogue actually needs — records individually valid and mutually inconsistent, a requisition that says left and a note that says right — is the obvious next tool, and it is exactly the kind of supplementary infrastructure that has become affordable to build."
+      }
+    },
+    {
+      "id": "claims-ladder",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "evidence",
+      "dockTitle": "Five claims, five kinds of evidence",
+      "vizType": "evidence-ladder",
+      "vizConfig": {
+        "title": "A record that satisfies a schema. A system that passes a test. A capability validated in use.",
+        "subtitle": "Five claims, five kinds of evidence — and where each of the four systems honestly sits.",
+        "rungs": [
+          {
+            "rung": "01 · schema-valid record",
+            "claim": "The data has the right shape",
+            "evidence": "Xenonym stress mode: names that sound like names, belong to nobody, and include the ones that break pipelines. Establishes that the pipeline accepts the shape — not that the record is clinically plausible, or private.",
+            "source": "Xenonym README"
+          },
+          {
+            "rung": "02 · passing test",
+            "claim": "The code does what a test asked",
+            "evidence": "WBC ΔΣ: 1,172 tests, 0 failures. Meaningful only because no layer verifies a copy and every new test is revert-checked — the 379 that executed nothing passed too.",
+            "source": "tessera README · DCR-004"
+          },
+          {
+            "rung": "03 · verified requirement",
+            "claim": "Each requirement traces to a test and a hazard",
+            "evidence": "WBC ΔΣ: 71 URS, 207 SRS, 56 hazards, 100% bidirectional traceability, counts generated. Establishes consistency — not that the requirement was the right one.",
+            "source": "tessera RTM-001"
+          },
+          {
+            "rung": "04 · validated in use",
+            "claim": "It changed the work, measured in practice",
+            "evidence": "Frozen-section QA: 70 to 8 days and 35% to 75% documentation, measured over 2,960 frozen sections. Dialogue: in pilot, feedback and rating, one documented catch — not yet here.",
+            "source": "Gibson 2025 · Yale news 2025"
+          },
+          {
+            "rung": "05 · improved outcomes",
+            "claim": "Patients did better",
+            "evidence": "Not yet established for any of the four. The discrepancy rate fell from 3.2% to 2.2% and was not significant; no amendment-rate effect for Dialogue has been measured. The rung stays empty until it is.",
+            "source": "",
+            "empty": true
+          }
+        ],
+        "verbs": [
+          {
+            "verb": "generate",
+            "detail": "records, adversarial ones included"
+          },
+          {
+            "verb": "execute",
+            "detail": "the shipped code, not a copy"
+          },
+          {
+            "verb": "trace",
+            "detail": "requirement to test to hazard"
+          },
+          {
+            "verb": "measure",
+            "detail": "in practice, intended use defined"
+          }
+        ],
+        "caption": "Faster construction makes explicit requirements, expert review and good tests more valuable, not less. The ladder is how you say which claim you are making."
+      },
+      "speakerNotes": "Five claims, five kinds of evidence. A record that satisfies a schema — Xenonym. A system that passes a test — the counter, and only because the tests execute the shipped code. A verified requirement — the traceability matrix, generated. A capability validated in use — the frozen-section program, measured over nearly three thousand frozen sections; Dialogue is not here yet, and I say so. And the fifth rung, patients did better, which is empty for all four and stays empty until someone measures it. The conclusion is not that AI is unreliable so be careful. It is that faster construction makes explicit requirements, expert review and good tests more valuable, not less — and this ladder is how you say which claim you are making.",
+      "takeaway": {
+        "text": "Faster construction makes explicit requirements, expert review and good tests more valuable, not less.",
+        "comment": "The shape is the evidence ladder from the operating-system talk, turned on software we built ourselves rather than on published models. “The data has the right shape” is the bottom rung; “patients did better” is the top, and it is empty for all four systems until someone measures it. Faster construction lowers the cost of every rung except the ones that need a person who knows the domain: deciding what the requirement should be, and defining the intended use against which the system is validated."
+      }
+    },
+    {
+      "id": "where-knowledge-enters",
+      "type": "content",
+      "transition": "fade",
+      "badge": "framework",
+      "title": "Where the Pathologist's Knowledge Enters the System",
+      "subtitle": "One requirement from each system — the sentence only a domain expert could have written",
+      "numberedItems": [
+        "<strong>Dialogue</strong> — ignore differences in wording that do not change the diagnosis; raise the ones that change side, site, identity or specimen.",
+        "<strong>Hedgehog</strong> — a handoff is complete only when the receiving party acknowledges it; an open handoff stays visible to both ends until then.",
+        "<strong>IBIS</strong> — show the interpretation and the generated query, and wait for approval before anything executes; the unit of the result is stated, not assumed.",
+        "<strong>WBC ΔΣ</strong> — completing a count below the target is never blocked; the report carries the count, the target, and the confidence interval that count supports.",
+        "<strong>Frozen-section QA</strong> — every frozen-section diagnosis is scored at sign-out as agree, margin assurance, defer, or disagree with a reason; after six months, a hard stop."
+      ],
+      "fragments": false,
+      "speakerNotes": "One sentence per system, and in every case it is the sentence the software could not have written for itself. Which differences to ignore. When a handoff is complete. What must be shown before a query runs. What happens when a count stops early. How a frozen section is scored. Requirements are patient safety made explicit, and they are the part of this work that belongs to the people in this room. The first one is my paraphrase of how the tool is described, not a quotation from a written requirement; if you have the real sentence, use it. The WBC ΔΣ requirement is from the current README; the FSQA scoring categories are from the AJCP 2025 paper.",
+      "takeaway": {
+        "text": "This is what AI cannot invent for you. Only domain experts can write the requirement that protects a patient.",
+        "comment": "Five sentences, one per system, and each is the sentence the software could not have written for itself: which differences to ignore, when a handoff is complete, what must be shown before a query runs, what happens when a count stops early, how a frozen section is scored. The counter’s rule is from its published requirements, the frozen-section categories from the 2025 paper, the Dialogue sentence a paraphrase of the tool’s published description. Requirements are patient safety made explicit."
+      }
+    },
+    {
+      "id": "clinically-led",
+      "type": "visualization",
+      "transition": "convex",
+      "badge": "framework",
+      "dockTitle": "Clinically led, informatics enabled",
+      "vizType": "clinically-led",
+      "vizConfig": {
+        "title": "Clinically led, informatics enabled.",
+        "subtitle": "Pathologists contribute the intended behavior, the meaningful exceptions and the acceptance criteria; an accountable team turns those into supported infrastructure.",
+        "rejected": [
+          {
+            "heading": "Everyone becomes a programmer",
+            "why": [
+              "Unsupported tools with nobody to call when they fail at 2 a.m.",
+              "Verification theater: tests that pass and execute nothing",
+              "Drift: documents, code and procedures that stop agreeing",
+              "Security and privacy handled by enthusiasm"
+            ]
+          },
+          {
+            "heading": "We no longer need engineering",
+            "why": [
+              "Requirements that were never made explicit cannot be tested",
+              "A model that proposes is not a system that is accountable",
+              "Plausible code is not reviewed code",
+              "Nobody owns the artifact after the demo"
+            ]
+          }
+        ],
+        "model": {
+          "heading": "Clinically led, informatics enabled",
+          "groups": [
+            {
+              "label": "Pathologists contribute",
+              "items": [
+                "The intended behavior — what the system should do",
+                "The meaningful exceptions — what it must never do, and when it must ask",
+                "The acceptance criteria — what evidence would convince them it works"
+              ]
+            },
+            {
+              "label": "An accountable team provides",
+              "items": [
+                "Specification review: the question asked back and sharpened before anything is built",
+                "Engineering inside the institution's security perimeter",
+                "Verification that executes the shipped code, and validation in use",
+                "Ownership after the demo: fixes, extension, retirement"
+              ]
+            }
+          ]
+        },
+        "loop": [
+          "intent",
+          "specification",
+          "build",
+          "test",
+          "use",
+          "revised intent"
+        ],
+        "caption": "The applied informatics team is the operating model that makes build-as-you-speak safe and sustainable — and the one that can say: not yet, sharpen the question."
+      },
+      "speakerNotes": "Two models I reject, struck through on either side. Everyone becomes a programmer: unsupported tools, verification theater, drift, security by enthusiasm. We no longer need engineering: untestable requirements, a model that proposes mistaken for a system that is accountable, nobody owning the artifact after the demo. The one in the middle is the one that has worked here for twenty years and now works faster: pathologists contribute the intended behavior, the meaningful exceptions and the acceptance criteria; an accountable team turns those into supported infrastructure. The loop at the bottom is the whole talk: intent, specification, build, test, use, revised intent. If the department chair is in the room, this is the slide to pause on.",
+      "takeaway": {
+        "text": "Neither 'everyone should become a programmer' nor 'we no longer need engineering'. Clinically led, informatics enabled.",
+        "comment": "The earlier research talk argued for the team’s existence; this slide argues the division of labor inside it. The pathologist owns the intended behavior, the exceptions and the evidence that would convince them. The accountable team owns the perimeter, the verification, the change record and the artifact after the demo — and is the only one of the three models that can answer a request with “not yet, sharpen the question”."
+      }
+    },
+    {
+      "id": "safety-boundary",
+      "type": "comparison",
+      "transition": "fade",
+      "badge": "debate",
+      "title": "The Safety Boundary, Across All Four Systems",
+      "left": {
+        "heading": "AI Does (Development Partner, and Proposer)",
+        "style": "good",
+        "bullets": [
+          "Turns stated intent into requirements, scaffolds, tests and documentation — Hedgehog, WBC ΔΣ, IBIS, this deck",
+          "Compares documents and proposes flags with its rationale — Dialogue, before release",
+          "Translates a question into an inspectable query — IBIS, before execution",
+          "Generates the adversarial test records — Xenonym",
+          "Drafts the quality documents, and the checks that keep them honest"
+        ]
+      },
+      "right": {
+        "heading": "AI Must Not (Non-Negotiable)",
+        "style": "bad",
+        "bullets": [
+          "<strong>Decide.</strong> No autonomous clinical decision: a flag is accepted or dismissed by a pathologist; a count is made by a technologist",
+          "<strong>See PHI in prompts.</strong> Built outside the institution on synthetic data; brought inside along the governed pathway",
+          "<strong>Make hidden transformations.</strong> Every filter, join, recode and flag is testable and reviewable",
+          "<strong>Ship unverified.</strong> Reviewed, tested against the shipped code, traced to a requirement",
+          "<strong>Be the memory.</strong> Sessions forget; the executable quality system remembers"
+        ]
+      },
+      "speakerNotes": "Read both columns aloud; the non-negotiables matter as much as the capabilities. The left column is what the four systems let AI do: construct, propose, translate, generate, draft. The right column is what none of them lets it do: decide, see PHI, transform silently, ship unverified — and the fifth, which this talk adds to the earlier lectures' list: be the memory. Sessions forget. The executable quality system remembers.",
+      "takeaway": {
+        "text": "AI is a development partner and, inside Dialogue, a proposer. It is never the decider — and never the memory.",
+        "comment": "The first four non-negotiables are the ones the residents’ lecture and the research talk set out. The fifth — never the memory — is the counter’s lesson: a session that can be told anything cannot be relied on to remember what it was told, so what the system must do has to live outside the model, in requirements and in checks that fail the build. It is the one most teams adopting AI-assisted development have not yet learned."
+      }
+    },
+    {
+      "id": "your-problem",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "interactive",
+      "dockTitle": "Your problem, on one page",
+      "vizType": "intent-spec",
+      "vizConfig": {
+        "title": "One page.",
+        "subtitle": "What the system should do. What it must never do. What evidence would convince you that it works. Click for a worked example.",
+        "sections": [
+          {
+            "heading": "What the system should do",
+            "hint": "One recurring problem you have accepted because changing the software seemed harder than living with it. Describe the intended behavior as a sentence a colleague could test."
+          },
+          {
+            "heading": "What it must never do",
+            "hint": "The exception that matters, the decision it must leave to you, the moment it must ask rather than proceed."
+          },
+          {
+            "heading": "What evidence would convince you",
+            "hint": "A measured interval, a documented rate, a test that fails when the behavior is removed — not a demonstration."
+          }
+        ],
+        "example": {
+          "title": "One worked example · specimen custody",
+          "sections": [
+            {
+              "heading": "Should",
+              "text": "Keep every handoff from the operating room to intake open and visible to both ends until the receiving party acknowledges it by name."
+            },
+            {
+              "heading": "Must never",
+              "text": "Mark a specimen received because a destination was typed, or close a manifest without an acknowledgement on record."
+            },
+            {
+              "heading": "Evidence",
+              "text": "A test that fails when the acknowledgement rule is removed; the interval from send to acknowledgement, measured weekly; zero unacknowledged manifests older than the threshold."
+            }
+          ]
+        },
+        "caption": "Bring the page to the people who can build it. If your institution has no such team, the page is the strongest case for funding one."
+      },
+      "speakerNotes": "The closing exercise, and it returns the problem to the room. Think of one recurring problem in your clinical, operational or research work that you have accepted because changing the software seemed harder than living with the problem. Three questions. What should the system do? What must it never do? What evidence would convince you that it works? Click for the custody example so nobody thinks the page has to be long. Then stop talking. If the poll is still open, show the results now: most rooms split between the first two options, and that is the point.",
+      "takeaway": {
+        "text": "Describe what the system should do, what it must never do, and what evidence would convince you. That page is the beginning of infrastructure.",
+        "comment": "The page needs only domain expertise, which the room has, and it is the same one-page specification the research talk asked investigators for, with one question added: what evidence would convince you. Written down, it is the beginning of infrastructure and the strongest case for the team that will build it. Left unwritten, it is the compensation you perform by hand this week and next."
+      }
+    },
+    {
+      "id": "how-this-deck-was-made",
+      "type": "visualization",
+      "transition": "fade",
+      "badge": "meta",
+      "isOptional": true,
+      "dockTitle": "How this deck was made (optional)",
+      "vizType": "lecture-provenance",
+      "vizConfig": {
+        "title": "This deck was built the way the talk says infrastructure can now be built.",
+        "subtitle": "A clinician stating intent, an AI session doing the construction, and tests deciding what is true.",
+        "stages": [
+          {
+            "label": "The brief",
+            "detail": "A thesis, three clinical needs and the counter's record, turned into a plan with objectives and guardrails.",
+            "count": "1 plan"
+          },
+          {
+            "label": "Repository audit",
+            "detail": "Ten decks and 102 visualizations read for what could be reused and what the room had already seen.",
+            "count": "5 visualizations reused"
+          },
+          {
+            "label": "Source verification",
+            "detail": "Every number traced to a page, a database record or a controlled document, with a status; eleven sources added in the third revision.",
+            "count": "51 sources checked"
+          },
+          {
+            "label": "Visualization specs",
+            "detail": "One specification per figure: argument, data, encoding, steps, acceptance.",
+            "count": "16 new"
+          },
+          {
+            "label": "Build",
+            "detail": "One JSON file and one block of D3; every word and number arriving through configuration.",
+            "count": "36 slides"
+          },
+          {
+            "label": "Tests",
+            "detail": "Static analysis, link validation, and a screenshot of every slide checked for overflow.",
+            "count": "3 suites"
+          }
+        ],
+        "loopLabel": "a question from the room re-enters at step one",
+        "build": {
+          "slides": 36,
+          "vizzes": 16,
+          "references": "51 checked",
+          "date": "17 Oct 2026"
+        },
+        "caption": "The medium demonstrates the argument: the deck is a JSON document and a visualization library, version-controlled, tested, and editable during the questions."
+      },
+      "speakerNotes": "OPTIONAL. For the audience that asks how long this took. The deck is one JSON file and a block of D3, built from a plan, a reference registry and a set of visualization specifications, and checked by static analysis, link validation and a screenshot of every slide. Edit the JSON during the questions if someone wants to see it.",
+      "takeaway": {
+        "text": "The medium demonstrates the argument.",
+        "comment": "The deck went through the discipline it describes: a written plan, one specification per visualization, a reference registry that marks every figure verified, partial, paraphrase or do-not-cite, adversarial review passes, and tests that fail the build on an unreadable font, a dead link or an overflowing slide. The planning package travels with the slides in the repository’s docs/ai_infrastructure folder — PLAN.md, VIZ_SPECS.md and REFERENCES.md — and the JSON can be edited during the questions."
+      }
+    },
+    {
+      "id": "takeaways",
+      "type": "takeaways",
+      "transition": "convex",
+      "title": "Key Takeaways",
+      "items": [
+        "<strong>Pathologists are becoming designers of how pathology works.</strong> The 2016 prediction aimed at judgment and missed context. The distance between recognizing what should happen and having infrastructure that makes it happen was never intellectual; it was the cost of implementation, and that cost has collapsed.",
+        "<strong>Two kinds of AI, kept separate.</strong> AI inside the application proposes and needs task-appropriate evaluation; AI helping construct the application leaves no model in the loop. The most valuable built systems often should behave predictably.",
+        "<strong>A correct diagnosis is not a coherent clinical record.</strong> Dialogue extends clinical attention over the relationships that make a diagnosis usable — and which contradictions matter is a pathology question.",
+        "<strong>Infrastructure changes practice; say what the evidence is.</strong> Seventy days to eight is a workflow result. AI changes how fast such infrastructure can be built, tested and revised.",
+        "<strong>Faster construction makes requirements, review and tests more valuable, not less</strong> — and a quality system protects no one until it is executable. A green build that executes nothing is the failure mode AI makes cheap."
+      ],
+      "cta": {
+        "label": "Your challenge:",
+        "text": "Think of one recurring problem in your clinical, operational or research work that you have accepted because changing the software seemed harder than living with it. Write what the system should do, what it must never do, and what evidence would convince you that it works — and bring that page to the people who can build it."
+      }
+    },
+    {
+      "id": "sources",
+      "type": "content",
+      "transition": "fade",
+      "title": "Sources &amp; Further Reading",
+      "subtitle": "Every number in this deck resolves to one of these. Verification status is recorded in docs/ai_infrastructure/REFERENCES.md.",
+      "bullets": [
+        "<style>\n.reveal .intro-slide ul.fragment-list:has(.sources-scroll){list-style:none !important;padding:0 !important;margin:0 !important;}\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll){padding:0 !important;margin:0 !important;font-size:13px !important;line-height:1.55 !important;}\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll)::before,\n.reveal .intro-slide ul.fragment-list > li:has(.sources-scroll):before{content:none !important;display:none !important;}\n.sources-scroll{max-height:470px; overflow-y:auto; overflow-x:hidden; padding:18px 26px 18px 22px; background:#fdfcf8; border:1px solid #e0d9c8; border-radius:6px; text-align:left; font-family:'Inter',sans-serif; scrollbar-width:thin; scrollbar-color:#b5a98e #f0eadd;}\n.sources-scroll::-webkit-scrollbar{width:9px;}\n.sources-scroll::-webkit-scrollbar-track{background:#f0eadd;}\n.sources-scroll::-webkit-scrollbar-thumb{background:#b5a98e; border-radius:4px;}\n.sources-scroll h4{font-size:11.5px !important; font-weight:700 !important; color:#1B3A5C; text-transform:uppercase; letter-spacing:1.7px; margin:20px 0 8px 0 !important; padding-bottom:4px; border-bottom:1px solid #d6cfbf;}\n.sources-scroll h4:first-child{margin-top:0 !important;}\n.sources-scroll p{font-size:12.5px !important; font-weight:400 !important; line-height:1.55 !important; margin:0 0 8px 0 !important; padding:0 0 0 18px !important; text-indent:-18px; color:#3a3024 !important;}\n.sources-scroll a{color:#0e6e8c; text-decoration:none; border-bottom:1px dotted rgba(14,110,140,0.5);}\n.sources-scroll a:hover{background:rgba(14,110,140,0.07); border-bottom-color:#0e6e8c;}\n.sources-scroll em{font-style:italic;}\n.sources-scroll .scroll-hint{display:block; text-align:right; font-size:10.5px; color:#6b5c48; font-style:italic; margin-bottom:10px; letter-spacing:0.4px; opacity:0.78;}\n.sources-scroll .annot{color:#6b5c48; font-style:italic; font-size:12px;}\n</style><div class=\"sources-scroll\"><span class=\"scroll-hint\">↓ scroll within this list for the full bibliography</span><h4>The Prediction and What It Missed</h4>\n  <p><a href=\"https://www.newyorker.com/magazine/2017/04/03/ai-versus-md\" target=\"_blank\">Mukherjee S. A.I. versus M.D.: what happens when diagnosis is automated? <em>The New Yorker</em>, 3 Apr 2017 (online 27 Mar 2017).</a> <span class=\"annot\">Hinton’s “five years … It might be ten years. I said this at a hospital”, “They should stop training radiologists now”, and “learning algorithms will make pathological diagnoses”; the automation-bias passage; “The algorithm can solve a case. It cannot build a case.”</span></p>\n  <p><a href=\"https://creativedestructionlab.com/blog/overview-of-the-mkt4intel/\" target=\"_blank\">Creative Destruction Lab. Machine Learning and the Market for Intelligence, Rotman School of Management, Toronto, 27 Oct 2016.</a> <span class=\"annot\">The conference at which the radiology remark was made on stage; the clip circulates as “Geoff Hinton: On Radiology”.</span></p>\n  <p><a href=\"https://newrepublic.com/article/187203/ai-radiology-geoffrey-hinton-nobel-prediction\" target=\"_blank\">Byju A. The “Godfather of AI” predicted I wouldn’t have a job. He was wrong. <em>The New Republic</em>, 25 Oct 2024.</a> <span class=\"annot\">A radiology resident’s transcription of the 2016 clip: “within five years … It might be 10 years, but we’ve got plenty of radiologists already.”</span></p>\n  <p><a href=\"https://www.auntminnie.com/imaging-informatics/artificial-intelligence/article/15746014/hinton-acknowledges-mistake-in-predicting-ai-replacement-of-radiologists\" target=\"_blank\">AuntMinnie.com. Hinton acknowledges mistake in predicting AI replacement of radiologists. 14 May 2025</a> — reporting Lohr S, <em>The New York Times</em>, 14 May 2025. <span class=\"annot\">Wrong on the timing, not the direction; spoke too broadly, about image analysis only; “a whole lot more efficient in addition to improving accuracy” (quoted by The Decoder, 15 May 2025); Mayo Clinic radiologists about 260 in 2016 to over 400 in 2025.</span></p>\n  <p><a href=\"https://www.nrmp.org/wp-content/uploads/2026/05/Main_Match_Results_and_Data-2026.pdf\" target=\"_blank\">National Resident Matching Program. Results and Data: 2026 Main Residency Match. Washington, DC: NRMP; May 2026.</a> <span class=\"annot\">Table 1: diagnostic radiology 156 PGY-1 positions (148 filled) and 1,083 PGY-2 (1,066 filled); pathology 636 positions, 634 filled. The five-year comparison is AuntMinnie’s, 20 Mar 2026.</span></p>\n  <p><a href=\"https://doi.org/10.5858/arpa.2013-0099-CP\" target=\"_blank\">Volmar KE, Idowu MO, Hunt JL, Souers RJ, Meier FA, Nakhleh RE. Surgical pathology report defects: a College of American Pathologists Q-Probes study of 73 institutions. <em>Arch Pathol Lab Med</em>. 2014;138(5):602-612.</a> <span class=\"annot\">1,688 defects in 360,218 cases: 14.6% misinterpretations, 13.3% misidentifications, 13.7% specimen defects, 58.4% other report defects; misidentifications most often found by clinicians.</span></p>\n  <p><a href=\"https://doi.org/10.1309/9UPELFVQU5WLCUHX\" target=\"_blank\">Meier FA, Zarbo RJ, Varney RC, et al. Amended reports: development and validation of a taxonomy of defects. <em>Am J Clin Pathol</em>. 2008;130(2):238-246.</a> <span class=\"annot\">The taxonomy: misinterpretation fractions 23–29%, misidentification 20–38%, specimen 4–10%, report defects 29–48%.</span></p>\n  <p><a href=\"https://europepmc.org/article/MED/9648896\" target=\"_blank\">Nakhleh RE, Zarbo RJ. Amended reports in surgical pathology and implications for diagnostic error detection and avoidance: a College of American Pathologists Q-Probes study of 1,667,547 accessioned cases in 359 laboratories. <em>Arch Pathol Lab Med</em>. 1998;122(4):303-309.</a> <span class=\"annot\">3,147 amended reports, 1.9 per 1,000; 38.7% changed the final diagnosis, 19.2% corrected patient identification.</span></p>\n  <p><a href=\"https://doi.org/10.1016/j.acra.2018.10.007\" target=\"_blank\">Gong B, Nugent JP, Guest W, et al. Influence of artificial intelligence on Canadian medical students’ preference for radiology specialty: a national survey study. <em>Acad Radiol</em>. 2019;26(4):566-577.</a> <span class=\"annot\">322 respondents, 17 schools, March 2018; one-sixth of would-be first-choice students deterred; 48.6% of first-choice students reported anxiety.</span></p>\n  <p><a href=\"https://doi.org/10.1186/s13244-019-0830-7\" target=\"_blank\">Sit C, Srinivasan R, Amlani A, et al. Attitudes and perceptions of UK medical students towards artificial intelligence and radiology: a multicentre survey. <em>Insights Imaging</em>. 2020;11:14.</a> <span class=\"annot\">484 responses, 19 schools; 49% less likely to consider radiology because of AI.</span></p>\n  <p><a href=\"https://doi.org/10.1016/j.clinimag.2021.09.018\" target=\"_blank\">Reeder K, Lee H. Impact of artificial intelligence on US medical students’ choice of radiology. <em>Clin Imaging</em>. 2022;81:67-71.</a> <span class=\"annot\">32 schools; one-sixth of would-be first-choice students did not choose radiology because of AI.</span></p>\n  <h4>The Clinical Anchor — Dialogue and Amended Reports</h4>\n  <p><a href=\"https://medicine.yale.edu/news-article/yale-pathology-develops-ai-tool-that-checks-records-to-ensure-accuracy/\" target=\"_blank\">Corcoran TP. Yale Pathology develops AI tool that checks records to ensure accuracy. Yale School of Medicine news, 23 Oct 2025.</a> <span class=\"annot\">Concept: Gershkovich and Gibson; built by Celano. The breast-biopsy laterality catch; one click before sign-out; feedback and rating; no performance figures.</span></p>\n  <p><a href=\"https://doi.org/10.1309/AJCPY55EVINJCLGX\" target=\"_blank\">Parkash V, Domfeh A, Cohen P, Fischbach N, Pronovost M, Haines GK, Gershkovich P. Are amended surgical pathology reports getting to the correct responsible care provider? <em>Am J Clin Pathol</em>. 2014;142(1):58-63.</a> <span class=\"annot\">60 amended reports; 7 ordering/treating discrepancies, all malignant; the amendment in the treating chart in 1 of 7.</span></p>\n  <p><a href=\"https://doi.org/10.1197/jamia.M3092\" target=\"_blank\">Friedman CP. A “fundamental theorem” of biomedical informatics. <em>JAMIA</em>. 2009;16(2):169-170.</a></p>\n  <h4>The Operational Anchor — Custody and Frozen-Section QA</h4>\n  <p><a href=\"https://doi.org/10.1093/ajcp/aqae188\" target=\"_blank\">Gibson JA, Mutnick N, Gershkovich P, Sinard J. Software solution for integration of frozen section quality assurance into daily practice. <em>Am J Clin Pathol</em>. 2025;163(5):794-802.</a> <span class=\"annot\">70 to 8 days; 35% to 75%; 3.2% to 2.2% not significant; 2,960 frozen sections in 1,805 cases after go-live in October 2022.</span></p>\n  <p><a href=\"https://doi.org/10.1097/PAP.0000000000000088\" target=\"_blank\">Gershkovich P, Sinard JH. Customizing laboratory information systems: closing the functionality gap. <em>Adv Anat Pathol</em>. 2015;22(5):323-330.</a> &middot; <a href=\"https://doi.org/10.4103/2153-3539.104906\" target=\"_blank\">Sinard JH, Gershkovich P. Custom software development for use in a clinical laboratory. <em>J Pathol Inform</em>. 2012;3:44.</a></p>\n  <p>Hedgehog, FSLink, POinT, RTSE, Histology Asset Tracking, Pathology Portal, RELAY: Yale Pathology Informatics systems described in the presenter's curriculum vitae (November 2025). <span class=\"annot\">No usage statistics for Hedgehog are published; the custody requirement on the slide is an illustrative formulation.</span></p>\n  <p><a href=\"/assets/software-is-never-done.pdf\" target=\"_blank\">McQuade JM, Murray RM (co-chairs). Software Is Never Done. Defense Innovation Board, 2019.</a></p>\n  <h4>The Research Anchor — IBIS</h4>\n  <p><a href=\"https://github.com/OpenPathologyFoundation\" target=\"_blank\">IBIS — Interactive Biomedical Inquiry System. OpenPathologyFoundation/ibis (repository not yet public).</a> <span class=\"annot\">Natural language to Lucene with interpretation, confidence, entities and a confirmation step; 200 synthetic seed cases. Field names on the demo slide are illustrative.</span></p>\n  <h4>How Do We Know It Works — WBC &Delta;&Sigma; and Xenonym</h4>\n  <p><a href=\"https://github.com/OpenPathologyFoundation/tessera\" target=\"_blank\">WBC &Delta;&Sigma; — Manual Differential Counter. OpenPathologyFoundation/tessera.</a> &middot; <a href=\"https://mdc.openpathology.org\" target=\"_blank\">mdc.openpathology.org</a> <span class=\"annot\">README v2.24.0 (23 Aug 2026), generated facts: 1,172 tests (722 Node + 450 browser), 71 URS, 207 SRS, 56 hazards, 803 verification cases, 100% traceability. QMS/DHF/DCR/DCR-004 (4 Aug 2026): the 379-test baseline that executed nothing and the fourteen defects behind it. QMS/DHF/DRIFT-LOG.md: 52 incidents, 42 prevented, append-only. TR-001 v4.2 records 191 tests at the same baseline; the discrepancy is noted in REFERENCES.md.</span></p>\n  <p><a href=\"https://github.com/OpenPathologyFoundation\" target=\"_blank\">Xenonym — synthetic patient and professional data generator. OpenPathologyFoundation/xenonym (repository not yet public).</a> &middot; <a href=\"https://xenonym.openpathology.org\" target=\"_blank\">xenonym.openpathology.org</a> <span class=\"annot\">Realistic and stress modes; JSON, CSV and FHIR R4; schema-driven output. No cross-record consistency feature, and none is claimed.</span></p>\n  <h4>Documented Harm and the Scale of Identification Error</h4>\n  <p><a href=\"https://www.periopleader.com/briefs/patient-falls-wrong-surgeries-care-delays-lead-rise-in-sentinel-events/\" target=\"_blank\">The Joint Commission, sentinel event annual review of 2024 (released 9 Jul 2025), as reported by Periop Leader.</a> <span class=\"annot\">1,575 events; 127 wrong-surgery events, up 13%; 68% wrong-site, laterality cited in over half; 51% severe temporary and 36% permanent harm.</span></p>\n  <p><a href=\"https://psnet.ahrq.gov/issue/surgical-specimen-identification-errors-new-measure-quality-surgical-care\" target=\"_blank\">Makary MA, Epstein J, Pronovost PJ, et al. Surgical specimen identification errors: a new measure of quality in surgical care. <em>Surgery</em>. 2007;141(4):450-455.</a> <span class=\"annot\">91 of 21,351 specimens; 4.3 per 1,000.</span> &middot; <a href=\"https://doi.org/10.5858/2010-0726-CPR\" target=\"_blank\">Nakhleh RE, Idowu MO, Souers RJ, et al. Mislabeling of cases, specimens, blocks, and slides: a CAP study of 136 institutions. <em>Arch Pathol Lab Med</em>. 2011;135(8):969-974.</a> <span class=\"annot\">0.11% cumulative.</span></p>\n  <p><a href=\"https://doi.org/10.1309/AJCP50WEZHWIFCIV\" target=\"_blank\">Pfeifer JD, Liu J. Rate of occult specimen provenance complications in routine clinical practice. <em>Am J Clin Pathol</em>. 2013;139(1):93-100.</a> <span class=\"annot\">About 13,000 prostate biopsies, 54 practices; 0.26% switched, 0.67% contaminated. Data supplied by Strand Analytical Laboratories, which markets the test.</span> &middot; <a href=\"https://doi.org/10.5858/134.2.244\" target=\"_blank\">Dunn EJ, Moga PJ. Patient misidentification in laboratory medicine: a qualitative analysis of 227 root cause analysis reports in the Veterans Health Administration. <em>Arch Pathol Lab Med</em>. 2010;134(2):244-255.</a> <span class=\"annot\">182 of 253 adverse events.</span></p>\n  <p><a href=\"https://pmc.ncbi.nlm.nih.gov/articles/PMC1117770/\" target=\"_blank\">Reason J. Human error: models and management. <em>BMJ</em>. 2000;320(7237):768-770.</a> <span class=\"annot\">The Swiss cheese model; the slide paraphrases.</span> &middot; <a href=\"https://www.rsna.org/news/2024/april/gpt4-matches-radiologists\" target=\"_blank\">Gertz RJ, et al. Potential of GPT-4 for detecting errors in radiology reports. <em>Radiology</em>. 2024; doi:10.1148/radiol.232714 (RSNA release).</a> <span class=\"annot\">150 inserted errors in 100 of 200 reports; GPT-4 82.7%, senior radiologists 89.3%, attendings and residents 80.0%.</span></p>\n  <p>The six cases: <a href=\"https://www.medicalnewstoday.com/articles/84665\" target=\"_blank\">Eason, Long Island (Medical News Today, 4 Oct 2007)</a> &middot; <a href=\"https://www.mprnews.org/story/2008/03/18/kidney\" target=\"_blank\">Methodist Hospital, St. Louis Park (MPR News, 18 Mar 2008)</a> &middot; <a href=\"https://www.lubinandmeyer.com/news/lab_mixup_lawsuit.html\" target=\"_blank\">Barros and Cloutman, Boston (Lubin &amp; Meyer, 2 Aug 2010)</a> &middot; <a href=\"https://nbcconnecticut.com/news/local/woman-sues-yale-new-haven-hospital-after-doctors-remove-wrong-rib-lawsuit/55942\" target=\"_blank\">Craven, New Haven (NBC Connecticut, 17 Mar 2016)</a> &middot; <a href=\"https://fortune.com/2026/08/08/kaiser-permanente-cancer-misdiagnosis-delay-lawsuit/\" target=\"_blank\">Barksdale, Georgia (AP via Fortune, 8 Aug 2026; allegations in a lawsuit)</a> &middot; <a href=\"https://www.nbcconnecticut.com/news/national-international/army-vet-sues-ohio-hospital-after-surgeons-amputate-wrong-leg/3780177/\" target=\"_blank\">Jacks, Marietta (NBC Connecticut, 30 Sep 2026)</a>.</p>\n  <h4>Operating Model and Governance</h4>\n  <p><a href=\"https://doi.org/10.1016/j.jpi.2023.100338\" target=\"_blank\">Hart SN, Hoffman NG, Gershkovich P, et al. Organizational preparedness for the use of large language models in pathology informatics. <em>J Pathol Inform</em>. 2023;14:100338.</a></p>\n  <p><a href=\"https://doi.org/10.1016/j.jpi.2025.100450\" target=\"_blank\">Gershkovich P. Wearing a fur coat in the summertime: should digital pathology redefine medical imaging? <em>J Pathol Inform</em>. 2025;18:100450.</a> <span class=\"annot\">The behavioral-interoperability argument.</span></p>\n  <p><a href=\"https://doi.org/10.1126/science.6999622\" target=\"_blank\">Lincoln TL, Korpman RA. Computers, health care, and medical information science. <em>Science</em>. 1980;210(4467):257-263.</a> <span class=\"annot\">Attributed as paraphrase; the sentences sometimes quoted from it could not be verified in the abstract.</span></p>\n  <p><a href=\"https://www.cap.org/advocacy/latest-news-and-practice-data/september-9-2025\" target=\"_blank\">CAP. AI tools make predictions, pathologists make diagnoses. September 2025.</a> &middot; <a href=\"https://www.anthropic.com/engineering/claude-code-best-practices\" target=\"_blank\">Anthropic. Claude Code best practices: explore, plan, implement, verify.</a></p>\n  <h4>Method and Provenance of This Deck</h4>\n  <p>The plan, the visualization specifications and the verified reference registry are in <em>docs/ai_infrastructure/</em>. Every number rendered here arrives through the slide configuration and resolves to an entry in that registry with a status of YES, PARTIAL or PARAPHRASE. The earlier lectures in this series — <em>Build as You Speak</em>, <em>AI Is Rewriting the Operating System of Pathology</em>, and the residents' <em>Custom Software Development in Pathology</em> — are at <a href=\"https://lectures.openpathology.org/\" target=\"_blank\">lectures.openpathology.org</a>.</p>\n</div>"
+      ],
+      "fragments": false
+    },
+    {
+      "id": "qa",
+      "type": "qa",
+      "transition": "zoom",
+      "title": "Questions &amp; Discussion",
+      "subtitle": "What is the one recurring problem you have accepted because changing the software seemed harder than living with it — and what should the system do, never do, and prove?",
+      "contact": "Peter Gershkovich, MD. MHA<br>Director of Pathology Informatics &amp; Cancer Data Science<br>Yale University School of Medicine<br><br><em>A question to open the discussion:</em><br>“What is the one recurring problem you have accepted because changing the software seemed harder than living with it?”<br><br><em>And the three that turn it into infrastructure:</em><br>“What should the system do? What must it never do? What evidence would convince you that it works?”",
+      "qrCode": {
+        "src": "/assets/qr/openpathology-lectures.svg",
+        "url": "https://lectures.openpathology.org/",
+        "label": "Scan to view",
+        "caption": "lectures.openpathology.org"
+      }
+    }
+  ]
+}
