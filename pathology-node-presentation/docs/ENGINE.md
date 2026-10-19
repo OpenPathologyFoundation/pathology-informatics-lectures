@@ -1,6 +1,6 @@
 # The Slide Engine
 
-Reference for the JSON-driven lecture engine behind `lecture.html`. Ten lectures run on it. If you are adding a lecture or a visualization, this is the contract.
+Reference for the JSON-driven lecture engine behind `lecture.html`. Eleven lectures run on it. If you are adding a lecture or a visualization, this is the contract.
 
 `index.html` and `software_dev_clinical_use.html` are separate, self-contained Reveal.js decks and are **not** covered here.
 
@@ -94,9 +94,9 @@ Fourteen renderers.
 
 ## 4. Visualizations
 
-`VizLibrary.render(name, container, config)` looks `name` up in the registry and calls `fn(container, config || {})`. Unknown names warn and no-op. **102 vizTypes are registered**, in two places: an object literal (`var registry = { … }`) and a run of `registry['name'] = fn;` assignments at the end of the file. Both forms are equivalent; the assignment block is where anything added since the orchestration lecture lives.
+`VizLibrary.render(name, container, config)` looks `name` up in the registry and calls `fn(container, config || {})`. Unknown names warn and no-op. **115 vizTypes are registered**, in two places: an object literal (`var registry = { … }`) and a run of `registry['name'] = fn;` assignments at the end of the file. Both forms are equivalent; the assignment block is where anything added since the orchestration lecture lives.
 
-Most of the older visualizations hard-code their content and ignore `config` entirely — they can be reused verbatim but not re-datad from JSON. Everything added for the `ai_operating_system` lecture is config-driven: labels, lists and numbers arrive through `vizConfig` so the deck JSON, not the JS, owns the words.
+Most of the older visualizations hard-code their content and ignore `config` entirely — they can be reused verbatim but not re-datad from JSON. Everything added for the `ai_operating_system` and `ai_infrastructure` lectures is config-driven: labels, lists and numbers arrive through `vizConfig` so the deck JSON, not the JS, owns the words. The `ai_infrastructure` block also adds a small click-to-advance stepper (`infraStepper`): a viz draws every step up front and an `apply(step)` callback shows or hides groups; `vizConfig.step` renders a fixed step for screenshots, and `prefers-reduced-motion` starts at the last step.
 
 ### Writing one
 
@@ -157,7 +157,7 @@ Shared tooltip helpers: `_createTooltip(container)`, `_showTooltip(tip, html, x,
 
 ## 6. Takeaways
 
-`takeaway` accepts a string or `{ text, comment }`. It renders as a bar pinned to the slide bottom, prefixed **Takeaway:**. When `comment` is present the bar gains an ⓘ and a hover-only popover — this is the de-facto presenter channel, and the audience can see it on hover too.
+`takeaway` accepts a string or `{ text, comment }`. It renders as a bar pinned to the slide bottom, prefixed **Takeaway:**. When `comment` is present the bar gains an ⓘ and a hover-only popover. The popover is shown to the room when the presenter hovers, so write it for the audience: one or two sentences that extend the takeaway, give the source, or sharpen what the slide is about. Presenter directions ("say this once", "if asked", "slow down here") belong in `speakerNotes`, which only the `S` view shows.
 
 ---
 
@@ -216,7 +216,7 @@ Watch specificity when styling anything inside a slide: `.reveal .intro-slide p`
 1. Write `data/lectures/<name>.json`. It is reachable at `/lecture/<name>` immediately — no server change.
 2. Give every slide a unique non-empty `id` and a known `type`; add `dockTitle` to any full-bleed visualization.
 3. Prefer the eleven styled badge values.
-4. Use `takeaway: { text, comment }` as the presenter channel; `speakerNotes` for the `S` view.
+4. Use `takeaway: { text, comment }` for the room — the comment is an audience-visible extension of the takeaway — and `speakerNotes` for anything addressed to the presenter.
 5. For new visuals, follow §4 and register the function.
 6. Add a `<a class="lecture-card" href="/lecture/<name>">` block to `home.html` and a row to the root `README.md`.
 7. Run `npm run test:viz`, `npm run test:links`, and `npm run shots` before showing it to anyone.

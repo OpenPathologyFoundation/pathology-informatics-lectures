@@ -1401,6 +1401,16 @@ a.poll-qr, a.poll-qr:hover {
     color: var(--ip);
     border-bottom-style: solid;
 }
+/* The poll's vote URL is a long slug under the QR code. The reference-link
+   rule above outranks .poll-qr-url and was rendering it at 0.85em of the
+   slide's body size — a 40 px URL that spilled out of the slide on every
+   poll. Keep it at the widget's own size. */
+.reveal .intro-slide a.poll-qr-url,
+.reveal .intro-slide a.poll-qr-url:visited {
+    font-size: 11px;
+    font-weight: 500;
+    border-bottom: none;
+}
 .dark-slide a,
 .dark-slide a:visited,
 .reveal .dark-slide a {

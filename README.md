@@ -12,6 +12,7 @@ Grand rounds, leadership, and conference audiences.
 
 | Title | Slides | Route | Docs |
 | ----- | ------ | ----- | ---- |
+| **Modern AI & Transformation of Clinical, Operational & Research Infrastructure in Pathology** | 36 | `/lecture/ai_infrastructure` | [Plan](docs/ai_infrastructure/PLAN.md) · [References](docs/ai_infrastructure/REFERENCES.md) · [Viz specs](docs/ai_infrastructure/VIZ_SPECS.md) |
 | **AI Is Rewriting the Operating System of Pathology** | 37 | `/lecture/ai_operating_system` | [Plan](docs/ai_operating_system/PLAN.md) · [References](docs/ai_operating_system/REFERENCES.md) · [Viz specs](docs/ai_operating_system/VIZ_SPECS.md) |
 | **From Image Management to Workflow Orchestration** — WSI as a State Machine *(35-min conference version)* | 30 | `/lecture/wsi_orchestration` | — |
 | **From "Image Management" to Workflow Orchestration** — The WSI Stack as a State Machine *(full-length version)* | 41 | `/lecture/wsi_state_machine` | — |
