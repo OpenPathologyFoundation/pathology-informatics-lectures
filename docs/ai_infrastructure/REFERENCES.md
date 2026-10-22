@@ -113,6 +113,38 @@ Every number the deck renders resolves to an id below. Visualizations receive th
 
 **Guardrails for this section.** The quote is Hinton's; Mukherjee carried it and concluded the opposite, so the slide attributes the words to Hinton and the essay to Mukherjee. The hedge ("It might be ten years") stays on the slide. The ten-year mark is October 2026 from the Toronto date; the talk is on 22 October 2026. The amendment split is the Q-Probes benchmark, not the department's own; if the department's amendments are split by the same taxonomy before the talk, those numbers replace the benchmark. The surveys measure students' stated intentions, not Match outcomes.
 
+## 9. Measured on the department's git server (added 2026-10-20)
+
+| id | Reference | Status |
+|---|---|---|
+| **GIT-1** | Commit and pull-request counts on git.yale.edu, organization PathologyInformatics (64 repositories), measured 2026-10-20 from the 51 repositories cloned locally (fetched that day) and the API for the other 13; non-merge commits on all fetched branches, deduplicated by sha; lines added plus deleted excluding lockfiles, vendored and build directories, binaries, minified files and SVG, capped at 2,000 lines per file per commit; merged pull requests from the search API; bots (renovate, github-actions, dependabot) excluded; author display names only, none rendered. The full report, the analysis script and the extracted data are kept locally in the repository root’s `.dev-notes/` (`2026-10-20-git-yale-productivity-stats.md`), which git ignores. | internal (measured) |
+
+**What GIT-1 establishes.** The speaker, calendar 2024 against 2026-04-17 to 2026-10-20: commits 80 → 2,303; days with a commit 44 → 130; lines changed 21,271 → 1,244,873; merged pull requests 3 → 950. Per day with a commit: commits ×10, lines ×20, merged pull requests ×100 — the last partly a change of workflow, since in 2024 most commits went to the main branch without a pull request. The speaker's monthly commits in 2026 step up in June (April 63, May 17, June 226, August 867), not at the April load. One senior engineer, the 13 weeks before 2026-09-15 against the five weeks after: commits 43 → 151 a week, lines 16,600 → 70,000 a week, days with a commit 4.2 → 6.2 a week; per such day ×2.3 and ×2.8; his baseline was already partly AI-assisted. Everyone except the speaker and bots: merged pull requests 53 → 127 a week over the same five weeks (78 in all of 2024). One team member stopped committing after 2026-09-14, so group totals are shown per person. Counts measure activity, not value; the deck renders only the per-day ratios for the speaker and the ×2 to ×4 range for the engineer.
+
+## 10. The image mover's security record (added 2026-10-21)
+
+| id | Reference | Status |
+|---|---|---|
+| **STV-1** | The image mover’s security record — internal, unpublished. The full deck renders its version dates, step and test counts and findings in plain words on a hidden slide; the public deck does not include the slide, the counts or the record’s titles. | internal |
+
+**What STV-1 establishes.** A forty-line file copy, in production, was re-asked "is it secure?" five times over two and a half years, and each pass surfaced an assumption the previous pass had no reason to see. The findings, the published disciplines the record ties each of them to, and the version dates are in the full deck’s hidden slide and its notes, not in this repository.
+
+## 11. The opening trail (added 2026-10-22, from the presenter's cue cards)
+
+The `opening-trail` slide draws nine anchors, 1928 to 2021, in order and not to scale. Every date and attribution below is as the presenter's cue cards give it; the cautions in the slide's notes are the cards' own.
+
+| id | source | status |
+|---|---|---|
+| OPN-1 | "Publish or perish": Case CM, *Scholarship in Sociology* (1928); Wilson L, *The Academic Man* (1942); historical tracing by Vladimir Moskovkin, Leiden CWTS, 4 June 2024. Not the first use; no inventor claimed. | YES (cue cards) |
+| OPN-2 | Bush V. *As We May Think*. The Atlantic, July 1945; Computer History Museum, Memex conceptual sketch. Proposed, not built; anticipated hypertext, not the Internet's networking. | YES (cue cards) |
+| OPN-3 | Licklider JCR. *Man-Computer Symbiosis*. IRE Transactions on Human Factors in Electronics, March 1960; full text hosted by MIT CSAIL. | YES (cue cards) |
+| OPN-4 | DARPA official histories: ARPA founded 1958; IPTO 1962; first ARPANET host-to-host message 29 October 1969; renamed DARPA 1972. | YES (cue cards) |
+| OPN-5 | Tufte ER. *The Visual Display of Quantitative Information*, 1983 (official book page; Yale faculty biography). Norman DA. *The Psychology of Everyday Things*, 1988, later *The Design of Everyday Things* (preface, revised edition 2013). | YES (cue cards) |
+| OPN-6 | Berners-Lee T. *The World Wide Web: Past, Present and Future*, 1996, W3C. Proposed the Web at CERN in 1989; the Web, not the Internet. | YES (cue cards) |
+| OPN-7 | Sculley D et al. *Hidden Technical Debt in Machine Learning Systems*. NIPS 2015. The diagram is conceptual, not a measured share of cost or code. | YES (cue cards) |
+| OPN-8 | Ehteshami Bejnordi B et al. *Diagnostic Assessment of Deep Learning Algorithms for Detection of Lymph Node Metastases in Women With Breast Cancer*. JAMA 2017;318:2199–2210. doi:10.1001/jama.2017.14585. A simulated, time-constrained evaluation; clinical evaluation still needed. | YES (cue cards) |
+| OPN-9 | Software Engineering Institute. *AI Engineering: An Emergent Discipline for Human-Centered, Robust and Secure, and Scalable AI*. 27 April 2021. Not the birth of systems engineering. | YES (cue cards) |
+
 ## 6. Borrowed from the repository's other decks (already verified there)
 
 | id | What | Where |

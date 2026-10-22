@@ -8,7 +8,7 @@ var SlideEngine = (function () {
     var _vizQueue = [];   // visualizations to render on slide entry
     var _rendered = {};   // track which vizs have been drawn
     var _slideMap = [];   // metadata for ALL slides (including hidden optional)
-    var _showOptional = sessionStorage.getItem('showOptional') !== 'false'; // default: show all
+    var _showOptional = true; // set per lecture in renderLecture
 
     // ─── MAIN ENTRY POINT ────────────────────────────────────
     function loadLecture(jsonUrl, callback) {
@@ -47,6 +47,14 @@ var SlideEngine = (function () {
             if (t.secondary) root.style.setProperty('--intro-secondary', t.secondary);
             if (t.accent) root.style.setProperty('--intro-accent', t.accent);
         }
+
+        // Optional slides show unless the lecture opens on its core slides
+        // (meta.optionalDefault: "hidden"); the title-slide toggle, once
+        // used, overrides either for the tab.
+        var storedOptional = sessionStorage.getItem('showOptional');
+        _showOptional = storedOptional !== null
+            ? storedOptional !== 'false'
+            : !(data.meta && data.meta.optionalDefault === 'hidden');
 
         // Build slide map and render
         _slideMap = [];
@@ -109,6 +117,11 @@ var SlideEngine = (function () {
         var section = fn(slide, meta);
         section.id = slide.id || '';
         section.setAttribute('data-transition', slide.transition || 'fade');
+        // A signpost says where the slide sits in the argument ("2 · Name ·
+        // First pass: Dialogue"). The top-left overlay shows it in place of
+        // the category badge, so a listener who lost the thread can see
+        // which part of the outline the talk is in.
+        if (slide.signpost) section.setAttribute('data-signpost', slide.signpost);
         if (slide.backgroundGradient) {
             section.setAttribute('data-background-gradient', slide.backgroundGradient);
         }
@@ -118,6 +131,11 @@ var SlideEngine = (function () {
         if (slide.speakerNotes) {
             var notes = el('aside', 'notes');
             notes.textContent = slide.speakerNotes;
+            // The speaker view shows the notes as HTML with normal white
+            // space, so a line break in the notes (the bridge to the next
+            // slide sits on its own line) has to be a <br>. textContent has
+            // already escaped the text; only the newlines are rewritten.
+            notes.innerHTML = notes.innerHTML.replace(/\n/g, '<br>');
             section.appendChild(notes);
         }
         return section;
@@ -273,6 +291,7 @@ var SlideEngine = (function () {
         var s = el('section', 'intro-slide');
         applyBadge(s, slide.badge);
         s.appendChild(el('h2', '', slide.title));
+        if (slide.subtitle) s.appendChild(el('p', 'slide-subtitle', slide.subtitle));
 
         var cols = el('div', 'content-columns');
 
@@ -720,6 +739,9 @@ var SlideEngine = (function () {
         icon.innerHTML = '<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.8214 2.48697 15.5291 3.33782 17L2.5 21.5L7 20.6622C8.47087 21.513 10.1786 22 12 22Z"/><path d="M12 12V12.01"/><path d="M12 8C12.5523 8 13 8.44772 13 9C13 9.55228 12.5523 10.5 12 10.5C11.4477 10.5 11 10 11 9.5"/></svg>';
         container.appendChild(icon);
         container.appendChild(el('p', 'qa-text', slide.title || 'Questions & Discussion'));
+        // The question for the discussion, if the lecture poses one. (Until
+        // 2026-10-22 the Q&A renderer ignored slide.subtitle in both layouts.)
+        if (slide.subtitle) container.appendChild(el('p', 'qa-subtitle', slide.subtitle));
 
         // Use presenter data if available; fall back to JSON contact
         var hasPresenter = (typeof Presenter !== 'undefined' && !Presenter.isSkipped());
@@ -758,8 +780,9 @@ var SlideEngine = (function () {
         // The SVG file lives in /assets/qr/ in the served tree; the JSON
         // carries only its URL, the caption shown beneath it, and the
         // human-readable URL that prints above it.
+        var qrLink = null;
         if (slide.qrCode && slide.qrCode.src) {
-            var qrLink = el('a', 'qa-qr');
+            qrLink = el('a', 'qa-qr');
             qrLink.href = slide.qrCode.url || '#';
             qrLink.target = '_blank';
             qrLink.setAttribute('aria-label', slide.qrCode.caption || 'Scan QR code');
@@ -773,9 +796,56 @@ var SlideEngine = (function () {
                 qrHtml += '<div class="qa-qr-caption">' + slide.qrCode.caption + '</div>';
             }
             qrLink.innerHTML = qrHtml;
-            s.appendChild(qrLink);
         }
 
+        // Optional acknowledgments beneath the card — the people behind the
+        // work, on screen for the whole discussion. The QR code moves beside
+        // the card so the panel can take the lower half.
+        //   slide.acknowledgments = { label, lineage: [{ name, when, text }],
+        //                             groups: [{ role, names: [] }], note }
+        //   note: one italic line under the groups, for everyone the slide
+        //   does not name.
+        var ack = slide.acknowledgments;
+        if (ack) {
+            s.classList.add('qa-slide--ack');
+            var top = el('div', 'qa-top');
+            if (qrLink) top.appendChild(qrLink);
+            top.appendChild(container);
+            s.appendChild(top);
+
+            var panel = el('div', 'qa-ack');
+            if (ack.label) panel.appendChild(el('div', 'qa-ack-label', ack.label));
+            if (ack.lineage && ack.lineage.length) {
+                var lineage = el('div', 'qa-ack-lineage');
+                // A step without a date keeps the date's line, so the texts align.
+                var anyWhen = ack.lineage.some(function (l) { return l.when; });
+                ack.lineage.forEach(function (l) {
+                    var step = el('div', 'qa-ack-step');
+                    step.appendChild(el('div', 'qa-ack-name', l.name));
+                    if (anyWhen) step.appendChild(el('div', 'qa-ack-when', l.when || '&nbsp;'));
+                    if (l.text) step.appendChild(el('div', 'qa-ack-text', l.text));
+                    lineage.appendChild(step);
+                });
+                panel.appendChild(lineage);
+            }
+            if (ack.groups && ack.groups.length) {
+                var groups = el('div', 'qa-ack-groups');
+                ack.groups.forEach(function (g) {
+                    var col = el('div', 'qa-ack-group');
+                    col.appendChild(el('div', 'qa-ack-role', g.role));
+                    (g.names || []).forEach(function (n) {
+                        col.appendChild(el('div', 'qa-ack-person', n));
+                    });
+                    groups.appendChild(col);
+                });
+                panel.appendChild(groups);
+            }
+            if (ack.note) panel.appendChild(el('div', 'qa-ack-note', ack.note));
+            s.appendChild(panel);
+            return s;
+        }
+
+        if (qrLink) s.appendChild(qrLink);
         s.appendChild(container);
         return s;
     }
@@ -790,8 +860,12 @@ var SlideEngine = (function () {
         reveal.appendChild(overlay);
 
         function updateBadge(slide) {
+            var signpost = slide ? slide.getAttribute('data-signpost') : null;
             var badge = slide ? slide.getAttribute('data-badge') : null;
-            if (badge) {
+            if (signpost) {
+                overlay.textContent = signpost;
+                overlay.className = 'badge-overlay badge-overlay--signpost badge-overlay--visible';
+            } else if (badge) {
                 overlay.textContent = badge.charAt(0).toUpperCase() + badge.slice(1);
                 overlay.className = 'badge-overlay badge-overlay--' + badge + ' badge-overlay--visible';
             } else {
@@ -802,6 +876,11 @@ var SlideEngine = (function () {
         if (typeof Reveal !== 'undefined') {
             Reveal.on('slidechanged', function (e) { updateBadge(e.currentSlide); });
             Reveal.on('ready', function (e) { updateBadge(e.currentSlide); });
+            // This runs after Reveal.initialize() resolved, so 'ready' may
+            // already have fired; a deck opened at a deep link (or inside
+            // the speaker view's iframes) would otherwise show no label
+            // until the first slide change.
+            if (Reveal.isReady && Reveal.isReady()) updateBadge(Reveal.getCurrentSlide());
         }
     }
 
@@ -875,30 +954,66 @@ var SlideEngine = (function () {
             document.querySelectorAll('.reveal .slides section'), fitVizToSlide);
     }
 
+    // A figure that builds in steps keeps its steps as fragments of the
+    // slide (VizLibrary's infraBuild). After any fragment change, and on
+    // arrival, the figure is told to match the fragments: all visible when
+    // the slide is reached from ahead, none when it is reached from behind.
+    function syncBuild(slide, immediate) {
+        if (slide && typeof slide.__vizBuild === 'function') slide.__vizBuild(immediate);
+    }
+
     function initVizOnSlideChange() {
         if (typeof Reveal === 'undefined') return;
 
-        Reveal.on('slidechanged', function (event) {
-            var slide = event.currentSlide;
-            var vizAttr = slide.getAttribute('data-viz');
-            if (!vizAttr || _rendered[vizAttr]) {
-                // Already drawn (the queue dedups by vizType) — still re-fit,
-                // the canvas may have been rescaled since.
-                fitVizToSlide(slide);
-                return;
-            }
-            _rendered[vizAttr] = true;
+        // Inter's weights load lazily, one file each, the first time text
+        // needs them. A figure that measures text (to wrap it, or to reserve
+        // room for a label) while a weight is still in flight measures the
+        // fallback face and lays out wrong for its first showing. Warm the
+        // weights the figures use before any slide needs them.
+        if (document.fonts && document.fonts.load) {
+            ['400', '500', '600', '700', '800'].forEach(function (w) {
+                try { document.fonts.load(w + ' 12px Inter'); } catch (e) { /* no-op */ }
+            });
+        }
 
-            // Find matching viz queue item
-            _vizQueue.forEach(function (item) {
-                if (item.type === 'viz' && item.vizType === vizAttr) {
-                    var vizContainer = document.getElementById(item.elementId);
-                    if (vizContainer && typeof VizLibrary !== 'undefined') {
-                        VizLibrary.render(item.vizType, vizContainer, item.vizConfig);
-                    }
+        function onFragment(event) {
+            var f = event.fragment;
+            if (f && f.classList && f.classList.contains('viz-build-step')) syncBuild(f.parentNode, false);
+        }
+        Reveal.on('fragmentshown', onFragment);
+        Reveal.on('fragmenthidden', onFragment);
+
+        // Render the figure that belongs to this slide, once, when the
+        // slide is reached. Keyed by the slide, not by the figure type:
+        // two slides may share a figure type (the objectives and the
+        // contributions both use the board), and drawing the second
+        // slide's figure while its section is still hidden measures no
+        // text at all, so its lines never wrap.
+        function renderSlideViz(slide) {
+            var vizAttr = slide.getAttribute('data-viz');
+            if (!vizAttr) return;
+            var key = slide.id ? 'slide:' + slide.id : 'viz:' + vizAttr;
+            if (_rendered[key]) return;
+            _rendered[key] = true;
+            var own = _vizQueue.filter(function (item) {
+                return item.type === 'viz' && slide.id && item.elementId === 'viz-' + slide.id;
+            });
+            if (!own.length) {
+                own = _vizQueue.filter(function (item) { return item.type === 'viz' && item.vizType === vizAttr; });
+            }
+            own.forEach(function (item) {
+                var vizContainer = document.getElementById(item.elementId);
+                if (vizContainer && typeof VizLibrary !== 'undefined' && !vizContainer.querySelector('svg')) {
+                    VizLibrary.render(item.vizType, vizContainer, item.vizConfig);
                 }
             });
-            fitVizToSlide(slide);          // after render: the svg now exists
+        }
+
+        Reveal.on('slidechanged', function (event) {
+            var slide = event.currentSlide;
+            renderSlideViz(slide);
+            fitVizToSlide(slide);          // after render: the svg now exists; or re-fit, the canvas may have rescaled
+            syncBuild(slide, true);
         });
 
         fitAllVisualizations();
@@ -906,22 +1021,23 @@ var SlideEngine = (function () {
         // The bar rewraps and the canvas rescales on resize.
         window.addEventListener('resize', fitAllVisualizations);
 
-        // Also check the initial slide
-        var currentSlide = Reveal.getCurrentSlide();
-        if (currentSlide) {
-            var vizAttr = currentSlide.getAttribute('data-viz');
-            if (vizAttr && !_rendered[vizAttr]) {
-                _rendered[vizAttr] = true;
-                _vizQueue.forEach(function (item) {
-                    if (item.type === 'viz' && item.vizType === vizAttr) {
-                        var vizContainer = document.getElementById(item.elementId);
-                        if (vizContainer && typeof VizLibrary !== 'undefined') {
-                            VizLibrary.render(item.vizType, vizContainer, item.vizConfig);
-                        }
-                    }
-                });
-            }
+        // Also check the initial slide. A deck opened at a deep link
+        // renders its first figure while the webfont may still be in
+        // flight; a figure that wraps text by measuring it then lays out
+        // for the fallback face and overruns once Inter arrives. Wait for
+        // the fonts (the weights were requested above) before that first
+        // render; slides reached later by key have them already.
+        function renderInitial() {
+            var currentSlide = Reveal.getCurrentSlide();
+            if (!currentSlide) return;
+            renderSlideViz(currentSlide);
             fitVizToSlide(currentSlide);
+            syncBuild(currentSlide, true);
+        }
+        if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+            document.fonts.ready.then(renderInitial, renderInitial);
+        } else {
+            renderInitial();
         }
     }
 
