@@ -31,7 +31,12 @@ test-results/
 playwright-report/
 .playwright/
 blob-report/
+
+# Local working notes: measurements, session notes and scratch scripts that
+# must not reach this public repository. Only the README that explains the
+# convention is tracked.
 .dev-notes/*
+!.dev-notes/README.md
 
 # Lecture working notes — raw verification transcripts and agent task lists.
 # These are superseded by the curated docs that ship alongside each lecture
@@ -47,3 +52,21 @@ docs/ai_and_applied_informatics.md
 # package-lock (root level — each sub-project manages its own)
 /package-lock.json
 
+
+# The presenter's full decks and the files generated from them. The public
+# deck (data/lectures/<lecture>.json) is built from the full deck by
+# pathology-node-presentation/tools/build-public-deck.js; the full deck,
+# the storyboard with the spoken script, the rehearsal table and the guided
+# route carry department data, internals and names that stay off the
+# internet. Internal documents dropped into docs/ for reference, and the
+# generated synopsis PDFs, stay local too.
+pathology-node-presentation/data/lectures/*_full.json
+pathology-node-presentation/data/lectures/*_guided.json
+docs/*/STORYBOARD.md
+docs/*/REHEARSAL.md
+docs/*.pdf
+pathology-node-presentation/docs/*.pdf
+
+# The per-lecture rules of the public build name the material they remove;
+# they stay with the full deck, off the repository.
+pathology-node-presentation/tools/public-rules/

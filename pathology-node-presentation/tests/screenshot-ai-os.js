@@ -25,6 +25,7 @@ const VIEWPORT = { width: 1440, height: 900 };
 
     await page.addInitScript(() => {
         try {
+            sessionStorage.setItem('showOptional', 'true');
             localStorage.setItem('pathInfoPresenter', JSON.stringify({
                 name: 'Peter Gershkovich',
                 title: 'M.D., M.H.A.',

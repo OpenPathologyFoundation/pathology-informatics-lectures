@@ -157,7 +157,7 @@ const PROBE = () => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await ctx.newPage();
     await page.addInitScript(v => {
-        try { localStorage.setItem('pathInfoPresenter', v); } catch (e) {}
+        try { localStorage.setItem('pathInfoPresenter', v); sessionStorage.setItem('showOptional', 'true'); } catch (e) {}
     }, PRESENTER);
 
     let totalFail = 0, totalText = 0;

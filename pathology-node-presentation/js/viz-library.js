@@ -997,11 +997,40 @@ const VizLibrary = (function () {
         parentContainer.appendChild(tip);
         return tip;
     }
-    function _showTooltip(tip, html, x, y) {
+    // Where the cursor is, in the container's own CSS pixels. Reveal scales
+    // the slide with a transform, so the cursor's screen offset from the
+    // container's corner is divided by that scale before it is used as a
+    // `left`/`top` inside the container; otherwise the tooltip lands twice
+    // as far from the cursor on a large display and short of it on a small one.
+    function _vizPointer(event, container) {
+        var e = event && event.sourceEvent ? event.sourceEvent : event;
+        var r = container.getBoundingClientRect();
+        var kx = r.width ? container.offsetWidth / r.width : 1;
+        var ky = r.height ? container.offsetHeight / r.height : 1;
+        return [(e.clientX - r.left) * kx, (e.clientY - r.top) * ky];
+    }
+    // `anchor` is the cursor in container pixels, when the tooltip follows
+    // it: a tooltip that would run past the right or bottom edge flips to
+    // the cursor's other side. Without an anchor it is clamped to the edge.
+    function _showTooltip(tip, html, x, y, anchor) {
         tip.innerHTML = html;
+        // Measured at the corner: an absolutely positioned box placed near
+        // the right edge shrinks to the room left, which would hide the
+        // overflow the flip is meant to catch.
+        tip.style.left = '0px';
+        tip.style.top = '0px';
+        tip.style.opacity = '1';
+        var parent = tip.parentNode;
+        var pw = parent ? parent.clientWidth : 0, ph = parent ? parent.clientHeight : 0;
+        var w = tip.offsetWidth, h = tip.offsetHeight;
         tip.style.left = x + 'px';
         tip.style.top = y + 'px';
-        tip.style.opacity = '1';
+        if (pw && ph) {
+            if (x + w > pw - 4) x = Math.max(4, anchor ? anchor[0] - 16 - w : pw - w - 4);
+            if (y + h > ph - 4) y = Math.max(4, anchor ? anchor[1] - 12 - h : ph - h - 4);
+            tip.style.left = x + 'px';
+            tip.style.top = y + 'px';
+        }
     }
     function _hideTooltip(tip) { tip.style.opacity = '0'; }
 
@@ -14715,6 +14744,9 @@ const VizLibrary = (function () {
     var IRON = '#4a4a48';          // the railroad
     var REDUCED_MOTION = !!(window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    // ?build=all in the page URL starts every build at its last step, for
+    // reading the deck through without clicking.
+    var BUILD_ALL = /[?&]build=all(?:&|$)/.test(window.location.search || '');
 
     // Standard cream stage. Returns the svg selection.
     function aiosStage(container, W, H) {
@@ -14766,6 +14798,7 @@ const VizLibrary = (function () {
     //  to the pathology_informatics_ai deck). Cream palette, five-stage
     //  wave, objectives supplied by the lecture JSON.
     //    config.objectives = [{ verb, text }]
+    //    config.fontSize, config.lineHeight — statement text (default 13 / 18)
     function learningObjectivesConfig(container, config) {
         var W = 1280, H = 620, P = TUFTE;
         var c = config || {};
@@ -14782,6 +14815,7 @@ const VizLibrary = (function () {
         }
 
         var mL = c.margin || 130, mR = c.margin || 130, tw = c.textWidth || 215;
+        var fs = c.fontSize || 13, lh = c.lineHeight || 18;
         var spacing = (W - mL - mR) / (objs.length - 1);
         var amp = 44;
 
@@ -14791,13 +14825,13 @@ const VizLibrary = (function () {
         var texts = objs.map(function (o, i) {
             var t = svg.append('text').attr('x', mL + i * spacing).attr('y', 0)
                 .attr('text-anchor', 'middle').attr('font-family', SERIF)
-                .attr('font-size', '13px').attr('fill', P.ink);
-            wsiWrap(t, o.text || '', tw, 18);
+                .attr('font-size', fs + 'px').attr('fill', P.ink);
+            wsiWrap(t, o.text || '', tw, lh);
             return { sel: t, lines: t.selectAll('tspan').size() || 1 };
         });
         var maxUp = 1;
         texts.forEach(function (t, i) { if (i % 2 === 0) maxUp = Math.max(maxUp, t.lines); });
-        var baseY = 292 + Math.max(0, maxUp - 4) * 20;
+        var baseY = 292 + Math.max(0, maxUp - 4) * (lh + 2);
 
         objs.forEach(function (o, i) {
             o.cx = mL + i * spacing;
@@ -14833,9 +14867,9 @@ const VizLibrary = (function () {
             // Verb above the statement in both directions — reading order
             // should not flip depending on which way the wave went.
             var t = texts[i].sel, lines = texts[i].lines;
-            var textTop = up ? (o.cy - 40 - (lines - 1) * 18) : (o.cy + 74);
+            var textTop = up ? (o.cy - 40 - (lines - 1) * lh) : (o.cy + 74);
             t.attr('y', textTop);
-            wsiWrap(t, o.text || '', tw, 18);
+            wsiWrap(t, o.text || '', tw, lh);
 
             g.append('text').attr('x', o.cx).attr('y', textTop - 20)
                 .attr('text-anchor', 'middle').attr('font-family', SANS)
@@ -15012,8 +15046,8 @@ const VizLibrary = (function () {
 
             if (st.tip) {
                 g.on('mousemove', function (event) {
-                    var pt = d3.pointer(event, container);
-                    _showTooltip(tip, st.tip, pt[0] + 16, pt[1] - 10);
+                    var pt = _vizPointer(event, container);
+                    _showTooltip(tip, st.tip, pt[0] + 16, pt[1] - 10, pt);
                 }).on('mouseleave', function () { _hideTooltip(tip); });
             }
         });
@@ -15110,11 +15144,11 @@ const VizLibrary = (function () {
                 .attr('font-size', '12.5px').attr('fill', P.ink).text(p.model);
             aiosReveal(g, i, 600, 150);
             g.on('mousemove', function (event) {
-                var pt = d3.pointer(event, container);
+                var pt = _vizPointer(event, container);
                 _showTooltip(tip, '<strong>' + p.model + '</strong><br>' +
                     'mean AUROC ' + p.auroc.toFixed(3) + '<br>' +
                     p.seconds + ' s / slide' + (p.note ? '<br><em>' + p.note + '</em>' : ''),
-                    pt[0] + 16, pt[1] - 10);
+                    pt[0] + 16, pt[1] - 10, pt);
             }).on('mouseleave', function () { _hideTooltip(tip); });
         });
 
@@ -15285,8 +15319,8 @@ const VizLibrary = (function () {
 
             if (m.hover) {
                 g.on('mousemove', function (event) {
-                    var pt = d3.pointer(event, container);
-                    _showTooltip(tip, m.hover, pt[0] + 16, pt[1] - 10);
+                    var pt = _vizPointer(event, container);
+                    _showTooltip(tip, m.hover, pt[0] + 16, pt[1] - 10, pt);
                 }).on('mouseleave', function () { _hideTooltip(tip); });
             }
         });
@@ -15505,8 +15539,8 @@ const VizLibrary = (function () {
 
             if (a.artifact) {
                 g.on('mousemove', function (event) {
-                    var pt = d3.pointer(event, container);
-                    _showTooltip(tip, '<strong>' + a.label + '</strong><br>' + a.artifact, pt[0] + 16, pt[1] - 10);
+                    var pt = _vizPointer(event, container);
+                    _showTooltip(tip, '<strong>' + a.label + '</strong><br>' + a.artifact, pt[0] + 16, pt[1] - 10, pt);
                 }).on('mouseleave', function () { _hideTooltip(tip); });
             }
         });
@@ -15641,13 +15675,13 @@ const VizLibrary = (function () {
             aiosReveal(g, i, 500, 55);
 
             g.on('mousemove', function (event) {
-                var pt = d3.pointer(event, container);
+                var pt = _vizPointer(event, container);
                 _showTooltip(tip,
                     '<strong>' + e.name + '</strong><br>' +
                     d3.timeFormat('%d %b %Y')(new Date(e.date)) + (e.who ? ' · ' + e.who : '') +
                     '<br><em>' + (e.kind || '') + '</em>' +
                     (e.url ? '<br><span style="opacity:.7">click to open</span>' : ''),
-                    pt[0] + 16, pt[1] - 10);
+                    pt[0] + 16, pt[1] - 10, pt);
             }).on('mouseleave', function () { _hideTooltip(tip); });
 
             if (e.url) g.on('click', function () { window.open(e.url, '_blank', 'noopener'); });
@@ -15832,13 +15866,14 @@ const VizLibrary = (function () {
             var clLines = cl.selectAll('tspan').size() || 1;
 
             var evY = cy + 52 + clLines * 20 + 8;
+            var es = c.evidenceSize || 12, elh = Math.round(es * 1.33);
             var ev = g.append('text').attr('x', cx + 16).attr('y', evY)
-                .attr('font-family', SERIF).attr('font-size', '12px')
+                .attr('font-family', SERIF).attr('font-size', es + 'px')
                 .attr('font-style', 'italic').attr('fill', r.empty ? P.crimson : P.muted);
-            wsiWrap(ev, r.evidence, cardW - 32, 16);
+            wsiWrap(ev, r.evidence, cardW - 32, elh);
             var evLines = ev.selectAll('tspan').size() || 1;
 
-            var srcY = evY + evLines * 16 + 14;
+            var srcY = evY + evLines * elh + 14;
             var srcLines = 0;
             if (r.source) {
                 var sr = g.append('text').attr('x', cx + 16).attr('y', srcY)
@@ -16009,10 +16044,10 @@ const VizLibrary = (function () {
                 .text(e.device + '  ' + (e.date || e.year));
             aiosReveal(g, i, 1200, 90);
             g.on('mousemove', function (event) {
-                var pt = d3.pointer(event, container);
+                var pt = _vizPointer(event, container);
                 _showTooltip(tip, '<strong>' + e.device + '</strong><br>' + e.id + ' \u00b7 ' + (e.date || e.year) +
                     (e.modern ? '<br><em>whole-slide-image algorithm</em>' : '<br><em>not a WSI algorithm</em>'),
-                    pt[0] + 16, pt[1] - 10);
+                    pt[0] + 16, pt[1] - 10, pt);
             }).on('mouseleave', function () { _hideTooltip(tip); });
         });
 
@@ -16237,8 +16272,8 @@ const VizLibrary = (function () {
 
             if (r.example) {
                 g.on('mousemove', function (event) {
-                    var pt = d3.pointer(event, container);
-                    _showTooltip(tip, '<strong>' + r.label + '</strong><br>' + r.example, pt[0] + 16, pt[1] - 10);
+                    var pt = _vizPointer(event, container);
+                    _showTooltip(tip, '<strong>' + r.label + '</strong><br>' + r.example, pt[0] + 16, pt[1] - 10, pt);
                 }).on('mouseleave', function () { _hideTooltip(tip); });
             }
         });
@@ -16383,11 +16418,11 @@ const VizLibrary = (function () {
 
             if (e.tip || e.url) {
                 g.on('mousemove', function (event) {
-                    var pt = d3.pointer(event, container);
+                    var pt = _vizPointer(event, container);
                     _showTooltip(tip, '<strong>' + e.label + '</strong>' +
                         (e.tip ? '<br>' + e.tip : '') +
                         (e.url ? '<br><span style="opacity:.7">click to open</span>' : ''),
-                        pt[0] + 16, pt[1] - 10);
+                        pt[0] + 16, pt[1] - 10, pt);
                 }).on('mouseleave', function () { _hideTooltip(tip); });
                 if (e.url) g.on('click', function () { window.open(e.url, '_blank', 'noopener'); });
             }
@@ -16580,8 +16615,8 @@ const VizLibrary = (function () {
                 aiosReveal(g, i, (opts && opts.eventDelay) || 500, 90);
                 if (e.tip) {
                     g.style('cursor', 'pointer').on('mousemove', function (event) {
-                        var pt = d3.pointer(event, container);
-                        _showTooltip(tip, e.tip, pt[0] + 16, pt[1] - 10);
+                        var pt = _vizPointer(event, container);
+                        _showTooltip(tip, e.tip, pt[0] + 16, pt[1] - 10, pt);
                     }).on('mouseleave', function () { _hideTooltip(tip); });
                 }
             });
@@ -16775,22 +16810,68 @@ const VizLibrary = (function () {
         return sel;
     }
 
-    // Click-to-advance stepper. `apply(step, immediate)` must be idempotent.
+    // ─── Builds as fragments ─────────────────────────────────────
+    //  A figure that builds in steps registers its steps as fragments of
+    //  its slide while the presentation is running, so the keyboard, a
+    //  clicker, the speaker view and the URL advance the build the way
+    //  they advance any other slide; a click on the stage still works.
+    //  Outside Reveal (a bare page, a test) the click advances directly.
+    //  `setStep(step, immediate)` is called in both directions, so it must
+    //  be idempotent. The engine calls `section.__vizBuild()` after any
+    //  fragment change on the slide. Returns { goto(step) }.
+    function infraBuild(container, svg, nSteps, step, setStep) {
+        var section = container && container.closest ? container.closest('section') : null;
+        var live = !!(section && typeof Reveal !== 'undefined' && Reveal.isReady &&
+                      Reveal.isReady() && Reveal.syncFragments);
+        function clamp(s) { return Math.max(0, Math.min(nSteps - 1, s)); }
+        svg.style('cursor', step >= nSteps - 1 ? 'default' : 'pointer');
+        if (!live || step >= nSteps - 1) {
+            svg.on('click', function () { if (step < nSteps - 1) { step += 1; setStep(step, false); } });
+            return { goto: function (s) { step = clamp(s); setStep(step, false); } };
+        }
+        Array.prototype.forEach.call(section.querySelectorAll('.viz-build-step'),
+            function (n) { n.parentNode.removeChild(n); });
+        for (var i = 1; i < nSteps; i++) {
+            var sp = document.createElement('span');
+            sp.className = 'fragment viz-build-step';
+            sp.setAttribute('data-fragment-index', String(i - 1));
+            sp.setAttribute('aria-hidden', 'true');
+            sp.style.display = 'none';
+            section.appendChild(sp);
+        }
+        Reveal.syncFragments(section);
+        section.__vizBuild = function (immediate) {
+            var s = clamp(section.querySelectorAll('.viz-build-step.visible').length);
+            if (s === step) return;
+            step = s;
+            setStep(step, immediate);
+        };
+        svg.on('click', function () {
+            if (Reveal.getCurrentSlide() === section && step < nSteps - 1) Reveal.next();
+        });
+        return { goto: function (s) {
+            var idx = Reveal.getIndices(section);
+            Reveal.slide(idx.h, idx.v, clamp(s) - 1);
+        } };
+    }
+
+    // Click-to-advance stepper. `apply(step, immediate)` must be idempotent
+    // in both directions (see infraBuild).
     function infraStepper(container, svg, W, H, nSteps, apply, config) {
         var fixed = config && typeof config.step === 'number';
         var step = fixed ? Math.max(0, Math.min(nSteps - 1, config.step))
-                         : (REDUCED_MOTION ? nSteps - 1 : 0);
+                         : ((REDUCED_MOTION || BUILD_ALL) ? nSteps - 1 : 0);
         apply(step, true);
         if (fixed || step >= nSteps - 1) return;
         var hint = svg.append('text').attr('x', W - 80).attr('y', H * 0.885)
             .attr('text-anchor', 'end').attr('font-family', SANS)
             .attr('font-size', '10px').attr('letter-spacing', '1.4px')
             .attr('fill', TUFTE.muted).text(String((config && config.hint) || 'CLICK TO CONTINUE').toUpperCase());
-        svg.style('cursor', 'pointer').on('click', function () {
-            if (step >= nSteps - 1) return;
-            step += 1;
-            apply(step, false);
-            if (step >= nSteps - 1) { hint.remove(); svg.style('cursor', 'default'); }
+        infraBuild(container, svg, nSteps, step, function (s, immediate) {
+            step = s;
+            apply(step, immediate);
+            hint.style('opacity', step >= nSteps - 1 ? 0 : 1);
+            svg.style('cursor', step >= nSteps - 1 ? 'default' : 'pointer');
         });
     }
 
@@ -16819,8 +16900,11 @@ const VizLibrary = (function () {
     //  every case the room is asked what does not agree before anything
     //  is marked; then the mismatch, the system's flag and the
     //  pathologist's decision are revealed as three different things.
-    //  One of the cases is internally consistent and clinically
-    //  implausible, which is the point of including it.
+    //  One of the cases is accessioned to the wrong patient: the report
+    //  header disagrees with the requisition, and the diagnosis is
+    //  implausible for the age on the header, which is what makes a
+    //  pathologist look twice. Cards, flag and decision boxes take the
+    //  height of their content.
     //    config.cases[] = { label, tabLabel,
     //        documents[] = { label, lines[] = { text, key, tag } },
     //        flag = { label, title, lines[], confidence },
@@ -16853,8 +16937,8 @@ const VizLibrary = (function () {
         var SUB = 4;
         var nSteps = cases.length * SUB + 1;
         var x0 = 80, gap = 24, cardW = (W - 160 - gap * 2) / 3;
-        var top = 176, cardH = 262;
-        var flagY = top + cardH + 24, flagH = 142, fw = 700;
+        var top = 168, cardH = 262, CARD_MAX = 272;
+        var flagY = top + cardH + 18, flagH = 142, fw = 700;
         var lineY = H * 0.86;
 
         // The case strip: which case is on the table.
@@ -16863,8 +16947,8 @@ const VizLibrary = (function () {
         var tabs = [], tabRules = [];
         var tx = 80;
         cases.forEach(function (cs, i) {
-            var t = svg.append('text').attr('x', tx).attr('y', 150)
-                .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700')
+            var t = svg.append('text').attr('x', tx).attr('y', 148)
+                .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700')
                 .attr('letter-spacing', '1.6px').attr('fill', P.muted)
                 .text(((i + 1) + ' · ' + String(cs.tabLabel || cs.label || '')).toUpperCase());
             var w = 120;
@@ -16875,8 +16959,8 @@ const VizLibrary = (function () {
             tx += w + 36;
         });
 
-        var promptSel = infraPara(svg, x0, lineY, W - 460, c.prompt || '', { size: 14, italic: true, color: P.ink, lh: 18 }).sel;
-        var summarySel = infraPara(svg, x0, lineY, W - 460, c.summary || '', { size: 14, italic: true, color: P.copper, lh: 18 }).sel
+        var promptSel = infraPara(svg, x0, lineY, W - 460, c.prompt || '', { size: 15, italic: true, color: P.ink, lh: 19 }).sel;
+        var summarySel = infraPara(svg, x0, lineY, W - 460, c.summary || '', { size: 15, italic: true, color: P.copper, lh: 19 }).sel
             .style('opacity', 0);
 
         var panel = svg.append('g');
@@ -16889,10 +16973,11 @@ const VizLibrary = (function () {
             tabs.forEach(function (t, i) { t.attr('fill', i === ci ? P.copper : P.muted); });
             tabRules.forEach(function (r, i) { r.style('opacity', i === ci ? 1 : 0); });
 
+            var rects = [], bottoms = [];
             (cs.documents || []).forEach(function (d, i) {
                 var x = x0 + i * (cardW + gap);
                 var g = panel.append('g');
-                infraCard(g, x, top, cardW, cardH, P.rule);
+                rects.push(infraCard(g, x, top, cardW, cardH, P.rule));
                 tufteSmallCaps(g, x + 16, top + 26, String(d.label || '').toUpperCase(), P.muted);
                 tufteRule(g, x + 16, top + 36, x + cardW - 16, top + 36, 0.8);
                 var y = top + 60;
@@ -16903,48 +16988,60 @@ const VizLibrary = (function () {
                     if (ln.key) {
                         tag = g.append('text').attr('x', x + cardW - 16).attr('y', y)
                             .attr('text-anchor', 'end').attr('font-family', SANS)
-                            .attr('font-size', '10px').attr('font-weight', '700')
+                            .attr('font-size', '11px').attr('font-weight', '700')
                             .attr('letter-spacing', '1.2px')
                             .attr('fill', ln.key === 'wording' ? P.amber : P.crimson)
                             .style('opacity', 0).text(String(ln.tag || '').toUpperCase());
                         try { tagW = tag.node().getComputedTextLength() + 14; } catch (e) { tagW = 110; }
                     }
-                    var p = infraPara(g, x + 16, y, cardW - 32 - tagW, ln.text, { size: 13, lh: 18 });
+                    var p = infraPara(g, x + 16, y, cardW - 32 - tagW, ln.text, { size: 14.5, lh: 19 });
                     if (tag) keyed.push({ sel: p.sel, tagSel: tag, key: ln.key });
-                    y = p.bottom + 22;
+                    y = p.bottom + 24;
                 });
+                bottoms.push(y - 24 + 18);
             });
+            // The cards take the height of the fullest one; the flag row follows.
+            cardH = Math.min(CARD_MAX, Math.max(230, d3.max(bottoms) - top));
+            rects.forEach(function (r) { r.attr('height', cardH); });
+            flagY = top + cardH + 18;
 
             flagG = panel.append('g').style('opacity', 0);
+            var flagRect = null, decRect = null, boxBottom = flagY + 120;
             if (cs.flag) {
-                infraCard(flagG, x0, flagY, fw, flagH, P.copper);
+                flagRect = infraCard(flagG, x0, flagY, fw, flagH, P.copper);
                 tufteSmallCaps(flagG, x0 + 16, flagY + 24, String(cs.flag.label || 'SYSTEM FLAG').toUpperCase(), P.copper);
                 if (cs.flag.confidence) {
                     flagG.append('text').attr('x', x0 + fw - 16).attr('y', flagY + 24).attr('text-anchor', 'end')
                         .attr('font-family', SANS).attr('font-size', '10px').attr('letter-spacing', '1.2px')
                         .attr('fill', P.muted).text(String(cs.flag.confidence).toUpperCase());
                 }
-                var ft = infraPara(flagG, x0 + 16, flagY + 48, fw - 32, cs.flag.title, { size: 14, weight: 700, lh: 18 });
-                var fy = ft.bottom + 20;
+                var ft = infraPara(flagG, x0 + 16, flagY + 48, fw - 32, cs.flag.title, { size: 15, weight: 700, lh: 19 });
+                var fy = ft.bottom + 21;
                 (cs.flag.lines || []).forEach(function (l) {
-                    var q = infraPara(flagG, x0 + 16, fy, fw - 32, l, { size: 12, lh: 15, color: P.muted });
-                    fy = q.bottom + 17;
+                    var q = infraPara(flagG, x0 + 16, fy, fw - 32, l, { size: 13, lh: 16.5, color: P.muted });
+                    fy = q.bottom + 18;
                 });
+                boxBottom = Math.max(boxBottom, fy - 18 + 14);
             }
             decG = panel.append('g').style('opacity', 0);
             if (cs.decision) {
                 var dx = x0 + fw + 24, dw = W - 80 - dx;
-                infraCard(decG, dx, flagY, dw, flagH, P.ink);
+                decRect = infraCard(decG, dx, flagY, dw, flagH, P.ink);
                 tufteSmallCaps(decG, dx + 16, flagY + 24, String(cs.decision.label || 'PATHOLOGIST DECISION').toUpperCase(), P.ink);
                 var oy = flagY + 48;
                 (cs.decision.options || []).forEach(function (o) {
                     decG.append('circle').attr('cx', dx + 22).attr('cy', oy - 4).attr('r', 4)
                         .attr('fill', 'none').attr('stroke', P.ink).attr('stroke-width', 1);
-                    var op = infraPara(decG, dx + 34, oy, dw - 50, o, { size: 12.5, lh: 15 });
-                    oy = op.bottom + 19;
+                    var op = infraPara(decG, dx + 34, oy, dw - 50, o, { size: 13.5, lh: 17 });
+                    oy = op.bottom + 20;
                 });
+                boxBottom = Math.max(boxBottom, oy - 20 + 14);
             }
-            lessonSel = infraPara(panel, x0, lineY, W - 460, cs.lesson || '', { size: 14, italic: true, color: P.copper, lh: 18 }).sel
+            // Both boxes take the height of the fuller one, within the line above the prompt.
+            flagH = Math.min(boxBottom, lineY - 22) - flagY;
+            if (flagRect) flagRect.attr('height', flagH);
+            if (decRect) decRect.attr('height', flagH);
+            lessonSel = infraPara(panel, x0, lineY, W - 460, cs.lesson || '', { size: 15, italic: true, color: P.copper, lh: 19 }).sel
                 .style('opacity', 0);
         }
 
@@ -16980,7 +17077,7 @@ const VizLibrary = (function () {
         }
 
         var fixed = typeof c.step === 'number';
-        var step = fixed ? Math.max(0, Math.min(nSteps - 1, c.step)) : (REDUCED_MOTION ? nSteps - 1 : 0);
+        var step = fixed ? Math.max(0, Math.min(nSteps - 1, c.step)) : ((REDUCED_MOTION || BUILD_ALL) ? nSteps - 1 : 0);
         apply(step, true);
         if (fixed) return;
         var hint = svg.append('text').attr('x', W - 80).attr('y', lineY)
@@ -16993,15 +17090,12 @@ const VizLibrary = (function () {
             hint.text(hintFor(step));
             svg.style('cursor', step >= nSteps - 1 ? 'default' : 'pointer');
         }
-        svg.style('cursor', step >= nSteps - 1 ? 'default' : 'pointer').on('click', function () {
-            if (step >= nSteps - 1) return;
-            setStep(step + 1, false);
-        });
+        var build = infraBuild(container, svg, nSteps, step, setStep);
         // Direct access by heading: jump to that case's first step. The
         // click must not also count as a stage click.
         tabs.forEach(function (t, i) {
             t.style('cursor', 'pointer')
-                .on('click', function (event) { event.stopPropagation(); setStep(i * SUB, false); })
+                .on('click', function (event) { event.stopPropagation(); build.goto(i * SUB); })
                 .on('mouseenter', function () { if (i !== currentCase) t.attr('fill', P.ink); })
                 .on('mouseleave', function () { if (i !== currentCase) t.attr('fill', P.muted); });
         });
@@ -17109,8 +17203,8 @@ const VizLibrary = (function () {
             if (!html) return;
             sel.style('cursor', 'help')
                 .on('mousemove', function (event) {
-                    var pt = d3.pointer(event, container);
-                    _showTooltip(tip, html, pt[0] + 16, pt[1] - 10);
+                    var pt = _vizPointer(event, container);
+                    _showTooltip(tip, html, pt[0] + 16, pt[1] - 10, pt);
                 }).on('mouseleave', function () { _hideTooltip(tip); });
         }
 
@@ -17133,10 +17227,15 @@ const VizLibrary = (function () {
         var model = lg.append('g');
         model.append('circle').attr('cx', mcx).attr('cy', mcy).attr('r', 46)
             .attr('fill', P.bg).attr('stroke', P.crimson).attr('stroke-width', 1.6);
-        model.append('text').attr('x', mcx).attr('y', mcy - 4).attr('text-anchor', 'middle')
+        // A two-word label ("language model") breaks at its last space so
+        // it fits the circle; a short one ("LLM") stays on one line.
+        var mlab = String(L.model || 'LLM'), msp = mlab.length > 10 ? mlab.lastIndexOf(' ') : -1;
+        var mlines = msp > 0 ? [mlab.slice(0, msp), mlab.slice(msp + 1)] : [mlab];
+        var mtxt = model.append('text').attr('x', mcx).attr('y', mlines.length > 1 ? mcy - 10 : mcy - 4).attr('text-anchor', 'middle')
             .attr('font-family', SANS).attr('font-size', '13px').attr('font-weight', '700')
-            .attr('fill', P.crimson).text(L.model || 'LLM');
-        model.append('text').attr('x', mcx).attr('y', mcy + 14).attr('text-anchor', 'middle')
+            .attr('fill', P.crimson);
+        mlines.forEach(function (l, i) { mtxt.append('tspan').attr('x', mcx).attr('dy', i ? 14 : 0).text(l); });
+        model.append('text').attr('x', mcx).attr('y', mlines.length > 1 ? mcy + 22 : mcy + 14).attr('text-anchor', 'middle')
             .attr('font-family', SERIF).attr('font-size', '11px').attr('font-style', 'italic')
             .attr('fill', P.muted).text(L.modelSub || 'proposes');
         hover(model, L.hover && L.hover.model);
@@ -17145,6 +17244,10 @@ const VizLibrary = (function () {
         var out = infraBox(lg, fx + fwid - 146, mcy - 24, 132, 48, L.output || 'proposed flags', { stroke: P.rule, size: 12 });
         hover(out, L.hover && L.hover.output);
         var dec = lg.append('g');
+        // The figure is an outline; a transparent rect behind it and its two
+        // lines makes the whole decider one hover target.
+        dec.append('rect').attr('x', fx + fwid / 2 - 96).attr('y', fy + fh + 26).attr('width', 192).attr('height', 94)
+            .attr('fill', 'transparent');
         infraPerson(dec, fx + fwid / 2, fy + fh + 42, P.ink);
         dec.append('text').attr('x', fx + fwid / 2).attr('y', fy + fh + 94).attr('text-anchor', 'middle')
             .attr('font-family', SERIF).attr('font-size', '14px').attr('font-weight', '700')
@@ -17773,8 +17876,9 @@ const VizLibrary = (function () {
         });
         if (B.source) aiosSource(lg, gx, H * 0.885, B.source);
 
-        // Right — the rebuilt suite.
-        var rg = svg.append('g');
+        // Right — the rebuilt suite, on its own click after the failure.
+        var rg = svg.append('g').style('opacity', 0);
+        var rgItems = [];
         tufteSmallCaps(rg, 660, 152, String(Rb.label || 'REBUILT').toUpperCase(), P.copper);
         var ly = 186;
         (Rb.layers || []).forEach(function (l, i) {
@@ -17788,7 +17892,7 @@ const VizLibrary = (function () {
             var p = infraPara(g, 660, ly + 20, 540, l.what, { size: 12.5, italic: true, color: P.muted, lh: 16 });
             tufteRule(g, 660, p.bottom + 14, 1200, p.bottom + 14, 0.6);
             ly = p.bottom + 40;
-            aiosReveal(g, i, 2000, 220);
+            rgItems.push(g);
         });
         if (Rb.total) {
             rg.append('text').attr('x', 660).attr('y', ly + 2)
@@ -17806,18 +17910,27 @@ const VizLibrary = (function () {
                     .attr('fill', P.copper).text(String(i + 1).padStart(2, '0'));
                 var p = infraPara(g, 686, ry, 514, r, { size: 13, lh: 17 });
                 ry = p.bottom + 22;
-                aiosReveal(g, i, 2800, 200);
+                rgItems.push(g);
             });
         }
         if (Rb.source) aiosSource(rg, 660, H * 0.885, Rb.source);
 
-        infraStepper(container, svg, W, H, 3, function (step, immediate) {
+        // Steps: 0 the wall · 1 none of it executed the application ·
+        // 2 the defects behind it · 3 the rebuilt suite.
+        infraStepper(container, svg, W, H, 4, function (step, immediate) {
             var dim = step >= 1;
             var sq = squares.selectAll('rect');
             if (immediate || REDUCED_MOTION) sq.attr('fill-opacity', dim ? 0.18 : 0.82);
             else sq.transition().duration(700).attr('fill-opacity', dim ? 0.18 : 0.82);
             infraShow(ex, step >= 1, immediate);
             infraShow(df, step >= 2, immediate);
+            var on = step >= 3;
+            if (on && !immediate && !REDUCED_MOTION) {
+                rg.style('opacity', 1);
+                rgItems.forEach(function (g, i) { aiosReveal(g, i, 150, 220); });
+            } else {
+                rg.style('opacity', on ? 1 : 0);
+            }
         }, c);
     }
 
@@ -18353,18 +18466,21 @@ const VizLibrary = (function () {
 
         var li = L.items || [], ri = R.items || [];
         var n = Math.max(li.length, ri.length);
+        // Type sizes follow the amount of text: config.leadSize / textSize
+        // (defaults suit six rows of two-line bodies).
+        var ls = c.leadSize || 14, ts = c.textSize || 12.5, tlh = Math.round(ts * 1.2);
         var y = hy + 36;
         for (var i = 0; i < n; i++) {
             var g = svg.append('g');
             var a = li[i] || {}, b = ri[i] || {};
             var la = g.append('text').attr('x', lx).attr('y', y)
-                .attr('font-family', SERIF).attr('font-size', '14px').attr('font-weight', '700')
+                .attr('font-family', SERIF).attr('font-size', ls + 'px').attr('font-weight', '700')
                 .attr('fill', P.ink).text(a.lead || '');
-            var pa = infraPara(g, lx, y + 19, lw, a.text || '', { size: 12.5, lh: 15, color: P.muted });
+            var pa = infraPara(g, lx, y + ls + 5, lw, a.text || '', { size: ts, lh: tlh, color: P.muted });
             var lb = g.append('text').attr('x', rx).attr('y', y)
-                .attr('font-family', SERIF).attr('font-size', '14px').attr('font-weight', '700')
+                .attr('font-family', SERIF).attr('font-size', ls + 'px').attr('font-weight', '700')
                 .attr('fill', P.copper).text(b.lead || '');
-            var pb = infraPara(g, rx, y + 19, rw, b.text || '', { size: 12.5, lh: 15, color: P.ink });
+            var pb = infraPara(g, rx, y + ls + 5, rw, b.text || '', { size: ts, lh: tlh, color: P.ink });
             g.append('line').attr('x1', lx + lw + 20).attr('y1', y - 5).attr('x2', rx - 22).attr('y2', y - 5)
                 .attr('stroke', P.copper).attr('stroke-width', 1).attr('marker-end', arrow);
             var bottom = Math.max(pa.bottom, pb.bottom) + 10;
@@ -18373,7 +18489,7 @@ const VizLibrary = (function () {
             y = bottom + 24;
         }
         if (c.caption) {
-            var cp = infraPara(svg, 80, Math.min(y + 2, H * 0.86), W - 160, c.caption, { size: 13, italic: true, color: P.ink, lh: 17 });
+            var cp = infraPara(svg, 80, Math.min(y + 2, H * 0.86), W - 160, c.caption, { size: c.captionSize || 13, italic: true, color: P.ink, lh: Math.round((c.captionSize || 13) * 1.3) });
             y = cp.bottom + 14;
         }
         if (c.source) aiosSource(svg, 80, Math.min(y + 6, H * 0.905), c.source);
@@ -18511,7 +18627,11 @@ const VizLibrary = (function () {
         if (C.note) cl.append('tspan').attr('font-style', 'italic').attr('fill', P.muted).text(' — ' + C.note);
 
         var thy = lyb + 28;
-        if (c.thesis) infraPara(g2, 80, thy, 730, c.thesis, { size: 15.5, lh: 19, color: P.ink });
+        // 690, not 730: the epigram starts at 840 and a line measured
+        // before the webfont arrives can run 40 px longer once it does.
+        // Without an epigram the thesis has the width.
+        var hasEp = !!(c.epigram && c.epigram.text);
+        if (c.thesis) infraPara(g2, 80, thy, hasEp ? 690 : W - 160, c.thesis, { size: 15.5, lh: 19, color: P.ink });
         if (c.epigram && c.epigram.text) {
             var ep = infraPara(g2, 840, thy, 360, c.epigram.text, { size: 13.5, lh: 17, italic: true, color: P.copper });
             if (c.epigram.who) g2.append('text').attr('x', 840).attr('y', ep.bottom + 18)
@@ -18525,6 +18645,1769 @@ const VizLibrary = (function () {
             infraShow(g2, step >= 2, immediate);
         }, c);
     }
+
+    // ─── I17. dialogue-eras ─────────────────────────────────────
+    //  Dialogue's history as eras. Equal-width chips name the eras and
+    //  fan down onto a proportional time axis; the reviews run each month
+    //  in clinical use grow along the same axis as the eras pass. Below,
+    //  the era in focus: what a pathologist could do, and the same
+    //  eight-box diagram every era, so a change shows up as a box drawn
+    //  differently (copper: new or changed; dashed: not there).
+    //    config.eras[]  = { chip, name, dates, from, to, could, note,
+    //                       nodes = { <key>: { state: new|same|none, text } } }
+    //    config.nodes[] = { key, label }   keys: pathologist signin other
+    //                                       screens api db cases ai
+    //    config.usage   = { label, note, total, golive = { date, label },
+    //                       months[] = { m: 'YYYY-MM', n, part, label } }
+    //    config.range   = { from, to }, config.couldLabel, config.frame,
+    //    config.source, config.hint, config.step
+    //  Steps: one per era. Each chip is also a control: a click on it
+    //  brings that era up without walking through the others.
+    function dialogueEras(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var eras = c.eras || [];
+
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'How Dialogue got here.', c.subtitle || '');
+        if (!eras.length) {
+            aiosNote(svg, 80, 160, 900, 'No eras supplied in vizConfig.eras.', P.crimson, 14);
+            return;
+        }
+        var arrow = aiosArrowDef(svg, 'infra-arrow-eras', P.muted);
+        var wash = d3.interpolateRgb(P.bg, P.copper)(0.09);
+        var washInk = textInk(P.copper, wash, 4.6);
+
+        // Dates are local calendar days, so the eras and the monthly bars
+        // land on the same grid.
+        function day(s) { s = String(s || ''); return new Date(s.length <= 10 ? s + 'T00:00:00' : s); }
+        var R = c.range || {};
+        var x = d3.scaleTime()
+            .domain([day(R.from || eras[0].from), day(R.to || eras[eras.length - 1].to)])
+            .range([80, W - 80]);
+
+        // ── Era chips, fanned onto their stretch of the time axis
+        var n = eras.length, cg = 8, cw = (W - 160 - cg * (n - 1)) / n;
+        var chipY = 134, axisY = 192;
+        var chips = [];
+        eras.forEach(function (e, i) {
+            var cx = 80 + i * (cw + cg);
+            var g = svg.append('g').style('cursor', 'pointer');
+            g.append('rect').attr('x', cx).attr('y', chipY - 8).attr('width', cw).attr('height', 46)
+                .attr('fill', P.bg);
+            var bar = g.append('rect').attr('x', cx).attr('y', chipY - 8).attr('width', cw).attr('height', 2.5)
+                .attr('fill', P.fine);
+            var lab = g.append('text').attr('x', cx).attr('y', chipY + 12)
+                .attr('font-family', SANS).attr('font-size', '10.5px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.1px').attr('fill', P.muted)
+                .text(i + ' · ' + String(e.chip || '').toUpperCase());
+            var dt = g.append('text').attr('x', cx).attr('y', chipY + 28)
+                .attr('font-family', SANS).attr('font-size', '10px').attr('fill', P.muted).text(e.dates || '');
+            var a = x(day(e.from)), b = x(day(e.to));
+            var fan = svg.append('line').attr('x1', cx + cw / 2).attr('y1', chipY + 36)
+                .attr('x2', (a + b) / 2).attr('y2', axisY - 4)
+                .attr('stroke', P.fine).attr('stroke-width', 1);
+            var seg = svg.append('rect').attr('x', a + 0.5).attr('y', axisY - 3)
+                .attr('width', Math.max(1.5, b - a - 1)).attr('height', 6).attr('fill', P.fine);
+            aiosReveal(g, i, 200, 90);
+            chips.push({ g: g, bar: bar, lab: lab, dt: dt, fan: fan, seg: seg });
+        });
+        d3.timeYear.range(x.domain()[0], x.domain()[1]).forEach(function (d) {
+            var yx = x(d);
+            svg.append('line').attr('x1', yx).attr('y1', axisY + 4).attr('x2', yx).attr('y2', axisY + 9)
+                .attr('stroke', P.rule).attr('stroke-width', 1);
+            svg.append('text').attr('x', yx).attr('y', axisY + 20).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '10px').attr('fill', P.muted)
+                .text(String(d.getFullYear()));
+        });
+
+        // ── Reviews per month in clinical use, on the same axis
+        var U = c.usage || {}, months = U.months || [];
+        var baseY = 274, maxH = 48;
+        var maxN = d3.max(months, function (d) { return +d.n || 0; }) || 1;
+        tufteSmallCaps(svg, 80, 236, String(U.label || 'REVIEWS PER MONTH').toUpperCase(), P.slate);
+        if (U.note) svg.append('text').attr('x', 80).attr('y', 252)
+            .attr('font-family', SERIF).attr('font-size', '12px').attr('font-style', 'italic')
+            .attr('fill', P.muted).text(U.note);
+        var totalSel = svg.append('text').attr('x', 80).attr('y', 273)
+            .attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700')
+            .attr('fill', P.slate).text(U.total || '').style('opacity', 0);
+        var bars = months.map(function (d) {
+            var ms = new Date(d.m + '-01T00:00:00'), me = d3.timeMonth.offset(ms, 1);
+            var bx = x(ms) + 3, bw = Math.max(2, x(me) - x(ms) - 6);
+            var r = svg.append('rect').attr('x', bx).attr('y', baseY).attr('width', bw).attr('height', 0)
+                .attr('fill', P.slate).attr('fill-opacity', d.part ? 0.45 : 1);
+            var h = maxH * (+d.n || 0) / maxN;
+            var lab = d.label ? svg.append('text').attr('x', bx + bw / 2).attr('y', baseY - h - 5)
+                .attr('text-anchor', 'middle').attr('font-family', SANS).attr('font-size', '10px')
+                .attr('font-weight', '700').attr('fill', P.slate).text(d.label).style('opacity', 0) : null;
+            return { r: r, h: h, start: ms, lab: lab };
+        });
+        if (months.length) {
+            svg.append('line').attr('x1', x(bars[0].start)).attr('y1', baseY + 0.5).attr('x2', W - 80).attr('y2', baseY + 0.5)
+                .attr('stroke', P.rule).attr('stroke-width', 0.8);
+        }
+        if (U.golive && U.golive.date) {
+            var gx = x(day(U.golive.date));
+            svg.append('line').attr('x1', gx).attr('y1', baseY - 6).attr('x2', gx).attr('y2', baseY + 8)
+                .attr('stroke', P.crimson).attr('stroke-width', 1.4);
+            svg.append('text').attr('x', gx + 5).attr('y', baseY + 17)
+                .attr('font-family', SERIF).attr('font-size', '11.5px').attr('font-style', 'italic')
+                .attr('fill', P.crimson).text(U.golive.label || '');
+        }
+
+        // ── The era in focus: what a pathologist could do
+        var dg = svg.append('g');
+        function drawDetail(e, i) {
+            dg.selectAll('*').remove();
+            dg.append('text').attr('x', 80).attr('y', 368)
+                .attr('font-family', SERIF).attr('font-size', '56px').attr('font-weight', '700')
+                .attr('fill', P.copper).text(String(i));
+            var nm = infraPara(dg, 132, 334, 420, e.name || '', { size: 21, weight: 700, lh: 25 });
+            dg.append('text').attr('x', 132).attr('y', nm.bottom + 22)
+                .attr('font-family', SERIF).attr('font-size', '13.5px').attr('font-style', 'italic')
+                .attr('fill', P.muted).text(e.dates || '');
+            var y = Math.max(nm.bottom + 62, 412);
+            tufteSmallCaps(dg, 80, y, String(c.couldLabel || 'WHAT A PATHOLOGIST COULD DO').toUpperCase(), P.muted);
+            var p = infraPara(dg, 80, y + 25, 470, e.could || '', { size: 15, lh: 20 });
+            if (e.note) infraPara(dg, 80, p.bottom + 30, 470, e.note, { size: 12.5, lh: 16, italic: true, color: P.muted });
+        }
+
+        // ── The same eight boxes every era
+        var NW = 160, NH = 78;
+        var POS = {
+            pathologist: [620, 316], signin: [620, 420], other: [620, 524],
+            screens: [830, 316], api: [830, 420], db: [830, 524],
+            cases: [1040, 352], ai: [1040, 488]
+        };
+        svg.append('rect').attr('x', 816).attr('y', 302).attr('width', NW + 28).attr('height', 3 * 104 - 2)
+            .attr('rx', 4).attr('fill', 'none').attr('stroke', P.rule).attr('stroke-width', 0.8)
+            .attr('stroke-dasharray', '3 3');
+        if (c.frame) tufteSmallCaps(svg, 816, 296, String(c.frame).toUpperCase(), P.muted);
+
+        function anchor(k, side) {
+            var p = POS[k];
+            if (side === 'r') return [p[0] + NW, p[1] + NH / 2];
+            if (side === 'l') return [p[0], p[1] + NH / 2];
+            if (side === 'b') return [p[0] + NW / 2, p[1] + NH];
+            return [p[0] + NW / 2, p[1]];
+        }
+        var edges = [
+            ['pathologist', 'r', 'screens', 'l'], ['signin', 'r', 'screens', 'l'],
+            ['other', 'r', 'api', 'l'], ['screens', 'b', 'api', 't'], ['api', 'b', 'db', 't'],
+            ['api', 'r', 'cases', 'l'], ['api', 'r', 'ai', 'l']
+        ].map(function (e) {
+            var a = anchor(e[0], e[1]), b = anchor(e[2], e[3]);
+            if (e[1] === 'r' && e[3] === 'l' && a[1] !== b[1]) b[1] += (a[1] < b[1] ? -NH / 4 : NH / 4);
+            var sel = svg.append('line').attr('x1', a[0]).attr('y1', a[1]).attr('x2', b[0] - (e[3] === 'l' ? 3 : 0))
+                .attr('y2', b[1] - (e[3] === 't' ? 3 : 0))
+                .attr('stroke', P.muted).attr('stroke-width', 1).attr('marker-end', arrow);
+            return { a: e[0], b: e[2], sel: sel };
+        });
+
+        var boxes = {};
+        (c.nodes || []).forEach(function (nd) {
+            var p = POS[nd.key];
+            if (!p) return;
+            var g = svg.append('g');
+            var r = g.append('rect').attr('x', p[0]).attr('y', p[1]).attr('width', NW).attr('height', NH)
+                .attr('rx', 3).attr('fill', P.bg).attr('stroke', P.rule).attr('stroke-width', 0.9);
+            var t = g.append('text').attr('x', p[0] + 12).attr('y', p[1] + 20)
+                .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.3px').attr('fill', P.muted).text(String(nd.label || '').toUpperCase());
+            var body = g.append('text').attr('x', p[0] + 12).attr('y', p[1] + 40)
+                .attr('font-family', SERIF).attr('font-size', '12.5px').attr('fill', P.ink);
+            boxes[nd.key] = { r: r, t: t, body: body, text: null, state: 'none' };
+        });
+
+        function applyNodes(e, fast) {
+            var nodes = e.nodes || {};
+            Object.keys(boxes).forEach(function (k) {
+                var b = boxes[k], s = nodes[k] || {};
+                var st = s.state || 'none';
+                var isNew = st === 'new', none = st === 'none';
+                // A stroke transition from the last era must not land after
+                // this era has been applied (stepping quickly, or back).
+                b.r.interrupt().attr('stroke-dasharray', none ? '4 3' : null)
+                    .attr('fill', isNew ? wash : P.bg)
+                    .attr('stroke', isNew ? P.copper : none ? P.rule : P.ink);
+                if (isNew && !fast) b.r.attr('stroke-width', 3.4).transition().duration(800).attr('stroke-width', 1.6);
+                else b.r.attr('stroke-width', isNew ? 1.6 : 0.9);
+                b.t.attr('fill', isNew ? washInk : P.muted);
+                var txt = s.text || '';
+                if (txt !== b.text) {
+                    wsiWrap(b.body, txt, NW - 22, 15);
+                    b.text = txt;
+                    if (!fast) b.body.style('opacity', 0).transition().duration(450).style('opacity', 1);
+                }
+                b.body.attr('fill', none ? P.muted : P.ink).attr('font-style', none ? 'italic' : 'normal');
+                b.state = st;
+            });
+            edges.forEach(function (ed) {
+                var on = boxes[ed.a] && boxes[ed.b] && boxes[ed.a].state !== 'none' && boxes[ed.b].state !== 'none';
+                ed.sel.attr('stroke', on ? P.muted : P.fine).attr('stroke-dasharray', on ? null : '3 3');
+            });
+        }
+
+        function applyChips(i) {
+            chips.forEach(function (ch, j) {
+                var now = j === i, past = j < i;
+                ch.lab.attr('fill', now ? P.copper : past ? P.ink : P.muted);
+                ch.dt.attr('fill', now ? P.ink : P.muted);
+                ch.bar.attr('fill', now ? P.copper : past ? P.muted : P.fine).attr('height', now ? 3.5 : 2.5);
+                ch.fan.attr('stroke', now ? P.copper : past ? P.rule : P.fine).attr('stroke-width', now ? 1.5 : 1);
+                ch.seg.attr('fill', now ? P.copper : past ? P.muted : P.fine);
+            });
+        }
+
+        function applyBars(e, fast) {
+            var end = day(e.to);
+            bars.forEach(function (b, k) {
+                var on = b.start < end, h = on ? b.h : 0;
+                if (fast) b.r.interrupt().attr('y', baseY - h).attr('height', h);
+                else b.r.transition().delay(150 + k * 30).duration(550).attr('y', baseY - h).attr('height', h);
+                if (b.lab) infraShow(b.lab, on, fast);
+            });
+        }
+
+        var current = -1;
+        function apply(i, immediate) {
+            var fast = immediate || REDUCED_MOTION;
+            var e = eras[i] || {};
+            applyChips(i);
+            if (i !== current) {
+                drawDetail(e, i);
+                if (!fast) dg.style('opacity', 0).transition().duration(400).style('opacity', 1);
+                current = i;
+            }
+            applyNodes(e, fast);
+            applyBars(e, fast);
+            infraShow(totalSel, i === n - 1, immediate);
+        }
+
+        if (c.source) aiosSource(svg, 80, H * 0.889, c.source);
+
+        var fixed = typeof c.step === 'number';
+        var step = fixed ? Math.max(0, Math.min(n - 1, c.step)) : ((REDUCED_MOTION || BUILD_ALL) ? n - 1 : 0);
+        apply(step, true);
+        if (fixed) return;
+        var hint = svg.append('text').attr('x', W - 80).attr('y', H * 0.885)
+            .attr('text-anchor', 'end').attr('font-family', SANS)
+            .attr('font-size', '10px').attr('letter-spacing', '1.4px')
+            .attr('fill', P.muted);
+        function setStep(s, immediate) {
+            step = Math.max(0, Math.min(n - 1, s));
+            apply(step, immediate);
+            hint.text(step >= n - 1 ? '' : String(c.hint || 'CLICK FOR THE NEXT ERA').toUpperCase());
+            svg.style('cursor', step >= n - 1 ? 'default' : 'pointer');
+        }
+        setStep(step, true);
+        var build = infraBuild(container, svg, n, step, setStep);
+        // Direct access by chip: the click must not also count as a stage click.
+        chips.forEach(function (ch, i) {
+            ch.g.on('click', function (event) { event.stopPropagation(); build.goto(i); })
+                .on('mouseenter', function () { if (i !== step) ch.lab.attr('fill', P.copper); })
+                .on('mouseleave', function () { applyChips(step); });
+        });
+    }
+
+    // ─── I18. changed-after-review ──────────────────────────────
+    //  What pathologists said a Dialogue review changed, as units: every
+    //  review run since the question was asked is a square. The answered
+    //  ones light up and move out to a block of their own; the changed
+    //  ones turn copper and move on to a third block, split by whether the
+    //  change would have needed an amendment. The last step strikes the
+    //  headline the numbers do not support and writes the one they do.
+    //    config.question = { label, text }
+    //    config.counts   = { run, answered, changed, yes, unsure, no, tooLate }
+    //    config.blocks[] = { value, caption }      run · answered · split
+    //    config.answeredKey = { changed, unchanged, tooLate }
+    //    config.splitKey    = { yes, unsure, no }
+    //    config.wrong, config.right, config.source, config.seed, config.step
+    //  Steps: 0 the question and every review · 1 the answered ones move
+    //  out · 2 the changed ones · 3 would it have needed an amendment ·
+    //  4 the honest headline.
+    function changedAfterReview(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var N = c.counts || {};
+        var run = +N.run || 0, ans = Math.min(+N.answered || 0, run), chg = Math.min(+N.changed || 0, ans);
+        var nYes = +N.yes || 0, nUnsure = +N.unsure || 0, nLate = +N.tooLate || 0;
+        var Q = c.question || {}, B = c.blocks || [], AK = c.answeredKey || {}, SK = c.splitKey || {};
+
+        tufteTitleBlock(svg, 80, 70, W - 160,
+            c.title || 'What a review changed.',
+            c.subtitle || '');
+        if (!run) {
+            aiosNote(svg, 80, 160, 900, 'No counts supplied in vizConfig.counts.', P.crimson, 14);
+            return;
+        }
+
+        var hatch = 'infra-hatch-changed';
+        var pat = svg.append('defs').append('pattern').attr('id', hatch)
+            .attr('patternUnits', 'userSpaceOnUse').attr('width', 5).attr('height', 5)
+            .attr('patternTransform', 'rotate(45)');
+        pat.append('rect').attr('width', 5).attr('height', 5).attr('fill', P.bg);
+        pat.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 5)
+            .attr('stroke', P.copper).attr('stroke-width', 2.2);
+        var paleCopper = d3.interpolateRgb(P.bg, P.copper)(0.28);
+        var paleSlate = d3.interpolateRgb(P.bg, P.slate)(0.3);
+
+        // ── The question, in its own words
+        tufteSmallCaps(svg, 80, 142, String(Q.label || 'THE QUESTION').toUpperCase(), P.muted);
+        svg.append('text').attr('x', 80).attr('y', 172)
+            .attr('font-family', SERIF).attr('font-size', '22px').attr('font-style', 'italic')
+            .attr('fill', P.ink).text(Q.text || '');
+
+        // ── Three blocks: every review · the answered · the changed
+        var top = 286;
+        var G = [
+            { x: 80,  cell: 6.5, cols: 58 },
+            { x: 520, cell: 13,  cols: 20 },
+            { x: 850, cell: 22,  cols: 15 }
+        ];
+        function pos(b, i) {
+            var g = G[b];
+            return [g.x + (i % g.cols) * g.cell, top + Math.floor(i / g.cols) * g.cell];
+        }
+        function size(b) { return G[b].cell * (b === 0 ? 0.78 : 0.8); }
+
+        var heads = B.slice(0, 3).map(function (bk, b) {
+            var g = svg.append('g').style('opacity', b === 0 ? 1 : 0);
+            g.append('text').attr('x', G[b].x).attr('y', 236)
+                .attr('font-family', SERIF).attr('font-size', '34px').attr('font-weight', '700')
+                .attr('fill', b === 2 ? P.crimson : b === 1 ? P.slate : P.ink).text(bk.value || '');
+            infraPara(g, G[b].x, 256, b === 0 ? 410 : 300, bk.caption || '', { size: 12.5, lh: 15, color: P.muted });
+            return g;
+        });
+
+        // Which reviews were answered: a seeded scatter, so a fixed step
+        // always draws the same picture.
+        var seed = +c.seed || 7;
+        function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+        var idx = d3.range(run);
+        for (var s = run - 1; s > 0; s--) { var j = Math.floor(rnd() * (s + 1)), tmp = idx[s]; idx[s] = idx[j]; idx[j] = tmp; }
+        var answered = idx.slice(0, ans).sort(d3.ascending);
+
+        var g0 = svg.append('g');
+        var sq0 = g0.selectAll('rect').data(d3.range(run)).enter().append('rect')
+            .attr('x', function (i) { return pos(0, i)[0]; }).attr('y', function (i) { return pos(0, i)[1]; })
+            .attr('width', size(0)).attr('height', size(0)).attr('fill', P.fine);
+        aiosReveal(g0, 0, 300, 0);
+        var isAnswered = {};
+        answered.forEach(function (i) { isAnswered[i] = true; });
+
+        // In block two the changed ones come first and the late one last.
+        var g1 = svg.append('g');
+        var sq1 = g1.selectAll('rect').data(answered.map(function (src, k) { return { src: src, k: k }; }))
+            .enter().append('rect').attr('width', size(0)).attr('height', size(0)).attr('fill', P.slate)
+            .style('opacity', 0);
+        var late = g1.selectAll('rect').filter(function (d) { return d.k >= ans - nLate; });
+
+        var g2 = svg.append('g');
+        var sq2 = g2.selectAll('rect').data(d3.range(chg)).enter().append('rect')
+            .attr('width', size(1)).attr('height', size(1)).style('opacity', 0)
+            .attr('fill', function (k) { return k < nYes ? P.crimson : k < nYes + nUnsure ? 'url(#' + hatch + ')' : paleCopper; });
+
+        // Keys under blocks two and three
+        function key(parent, x, y, swatch, text, w) {
+            var g = parent.append('g');
+            swatch(g, x, y - 10);
+            infraPara(g, x + 20, y, w || 290, text || '', { size: 12.5, lh: 15, color: P.ink });
+            return g;
+        }
+        var k1 = svg.append('g').style('opacity', 0);
+        var ky = top + Math.ceil(ans / G[1].cols) * G[1].cell + 26;
+        key(k1, G[1].x, ky, function (g, x, y) {
+            g.append('rect').attr('x', x).attr('y', y).attr('width', 11).attr('height', 11).attr('fill', P.copper);
+        }, AK.changed);
+        key(k1, G[1].x, ky + 34, function (g, x, y) {
+            g.append('rect').attr('x', x).attr('y', y).attr('width', 11).attr('height', 11).attr('fill', paleSlate);
+        }, AK.unchanged);
+        if (nLate) key(k1, G[1].x, ky + 68, function (g, x, y) {
+            g.append('rect').attr('x', x + 0.75).attr('y', y + 0.75).attr('width', 9.5).attr('height', 9.5)
+                .attr('fill', P.bg).attr('stroke', P.crimson).attr('stroke-width', 1.5);
+        }, AK.tooLate);
+
+        var k2 = svg.append('g').style('opacity', 0);
+        var ky2 = top + Math.ceil(chg / G[2].cols) * G[2].cell + 26;
+        key(k2, G[2].x, ky2, function (g, x, y) {
+            g.append('rect').attr('x', x).attr('y', y).attr('width', 11).attr('height', 11).attr('fill', P.crimson);
+        }, SK.yes, 320);
+        key(k2, G[2].x, ky2 + 22, function (g, x, y) {
+            g.append('rect').attr('x', x).attr('y', y).attr('width', 11).attr('height', 11).attr('fill', 'url(#' + hatch + ')')
+                .attr('stroke', P.copper).attr('stroke-width', 0.6);
+        }, SK.unsure, 320);
+        key(k2, G[2].x, ky2 + 44, function (g, x, y) {
+            g.append('rect').attr('x', x).attr('y', y).attr('width', 11).attr('height', 11).attr('fill', paleCopper);
+        }, SK.no, 320);
+
+        // ── The honest headline
+        var hg = svg.append('g').style('opacity', 0);
+        var hy = 612;
+        var wrong = hg.append('text').attr('x', 80).attr('y', hy)
+            .attr('font-family', SERIF).attr('font-size', '18px').attr('font-style', 'italic')
+            .attr('fill', P.muted).text(c.wrong || '');
+        var ww = 0;
+        try { ww = wrong.node().getComputedTextLength(); } catch (e) { ww = 280; }
+        var strike = hg.append('line').attr('x1', 79).attr('y1', hy - 6).attr('x2', 79).attr('y2', hy - 6)
+            .attr('stroke', P.crimson).attr('stroke-width', 2);
+        hg.append('text').attr('x', 80 + ww + 24).attr('y', hy)
+            .attr('font-family', SERIF).attr('font-size', '18px').attr('font-weight', '700')
+            .attr('fill', P.ink).text(c.right || '');
+
+        if (c.source) aiosSource(svg, 80, H * 0.889, c.source);
+
+        function apply(step, immediate) {
+            var fast = immediate || REDUCED_MOTION;
+            function to(sel, ms, delayFn) {
+                return fast ? sel.interrupt() : sel.transition().duration(ms).delay(delayFn || 0);
+            }
+            // Block one: the answered ones light up from step one on.
+            to(sq0, 400).attr('fill', function (i) { return step >= 1 && isAnswered[i] ? P.slate : P.fine; });
+            infraShow(heads[1] || d3.select(null), step >= 1, immediate);
+            infraShow(heads[2] || d3.select(null), step >= 3, immediate);
+
+            // Block two: out of block one, then the changed ones in copper.
+            var out = step >= 1;
+            to(sq1, 900, function (d) { return 350 + d.k * 4; })
+                .style('opacity', out ? 1 : 0)
+                .attr('x', function (d) { return out ? pos(1, d.k)[0] : pos(0, d.src)[0]; })
+                .attr('y', function (d) { return out ? pos(1, d.k)[1] : pos(0, d.src)[1]; })
+                .attr('width', out ? size(1) : size(0)).attr('height', out ? size(1) : size(0))
+                .attr('fill', function (d) {
+                    if (step < 2) return P.slate;
+                    if (d.k < chg) return P.copper;
+                    return d.k >= ans - nLate ? P.bg : paleSlate;
+                });
+            late.attr('stroke', step >= 2 ? P.crimson : 'none').attr('stroke-width', 1.5);
+            infraShow(k1, step >= 2, immediate);
+
+            // Block three: the changed ones, split by the second question.
+            var on3 = step >= 3;
+            to(sq2, 900, function (k) { return 200 + k * 8; })
+                .style('opacity', on3 ? 1 : 0)
+                .attr('x', function (k) { return on3 ? pos(2, k)[0] : pos(1, k)[0]; })
+                .attr('y', function (k) { return on3 ? pos(2, k)[1] : pos(1, k)[1]; })
+                .attr('width', on3 ? size(2) : size(1)).attr('height', on3 ? size(2) : size(1));
+            infraShow(k2, on3, immediate);
+
+            infraShow(hg, step >= 4, immediate);
+            to(strike, 600, function () { return 500; }).attr('x2', step >= 4 ? 80 + ww + 2 : 79);
+        }
+
+        infraStepper(container, svg, W, H, 5, apply, c);
+    }
+
+    // ─── I21. effort-shift ──────────────────────────────────────
+    //  What AI-assisted construction changed, said for pathologists: the
+    //  work it absorbed on the left, the work it amplified on the right
+    //  (which is the pathologist's), the magnitude between them, and the
+    //  hinge beneath: the magnitude holds only under discipline. Redrawn
+    //  from the two-orders slide of the DOM grand rounds.
+    //    config.absorbed  = { label, sub, items[] }
+    //    config.amplified = { label, sub, items[] }
+    //    config.center    = { label, figure, text, lines[], basis }
+    //    config.hinge     = { label, without: { label, lines[], note },
+    //                         with: { label, lines[], note } }
+    //    config.closing, config.source, config.title, config.subtitle,
+    //    config.hint, config.step
+    //  Steps: 0 both kinds of work, as they were · 1 the redistribution ·
+    //  2 the hinge.
+    function effortShift(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var A = c.absorbed || {}, M = c.amplified || {}, C = c.center || {}, G = c.hinge || {};
+        var svg = aiosStage(container, W, H);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'What changed, and what did not.', c.subtitle || '');
+
+        var LX = 330, RX = 950, HY = 156, IY = 206, GAP = 30;
+        var faded = d3.interpolateRgb(P.bg, P.muted)(0.8);
+        var green = textInk(P.green, P.bg, 4.6), copper = textInk(P.copper, P.bg, 4.6), crimson = textInk(P.crimson, P.bg, 4.6);
+
+        function header(x, label, sub, color) {
+            svg.append('text').attr('x', x).attr('y', HY).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700')
+                .attr('letter-spacing', '2px').attr('fill', color).text(String(label || '').toUpperCase());
+            if (sub) svg.append('text').attr('x', x).attr('y', HY + 18).attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', '12px').attr('font-style', 'italic')
+                .attr('fill', P.muted).text(sub);
+        }
+        header(LX, A.label || 'Absorbed by AI', A.sub, P.muted);
+        header(RX, M.label || 'Amplified for pathologists', M.sub, green);
+
+        // The two columns. The left strikes through on the first click;
+        // the right comes forward at the same time.
+        var left = (A.items || []).map(function (t, i) {
+            var y = IY + i * GAP;
+            var arrow = svg.append('text').attr('x', LX - 150).attr('y', y + 5).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '13px').attr('fill', P.muted).text('↓').style('opacity', 0);
+            var txt = svg.append('text').attr('x', LX).attr('y', y + 5).attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', '15px').attr('fill', P.ink).text(t);
+            var strike = svg.append('line').attr('x1', LX).attr('x2', LX).attr('y1', y).attr('y2', y)
+                .attr('stroke', P.muted).attr('stroke-width', 1.1);
+            return { arrow: arrow, txt: txt, strike: strike, chars: String(t).length, w: 0 };
+        });
+        var right = (M.items || []).map(function (t, i) {
+            var y = IY + i * GAP;
+            var arrow = svg.append('text').attr('x', RX - 170).attr('y', y + 5).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '13px').attr('font-weight', '700').attr('fill', green)
+                .text('↑').style('opacity', 0);
+            var txt = svg.append('text').attr('x', RX).attr('y', y + 5).attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', '15px').attr('fill', P.ink).text(t);
+            return { arrow: arrow, txt: txt };
+        });
+
+        // The magnitude, between the columns.
+        var n = Math.max((A.items || []).length, (M.items || []).length, 1);
+        var top = IY - 40, bot = IY + n * GAP - 10, cy = (top + bot) / 2;
+        var mid = svg.append('g').style('opacity', 0);
+        // The measured block (config.center.measured = { label, rows[] }) sits
+        // under the figure; when present the figure moves up, the lower rule
+        // and the basis line give way to it.
+        var MS = C.measured && (C.measured.rows || []).length ? C.measured : null;
+        var fy = MS ? cy - 30 : cy - 2;
+        mid.append('line').attr('x1', W / 2).attr('x2', W / 2).attr('y1', top + 26).attr('y2', fy - 44)
+            .attr('stroke', P.rule).attr('stroke-width', 0.7);
+        if (!MS) mid.append('line').attr('x1', W / 2).attr('x2', W / 2).attr('y1', cy + 84).attr('y2', bot - 14)
+            .attr('stroke', P.rule).attr('stroke-width', 0.7);
+        mid.append('text').attr('x', W / 2).attr('y', top + 10).attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2px')
+            .attr('fill', copper).text('←  ' + String(C.label || 'redistribution').toUpperCase() + '  →');
+        mid.append('text').attr('x', W / 2).attr('y', fy).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '48px').attr('fill', copper).text(C.figure || '100×');
+        mid.append('text').attr('x', W / 2).attr('y', fy + 24).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '13px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text(C.text || 'less effort');
+        (C.lines || []).forEach(function (t, i) {
+            mid.append('text').attr('x', W / 2).attr('y', fy + 52 + i * 17).attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', '12.5px').attr('fill', P.ink).text(t);
+        });
+        if (MS) {
+            // The free band between the columns is wider on the left, so the
+            // block sits a few pixels left of the figure's axis.
+            var my = fy + 52 + (C.lines || []).length * 17 + 14, mx = W / 2 - 8;
+            if (MS.label) mid.append('text').attr('x', mx).attr('y', my).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '9.5px').attr('letter-spacing', '1.2px').attr('fill', P.muted)
+                .text(String(MS.label).toUpperCase());
+            MS.rows.forEach(function (t, i) {
+                mid.append('text').attr('x', mx).attr('y', my + 17 + i * 15).attr('text-anchor', 'middle')
+                    .attr('font-family', SERIF).attr('font-size', '10.5px').attr('fill', P.ink).text(t);
+            });
+        } else if (C.basis) mid.append('text').attr('x', W / 2).attr('y', bot - 1).attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '9.5px').attr('letter-spacing', '1.2px').attr('fill', P.muted)
+            .text(String(C.basis).toUpperCase());
+
+        // The hinge: the magnitude is conditional.
+        var hinge = svg.append('g').style('opacity', 0);
+        var hy = IY + n * GAP + 26;
+        hinge.append('line').attr('x1', 80).attr('x2', W - 80).attr('y1', hy - 18).attr('y2', hy - 18)
+            .attr('stroke', P.rule).attr('stroke-width', 0.7);
+        hinge.append('text').attr('x', W / 2).attr('y', hy + 2).attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2px')
+            .attr('fill', P.ink).text(String(G.label || 'The discipline hinge').toUpperCase());
+        var pw = (W - 160 - 40) / 2, py = hy + 20, ph = 100;
+        function panel(x, side, color, ink) {
+            side = side || {};
+            var g = hinge.append('g');
+            g.append('rect').attr('x', x).attr('y', py).attr('width', pw).attr('height', ph).attr('rx', 4)
+                .attr('fill', d3.interpolateRgb(P.bg, color)(0.07)).attr('stroke', color).attr('stroke-width', 1.1);
+            g.append('text').attr('x', x + pw / 2).attr('y', py + 24).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700').attr('letter-spacing', '2px')
+                .attr('fill', ink).text(String(side.label || '').toUpperCase());
+            (side.lines || []).slice(0, 2).forEach(function (t, i) {
+                g.append('text').attr('x', x + pw / 2).attr('y', py + 46 + i * 18).attr('text-anchor', 'middle')
+                    .attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink).text(t);
+            });
+            if (side.note) g.append('text').attr('x', x + pw / 2).attr('y', py + 86).attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', '12px').attr('font-style', 'italic').attr('fill', ink).text(side.note);
+        }
+        panel(80, G.without, P.crimson, crimson);
+        panel(W - 80 - pw, G.with, P.green, green);
+
+        var closing = svg.append('text').attr('x', W / 2).attr('y', py + ph + 36).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink)
+            .text(c.closing || '').style('opacity', 0);
+        if (c.source) aiosSource(svg, 80, H * 0.905, c.source);
+
+        function show(sel, on, delay, fast) {
+            sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : (delay || 0)).style('opacity', on ? 1 : 0);
+        }
+        infraStepper(container, svg, W, H, 3, function (step, fast) {
+            var shift = step >= 1, hinged = step >= 2;
+            left.forEach(function (it, i) {
+                if (!it.w) { var b = it.txt.node().getBBox(); it.w = (b && b.width ? b.width : it.chars * 7) + 6; }
+                it.strike.transition().duration(fast ? 0 : 400).delay(fast ? 0 : 150 + i * 70)
+                    .attr('x1', shift ? LX - it.w / 2 : LX).attr('x2', shift ? LX + it.w / 2 : LX);
+                it.txt.transition().duration(fast ? 0 : 400).delay(fast ? 0 : 150 + i * 70)
+                    .attr('fill', shift ? faded : P.ink).attr('font-style', shift ? 'italic' : 'normal');
+                show(it.arrow, shift, 150 + i * 70, fast);
+            });
+            right.forEach(function (it, i) {
+                it.txt.transition().duration(fast ? 0 : 400).delay(fast ? 0 : 300 + i * 70)
+                    .attr('font-weight', shift ? '700' : '400');
+                show(it.arrow, shift, 300 + i * 70, fast);
+            });
+            show(mid, shift, 250, fast);
+            show(hinge, hinged, 150, fast);
+            show(closing, hinged, 550, fast);
+        }, c);
+    }
+
+    // ─── I22. questions-to-rules ────────────────────────────────
+    //  Three things from a review, read three ways: the case as it
+    //  reaches the review; what the machine says about it (literal,
+    //  tireless, one word each); and the question only a pathologist
+    //  can answer, which on the last click is replaced, in place, by
+    //  that answer written down as a rule the chain is tested against.
+    //  Replaces the two-column "what the system can do / what only a
+    //  pathologist can decide".
+    //    config.columns[] = { head, lines[] = { tag, text, tone, sep },
+    //                         machine, question, rule }
+    //    config.rows = { case: { label, gloss }, machine: { label, gloss },
+    //                    question: { label, gloss }, rule: { label, gloss } }
+    //    config.closing, config.source, config.title, config.subtitle,
+    //    config.hint, config.step
+    //  Steps: 0 the cases and the machine's reading · 1 the questions ·
+    //  2 the rules in place of the questions, the closing line, and the
+    //  tones on the first column (amber for wording, crimson for a side).
+    function questionsToRules(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var cols = c.columns || [], rows = c.rows || {};
+        var svg = aiosStage(container, W, H);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'The questions that require your expertise.', c.subtitle || '');
+
+        var X0 = 80, GAP = 30, n = Math.max(cols.length, 1), CW = (W - 160 - GAP * (n - 1)) / n;
+        var copper = textInk(P.copper, P.bg, 4.6), green = textInk(P.green, P.bg, 4.6);
+        var amber = textInk(P.amber, P.bg, 4.6), crimson = textInk(P.crimson, P.bg, 4.6);
+        function colX(i) { return X0 + i * (CW + GAP); }
+
+        // A row band: small-caps label, italic gloss, hairline beneath.
+        function band(parent, y, row, color) {
+            row = row || {};
+            var g = parent.append('g');
+            var lab = g.append('text').attr('x', X0).attr('y', y)
+                .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700')
+                .attr('letter-spacing', '2px').attr('fill', color || P.muted).text(String(row.label || '').toUpperCase());
+            var lw = lab.node().getComputedTextLength ? lab.node().getComputedTextLength() : String(row.label || '').length * 8.5;
+            if (row.gloss) g.append('text').attr('x', X0 + lw + 14).attr('y', y)
+                .attr('font-family', SERIF).attr('font-size', '13px').attr('font-style', 'italic')
+                .attr('fill', P.muted).text(row.gloss);
+            tufteRule(g, X0, y + 8, W - 80, y + 8, 0.9);
+            return g;
+        }
+
+        // ── Row 1: the case, one card per column ──
+        var Y1 = 138, CARD_Y = 154, CARD_H = 100, TAG_W = 64, LH = 18;
+        band(svg, Y1, rows.case || { label: 'The case' });
+        var toned = [], cards = [], cardBottom = CARD_Y + CARD_H;
+        cols.forEach(function (col, i) {
+            var x = colX(i);
+            cards.push(infraCard(svg, x, CARD_Y, CW, CARD_H, P.rule));
+            svg.append('text').attr('x', x + CW / 2).attr('y', CARD_Y + 20).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '10.5px').attr('font-weight', '700')
+                .attr('letter-spacing', '2px').attr('fill', P.ink).text(String(col.head || '').toUpperCase());
+            tufteRule(svg, x + 12, CARD_Y + 30, x + CW - 12, CARD_Y + 30, 0.9);
+            var y = CARD_Y + 50;
+            (col.lines || []).forEach(function (ln) {
+                if (ln.sep === true) { tufteRule(svg, x + 12, y - 11, x + CW - 12, y - 11, 0.6); }
+                svg.append('text').attr('x', x + 14).attr('y', y)
+                    .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700')
+                    .attr('letter-spacing', '1.2px').attr('fill', P.muted).text(String(ln.tag || '').toUpperCase());
+                var p = infraPara(svg, x + 14 + TAG_W, y, CW - 28 - TAG_W, ln.text,
+                    { size: 13.5, lh: LH, font: SANS, color: P.ink });
+                if (ln.tone) toned.push({ sel: p.sel, tone: ln.tone });
+                cardBottom = Math.max(cardBottom, p.bottom + 16);
+                y = p.bottom + LH + (ln.sep === 'after' ? 10 : 2);
+            });
+        });
+        CARD_H = cardBottom - CARD_Y;
+        cards.forEach(function (r) { r.attr('height', CARD_H); });
+
+        // ── Row 2: what the machine says ──
+        var Y2 = CARD_Y + CARD_H + 30;
+        band(svg, Y2, rows.machine || { label: 'The machine says' });
+        var machine = svg.append('g');
+        cols.forEach(function (col, i) {
+            var x = colX(i) + CW / 2;
+            var t = machine.append('text').attr('x', x).attr('y', Y2 + 36).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '15px').attr('fill', P.muted);
+            String(col.machine || '').split('·').forEach(function (part, k) {
+                var m = part.trim().match(/^(\S)\s+(.*)$/);
+                if (m) {
+                    t.append('tspan').attr('font-size', '17px').attr('font-weight', '700').attr('dx', k ? 24 : 0).text(m[1] + ' ');
+                    t.append('tspan').attr('letter-spacing', '0.4px').text(m[2]);
+                } else t.append('tspan').attr('dx', k ? 24 : 0).attr('letter-spacing', '0.4px').text(part.trim());
+            });
+        });
+
+        // ── Row 3: the question, then the rule in its place ──
+        var Y3 = Y2 + 36 + 34;
+        var qBand = band(svg, Y3, rows.question || { label: 'Only a pathologist can answer' }, copper).style('opacity', 0);
+        var rBand = band(svg, Y3, rows.rule || { label: 'Written down, it is a rule' }, green).style('opacity', 0);
+        var qItems = [], rItems = [], bottom = Y3;
+        cols.forEach(function (col, i) {
+            var x = colX(i);
+            var qg = svg.append('g').style('opacity', 0);
+            qg.append('text').attr('x', x + 14).attr('y', Y3 + 56).attr('font-family', SERIF)
+                .attr('font-size', '40px').attr('fill', copper).text('?');
+            var q = infraPara(qg, x + 46, Y3 + 42, CW - 50, col.question || '',
+                { size: 17, lh: 22, italic: true, color: P.ink });
+            var rg = svg.append('g').style('opacity', 0);
+            var r = infraPara(rg, x + 20, Y3 + 42, CW - 24, col.rule || '',
+                { size: 17, lh: 22, color: P.ink });
+            rg.append('rect').attr('x', x).attr('y', Y3 + 26).attr('width', 3)
+                .attr('height', r.bottom - (Y3 + 42) + 24).attr('fill', green);
+            bottom = Math.max(bottom, q.bottom, r.bottom);
+            qItems.push(qg); rItems.push(rg);
+        });
+
+        var closing = svg.append('text').attr('x', W / 2).attr('y', Math.min(bottom + 56, H * 0.86)).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.ink)
+            .text(c.closing || '').style('opacity', 0);
+        if (c.source) aiosSource(svg, 80, H * 0.905, c.source);
+
+        function show(sel, on, delay, fast) {
+            if (fast) { sel.interrupt().style('opacity', on ? 1 : 0); return; }
+            sel.transition().duration(450).delay(delay || 0).style('opacity', on ? 1 : 0);
+        }
+        infraStepper(container, svg, W, H, 3, function (step, fast) {
+            var asked = step >= 1, ruled = step >= 2;
+            machine.transition().duration(fast ? 0 : 450).style('opacity', asked ? 0.62 : 1);
+            show(qBand, asked && !ruled, 0, fast);
+            show(rBand, ruled, 250, fast);
+            qItems.forEach(function (g, i) { show(g, asked && !ruled, ruled ? 0 : 120 + i * 140, fast); });
+            rItems.forEach(function (g, i) { show(g, ruled, 300 + i * 140, fast); });
+            show(closing, ruled, 900, fast);
+            toned.forEach(function (t) {
+                var color = ruled ? (t.tone === 'error' ? crimson : t.tone === 'wording' ? amber : P.ink) : P.ink;
+                t.sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : 300)
+                    .attr('fill', color).attr('font-weight', ruled && t.tone ? '700' : '400');
+            });
+        }, c);
+    }
+
+    // ─── I26. takeaways-board ───────────────────────────────────
+    //  The closing summary as a Bauhaus board: a black spine at the
+    //  left, heavy numerals, one bold claim per line with its gloss in
+    //  muted type beneath, and the challenge as a black band across the
+    //  width with the amber triangle, the shape the safety-boundary
+    //  slide gave to what the talk insists on.
+    //    config.items[] = { claim, gloss }
+    //    config.challenge = { label, text }
+    //    config.title, config.subtitle, config.hint, config.step
+    //  Steps: 0 spine, numerals, claims · 1 the glosses · 2 the band.
+    function takeawaysBoard(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var items = c.items || [], CH = c.challenge || {};
+        var svg = aiosStage(container, W, H);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'What to take with you.', c.subtitle || '');
+        var amber = textInk(P.amber, P.ink, 4.6);
+
+        var SX = 80, SW = 14, NX = 114, TX = 178, TW = W - 80 - TX;
+        // The glosses are measured first so that every row has the same
+        // height and the claims sit evenly before the glosses arrive.
+        var probe = svg.append('g').style('opacity', 0), maxLines = 1;
+        items.forEach(function (it) {
+            maxLines = Math.max(maxLines, infraPara(probe, TX, 0, TW, it.gloss || '', { size: 13.5, lh: 17 }).lines);
+        });
+        probe.remove();
+        var ROW = 23 + maxLines * 17 + 16;
+        var y = 158, bottom = y, rows = [], glosses = [];
+        items.forEach(function (it, i) {
+            var g = svg.append('g');
+            g.append('text').attr('x', NX).attr('y', y)
+                .attr('font-family', SANS).attr('font-size', '30px').attr('font-weight', '800')
+                .attr('fill', P.ink).text(String(i + 1));
+            var cl = infraPara(g, TX, y, TW, it.claim || '', { size: 17, lh: 21, weight: 700, color: P.ink });
+            aiosReveal(g, i, 300, 160);
+            rows.push(g);
+            var gl = svg.append('g').style('opacity', 0);
+            var p = infraPara(gl, TX, cl.bottom + 23, TW, it.gloss || '', { size: 13.5, lh: 17, color: P.muted });
+            glosses.push(gl);
+            bottom = Math.max(p.bottom, cl.bottom + 23 + (maxLines - 1) * 17);
+            y += ROW + (cl.lines - 1) * 21;
+        });
+        // The spine, the length of the rows.
+        var spine = svg.insert('rect', ':first-child').attr('x', SX).attr('y', 146).attr('width', SW).attr('height', Math.max(60, bottom + 8 - 146))
+            .attr('fill', P.ink);
+        aiosReveal(spine, 0, 150, 0);
+
+        // The challenge: a black band across the width.
+        var band = svg.append('g').style('opacity', 0);
+        // The band ends above the stepper hint, which sits at 0.885 H.
+        var BY = Math.min(531, Math.max(bottom + 22, 470)), BH = 86;
+        var br = band.append('rect').attr('x', 80).attr('y', BY).attr('width', W - 160).attr('height', BH).attr('fill', P.ink);
+        band.append('polygon').attr('points', [[104, BY + 20], [104, BY + 38], [120, BY + 29]].map(function (p) { return p.join(','); }).join(' '))
+            .attr('fill', P.amber);
+        tufteSmallCaps(band, 136, BY + 33, String(CH.label || 'your challenge').toUpperCase(), amber);
+        var bp = infraPara(band, 136, BY + 54, W - 160 - 72, CH.text || '', { size: 13.5, lh: 17, color: P.bg });
+        br.attr('height', Math.max(BH, bp.bottom - BY + 20));
+
+        function show(sel, on, delay, fast) {
+            sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : (delay || 0)).style('opacity', on ? 1 : 0);
+        }
+        infraStepper(container, svg, W, H, 3, function (step, fast) {
+            glosses.forEach(function (gl, i) { show(gl, step >= 1, 80 + i * 140, fast); });
+            show(band, step >= 2, 150, fast);
+        }, c);
+    }
+
+    // ─── I25. safety-boundary ───────────────────────────────────
+    //  What AI does on one side of a black diagonal bar and what it
+    //  must not on the other, in Bauhaus terms: the circle for the
+    //  actions, the square for the prohibitions, the triangle for the
+    //  two this talk insists on. Each column arrives on a click; the
+    //  last click dims everything but those two and sets the closing
+    //  line.
+    //    config.does    = { heading, sub, items[] = { text, systems } }
+    //    config.mustNot = { heading, sub, items[] = { verb, text } }
+    //    config.emphasis[] (indexes into mustNot.items), config.closing,
+    //    config.title, config.subtitle, config.hint, config.step
+    //  Steps: 0 the bar and the headings · 1 what AI does · 2 what it
+    //  must not · 3 the two emphasized, the rest dimmed, the closing line.
+    function safetyBoundary(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var D = c.does || {}, M = c.mustNot || {};
+        var svg = aiosStage(container, W, H);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'The safety boundary.', c.subtitle || '');
+        var slate = textInk(P.slate, P.bg, 4.6);
+
+        // The bar: a black diagonal from the title rule to the closing line.
+        var BT = 140, BB = 600, BX0 = 596, BX1 = 684, BW = 18;
+        function barX(y) { return BX0 + (y - BT) / (BB - BT) * (BX1 - BX0); }
+        function pts(a) { return a.map(function (p) { return p.join(','); }).join(' '); }
+        var bar = svg.append('polygon')
+            .attr('points', pts([[BX0, BT], [BX0 + BW, BT], [BX1 + BW, BB], [BX1, BB]]))
+            .attr('fill', P.ink);
+        aiosReveal(bar, 0, 150, 0);
+
+        function heading(g, x, y, text, sub, shape) {
+            if (shape === 'circle') g.append('circle').attr('cx', x + 22).attr('cy', y - 10).attr('r', 22).attr('fill', P.slate);
+            else g.append('rect').attr('x', x).attr('y', y - 32).attr('width', 44).attr('height', 44).attr('fill', P.crimson);
+            g.append('text').attr('x', x + 60).attr('y', y)
+                .attr('font-family', SANS).attr('font-size', '26px').attr('font-weight', '800')
+                .attr('letter-spacing', '5px').attr('fill', P.ink).text(String(text || '').toUpperCase());
+            if (sub) tufteSmallCaps(g, x + 60, y + 20, String(sub).toUpperCase(), P.muted);
+        }
+        var HY = 188;
+        var lh = svg.append('g'); heading(lh, 80, HY, D.heading || 'AI does', D.sub, 'circle'); aiosReveal(lh, 1, 150, 200);
+        var rh = svg.append('g'); heading(rh, barX(HY) + BW + 30, HY, M.heading || 'AI must not', M.sub, 'square'); aiosReveal(rh, 2, 150, 200);
+
+        // What AI does: a slate circle and the action, the systems beneath.
+        var y = 252, left = [];
+        (D.items || []).forEach(function (it) {
+            var g = svg.append('g').style('opacity', 0);
+            var x = 80, w = barX(y) - 30 - (x + 22);
+            g.append('circle').attr('cx', x + 6).attr('cy', y - 5).attr('r', 6).attr('fill', P.slate);
+            var p = infraPara(g, x + 22, y, w, it.text || '', { size: 14.5, lh: 18, color: P.ink });
+            var b = p.bottom;
+            if (it.systems) {
+                tufteSmallCaps(g, x + 22, b + 18, String(it.systems).toUpperCase(), slate).attr('font-size', '10px');
+                b += 18;
+            }
+            left.push(g);
+            y = b + 24;
+        });
+
+        // What it must not: a crimson square, the verb in bold, the reason beneath.
+        y = 252; var right = [];
+        (M.items || []).forEach(function (it) {
+            var g = svg.append('g').style('opacity', 0);
+            var x = barX(y) + BW + 30, w = W - 80 - (x + 22);
+            var sq = g.append('rect').attr('x', x).attr('y', y - 11).attr('width', 12).attr('height', 12).attr('fill', P.crimson);
+            g.append('text').attr('x', x + 22).attr('y', y)
+                .attr('font-family', SANS).attr('font-size', '15px').attr('font-weight', '700').attr('fill', P.ink).text(it.verb || '');
+            var p = infraPara(g, x + 22, y + 19, w, it.text || '', { size: 13.5, lh: 17, color: P.muted });
+            right.push({ g: g, sq: sq });
+            y = p.bottom + 20;
+        });
+
+        // The closing line, with the triangle: the two this talk insists on.
+        var emph = c.emphasis || [];
+        var closing = svg.append('g').style('opacity', 0);
+        var cy = 640;
+        var ct = closing.append('text').attr('x', W / 2 + 14).attr('y', cy).attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '20px').attr('font-weight', '800')
+            .attr('letter-spacing', '4px').attr('fill', P.ink).text(String(c.closing || '').toUpperCase());
+        var tw = 420;
+        try { tw = ct.node().getBBox().width || tw; } catch (e) {}
+        var tx = W / 2 + 14 - tw / 2 - 30;
+        closing.append('polygon').attr('points', pts([[tx, cy - 17], [tx, cy + 1], [tx + 16, cy - 8]])).attr('fill', P.amber);
+
+        function show(sel, level, delay, fast) {
+            sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : (delay || 0)).style('opacity', level);
+        }
+        infraStepper(container, svg, W, H, 4, function (step, fast) {
+            left.forEach(function (g, i) {
+                show(g, step >= 3 ? 0.3 : (step >= 1 ? 1 : 0), 100 + i * 140, fast);
+            });
+            right.forEach(function (r, i) {
+                var e = emph.indexOf(i) >= 0;
+                show(r.g, step >= 3 ? (e ? 1 : 0.3) : (step >= 2 ? 1 : 0), 100 + i * 140, fast);
+                r.sq.transition().duration(fast ? 0 : 450).attr('fill', step >= 3 && e ? P.amber : P.crimson);
+            });
+            show(closing, step >= 3 ? 1 : 0, 220, fast);
+        }, c);
+    }
+
+    // ─── I27. two-programs ──────────────────────────────────────
+    //  The claim slide. Two programs for AI in pathology drawn on the
+    //  same ten years: AI engineering (the model does the pathologist's
+    //  work: a forecast that keeps moving, and one bought model under
+    //  evaluation) above; engineering with AI (the systems we already
+    //  know we need: systems in use, crowded into the last three years,
+    //  each a bar reaching today) below. The empty years in the lower
+    //  band are the picture: nothing built this way for seven years, then
+    //  everything at once, because the cost collapsed. The slide carries
+    //  names and dates, not sentences, and no small labels: the presenter
+    //  says the rest.
+    //    config.axis = { start, end, ticks[] = { date, text, anchor } }
+    //    config.dream = { label, gloss, horizons[] = { date, text },
+    //                     note = { date, text }, instance = { date, text, through, link } }
+    //    config.record = { label, gloss,
+    //                      items[] = { date, to, through, lead, when, below, anchor },
+    //                      measured = { from, to, figure, text } }
+    //    config.closing, config.source, config.title, config.subtitle,
+    //    config.hint, config.step
+    //  Dates are "YYYY-MM". `to` draws a copper period (a build) above
+    //  the baseline; `through` draws a bar from the item's date to now
+    //  (in use since); `when` is the date shown beside the name. An item
+    //  with `below` is labelled under its mark (`anchor` end | middle |
+    //  start); the others take a row each beneath, with a leader.
+    //  `instance.link` true draws the copper arrow from the build period
+    //  up to the instance square (a string also labels it). Steps: 0 the
+    //  frame · 1 the dream · 2 the record and the measured figure · 3 the
+    //  arrow and the closing line.
+    function twoPrograms(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var A = c.axis || {}, D = c.dream || {}, R = c.record || {};
+        var svg = aiosStage(container, W, H);
+        var arrow = aiosArrowDef(svg, 'infra-arrow-two-programs', P.amber);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'Two programs, one decade.', c.subtitle || '');
+        var amber = textInk(P.amber, P.bg, 4.6), slate = textInk(P.slate, P.bg, 4.6),
+            copper = textInk(P.copper, P.bg, 4.6);
+
+        // ── the decade
+        function dec(s) {                       // "YYYY-MM" → decimal year
+            var m = /^(\d{4})(?:-(\d{1,2}))?/.exec(String(s || ''));
+            if (!m) return NaN;
+            return +m[1] + ((+m[2] || 1) - 1) / 12;
+        }
+        var T0 = dec(A.start || '2016-10'), T1 = dec(A.end || '2026-10');
+        var AX0 = 372, AX1 = 1090, AXE = W - 80;
+        function X(s) { return AX0 + (dec(s) - T0) / (T1 - T0) * (AX1 - AX0); }
+        var BL1 = 222, BL2 = 392, STRIP = 318, TOP = 150, BOT = 606, LX = 80, LW = 250;
+        var now = X(A.end || '2026-10');
+        function halo(sel) { return sel.attr('stroke', P.bg).attr('stroke-width', 4).attr('paint-order', 'stroke'); }
+
+        var frame = svg.append('g');
+        frame.append('rect').attr('x', AX1).attr('y', TOP).attr('width', AXE - AX1).attr('height', BOT - TOP)
+            .attr('fill', P.fine).attr('fill-opacity', 0.28);
+        (A.ticks || []).forEach(function (t) {
+            var x = X(t.date);
+            frame.append('line').attr('x1', x).attr('y1', STRIP - 24).attr('x2', x).attr('y2', STRIP - 16)
+                .attr('stroke', P.muted).attr('stroke-width', 1);
+            halo(tufteSmallCaps(frame, x, STRIP, String(t.text || '').toUpperCase(), P.muted)
+                .attr('text-anchor', t.anchor || 'middle').attr('font-size', '13.5px'));
+        });
+        frame.append('line').attr('x1', now).attr('y1', TOP).attr('x2', now).attr('y2', BOT)
+            .attr('stroke', P.ink).attr('stroke-width', 1).attr('stroke-dasharray', '3 3').attr('opacity', 0.55);
+        aiosReveal(frame, 0, 150, 0);
+
+        // ── the two programs, named at the left
+        function programLabel(g, y, prog, color) {
+            tufteSmallCaps(g, LX, y, String(prog.label || '').toUpperCase(), color).attr('font-size', '15px');
+            infraPara(g, LX, y + 32, LW, prog.gloss || '', { size: 17, lh: 22, color: P.ink });
+        }
+        var lab1 = svg.append('g'); programLabel(lab1, BL1 - 58, D, amber); aiosReveal(lab1, 1, 150, 200);
+        var lab2 = svg.append('g'); programLabel(lab2, BL2 - 58, R, slate); aiosReveal(lab2, 2, 150, 200);
+
+        // ── step 1 · the dream: a forecast that keeps moving, and one bought model
+        var dream = svg.append('g').style('opacity', 0);
+        var hz = D.horizons || [];
+        var hx = [X(A.start || '2016-10')].concat(hz.map(function (h) { return X(h.date); }));
+        dream.append('circle').attr('cx', hx[0]).attr('cy', BL1).attr('r', 6).attr('fill', P.amber);
+        for (var i = 1; i < hx.length; i++) {
+            var lastOne = i === hx.length - 1;
+            dream.append('line').attr('x1', hx[i - 1]).attr('y1', BL1).attr('x2', hx[i]).attr('y2', BL1)
+                .attr('stroke', P.amber).attr('stroke-width', 2.4)
+                .attr('stroke-dasharray', i === 1 ? null : '7 5');
+            dream.append('circle').attr('cx', hx[i]).attr('cy', BL1).attr('r', 7.5)
+                .attr('fill', P.bg).attr('stroke', P.amber).attr('stroke-width', 2.4);
+            halo(tufteSmallCaps(dream, hx[i] - (lastOne ? 10 : 0), BL1 - 20, String(hz[i - 1].text || '').toUpperCase(), amber)
+                .attr('text-anchor', lastOne ? 'end' : 'middle').attr('font-size', '15px'));
+        }
+        var last = hx[hx.length - 1];
+        dream.append('line').attr('x1', last + 10).attr('y1', BL1).attr('x2', AXE - 4).attr('y2', BL1)
+            .attr('stroke', P.amber).attr('stroke-width', 2.4).attr('stroke-dasharray', '2 6')
+            .attr('marker-end', arrow);
+        if (D.note && D.note.text) {
+            var nx = X(D.note.date);
+            dream.append('line').attr('x1', nx).attr('y1', BL1 - 9).attr('x2', nx).attr('y2', BL1 + 9)
+                .attr('stroke', P.amber).attr('stroke-width', 1.8);
+            dream.append('text').attr('x', nx - 12).attr('y', BL1 + 28).attr('text-anchor', 'end')
+                .attr('font-family', SERIF).attr('font-size', '15.5px').attr('font-style', 'italic').attr('fill', P.muted)
+                .text(D.note.text);
+        }
+        var ix, iy;
+        if (D.instance && D.instance.text) {
+            ix = X(D.instance.date); iy = BL1 + 68;
+            dream.append('line').attr('x1', ix).attr('y1', BL1 + 10).attr('x2', ix).attr('y2', iy - 16)
+                .attr('stroke', P.amber).attr('stroke-width', 1.2).attr('stroke-dasharray', '2 3');
+            if (D.instance.through) {
+                dream.append('line').attr('x1', ix + 10).attr('y1', iy - 9).attr('x2', now).attr('y2', iy - 9)
+                    .attr('stroke', P.amber).attr('stroke-width', 2.4).attr('stroke-dasharray', '4 4');
+                dream.append('circle').attr('cx', now).attr('cy', iy - 9).attr('r', 5)
+                    .attr('fill', P.bg).attr('stroke', P.amber).attr('stroke-width', 2);
+            }
+            dream.append('rect').attr('x', ix - 8).attr('y', iy - 17).attr('width', 16).attr('height', 16).attr('fill', P.amber);
+            dream.append('text').attr('x', ix - 20).attr('y', iy - 3).attr('text-anchor', 'end')
+                .attr('font-family', SANS).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(D.instance.text);
+        }
+
+        // ── step 2 · the record: systems in use, crowded into the last years
+        var record = svg.append('g').style('opacity', 0);
+        record.append('line').attr('x1', AX0).attr('y1', BL2).attr('x2', now).attr('y2', BL2)
+            .attr('stroke', P.slate).attr('stroke-width', 1.2).attr('opacity', 0.5);
+        var items = (R.items || []).slice().sort(function (a, b) { return dec(a.date) - dec(b.date); });
+        var nRows = items.filter(function (it) { return !it.below; }).length;
+        var ROW = Math.min(34, Math.floor(114 / Math.max(1, nRows))), row = 0;
+        items.forEach(function (it) {
+            var x = X(it.date), color = it.to ? P.copper : P.slate, ink = it.to ? copper : slate;
+            var x2 = x;
+            if (it.to) {
+                x2 = Math.max(x + 8, X(it.to));
+                record.append('rect').attr('x', x).attr('y', BL2 - 17).attr('width', x2 - x).attr('height', 10).attr('fill', P.copper);
+            }
+            if (it.through) {
+                record.append('rect').attr('x', x2).attr('y', BL2 - 4).attr('width', Math.max(0, now - x2)).attr('height', 8)
+                    .attr('fill', P.slate).attr('fill-opacity', 0.35);
+            }
+            record.append('circle').attr('cx', it.to ? x2 : x).attr('cy', BL2).attr('r', 7.5).attr('fill', color);
+            var t, ty;
+            if (it.below) {
+                ty = BL2 + 42;
+                var anc = it.anchor || 'middle';
+                t = record.append('text').attr('x', x + (anc === 'end' ? -16 : anc === 'start' ? 16 : 0)).attr('y', ty)
+                    .attr('text-anchor', anc);
+            } else {
+                row += 1;
+                ty = BL2 + 42 + row * ROW;
+                record.append('line').attr('x1', x).attr('y1', BL2 + 10).attr('x2', x).attr('y2', ty - 7)
+                    .attr('stroke', color).attr('stroke-width', 1.2).attr('stroke-dasharray', '2 3');
+                record.append('circle').attr('cx', x).attr('cy', ty - 7).attr('r', 2.8).attr('fill', color);
+                t = record.append('text').attr('x', x - 16).attr('y', ty).attr('text-anchor', 'end');
+            }
+            t.attr('font-family', SANS).attr('font-size', '20px').attr('font-weight', '700').attr('fill', ink)
+                .text(it.lead || '');
+            if (it.when) t.append('tspan').attr('font-size', '16px').attr('font-weight', '400').attr('fill', P.muted)
+                .text('  ' + it.when);
+        });
+        var rowsBottom = BL2 + 42 + row * ROW;
+        if (R.measured && (R.measured.figure || R.measured.text)) {
+            var mx0 = X(R.measured.from), mx1 = X(R.measured.to || A.end || '2026-10'), my = rowsBottom + 18;
+            record.append('line').attr('x1', mx0).attr('y1', my).attr('x2', mx1).attr('y2', my)
+                .attr('stroke', P.ink).attr('stroke-width', 1.2);
+            record.append('line').attr('x1', mx0).attr('y1', my - 6).attr('x2', mx0).attr('y2', my + 6).attr('stroke', P.ink).attr('stroke-width', 1.2);
+            record.append('line').attr('x1', mx1).attr('y1', my - 6).attr('x2', mx1).attr('y2', my + 6).attr('stroke', P.ink).attr('stroke-width', 1.2);
+            if (R.measured.figure) record.append('text').attr('x', mx1 - 8).attr('y', my + 38).attr('text-anchor', 'end')
+                .attr('font-family', SANS).attr('font-size', '30px').attr('font-weight', '800').attr('fill', P.ink)
+                .text(R.measured.figure);
+            if (R.measured.text) record.append('text').attr('x', mx1 - 8).attr('y', my + 54).attr('text-anchor', 'end')
+                .attr('font-family', SANS).attr('font-size', '15px').attr('fill', P.muted)
+                .text(R.measured.text);
+        }
+
+        // ── step 3 · the closing line, and the arrow from the build to the bought model
+        var closing = svg.append('g').style('opacity', 0);
+        if (D.instance && D.instance.link && typeof ix === 'number') {
+            var period = items.filter(function (it) { return it.to; })[0];
+            var px = period ? Math.max(X(period.date) + 8, X(period.to)) : ix;
+            var up = aiosArrowDef(svg, 'infra-arrow-two-programs-up', P.copper);
+            closing.append('line').attr('x1', px).attr('y1', BL2 - 19).attr('x2', px).attr('y2', iy + 6)
+                .attr('stroke', P.copper).attr('stroke-width', 1.8).attr('marker-end', up);
+            if (typeof D.instance.link === 'string' && D.instance.link.trim()) {
+                halo(tufteSmallCaps(closing, px - 10, Math.round((iy + BL2 - 16) / 2) + 14, String(D.instance.link).toUpperCase(), copper)
+                    .attr('text-anchor', 'end').attr('font-size', '13px'));
+            }
+        }
+        closing.append('text').attr('x', W / 2).attr('y', 640).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '21px').attr('font-weight', '700').attr('fill', P.ink)
+            .text(c.closing || '');
+        if (c.source) aiosSource(svg, 80, 668, c.source);
+
+        function show(sel, on, delay, fast) {
+            sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : (delay || 0)).style('opacity', on ? 1 : 0);
+        }
+        infraStepper(container, svg, W, H, 4, function (step, fast) {
+            show(dream, step >= 1, 120, fast);
+            show(record, step >= 2, 120, fast);
+            show(closing, step >= 3, 150, fast);
+        }, c);
+    }
+
+    // ─── I28. memory-trail ──────────────────────────────────────
+    //  The opening, from the presenter's cue cards, as an arc diagram:
+    //  nine anchors from 1928 to 2021 on one line, in order but not to
+    //  scale, and thin arcs above the line for the connections between
+    //  them (publish to use; the hypertext lineage; symbiosis to the
+    //  institutions that built the network, and to human-centered AI
+    //  engineering; model against system; task against service). The
+    //  form is Bush's own idea on the slide: a trail of connections,
+    //  not a list of dates. Below the line, each anchor's name and a few
+    //  words, in two rows so nine fit. Built in thirds; the last third
+    //  and its arcs in copper, because the talk begins there; then the
+    //  closing line.
+    //    config.anchors[] = { year, name, point }
+    //    config.links[]   = { from, to, label }   (indices into anchors)
+    //    config.closing, config.source, config.title, config.subtitle,
+    //    config.hint, config.step
+    //  Steps: 0 the line and the years · 1 the first third · 2 the
+    //  second · 3 the last third, its arcs and the closing line. An arc
+    //  arrives with the later of its two anchors.
+    function memoryTrail(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var A = c.anchors || [], L = c.links || [];
+        var svg = aiosStage(container, W, H);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'A memory trail.', c.subtitle || '');
+        if (!A.length) {
+            aiosNote(svg, 80, 160, 900, 'No anchors supplied in vizConfig.anchors.', P.crimson, 14);
+            return;
+        }
+        var n = A.length, per = Math.ceil(n / 3);
+        var X0 = 150, X1 = W - 150, AY = 340, TW = 164, ARC = 168;
+        var stepX = n > 1 ? (X1 - X0) / (n - 1) : 0;
+        function xOf(i) { return X0 + i * stepX; }
+        function third(i) { return Math.min(2, Math.floor(i / per)); }
+        var copper = textInk(P.copper, P.bg, 4.6), slate = textInk(P.slate, P.bg, 4.6);
+        function halo(sel) { return sel.attr('stroke', P.bg).attr('stroke-width', 4).attr('paint-order', 'stroke'); }
+
+        // ── step 0 · the line and the years
+        var frame = svg.append('g');
+        frame.append('line').attr('x1', X0 - 50).attr('y1', AY).attr('x2', X1 + 50).attr('y2', AY)
+            .attr('stroke', P.rule).attr('stroke-width', 1.4);
+        A.forEach(function (a, i) {
+            var x = xOf(i);
+            frame.append('line').attr('x1', x).attr('y1', AY - 5).attr('x2', x).attr('y2', AY + 5)
+                .attr('stroke', P.rule).attr('stroke-width', 1);
+            halo(tufteSmallCaps(frame, x, AY + 24, String(a.year || ''), P.muted)
+                .attr('text-anchor', 'middle').attr('font-size', '12.5px'));
+        });
+        aiosReveal(frame, 0, 150, 0);
+
+        var groups = [svg.append('g').style('opacity', 0), svg.append('g').style('opacity', 0), svg.append('g').style('opacity', 0)];
+
+        // ── the arcs, each with the later of its anchors
+        L.forEach(function (l) {
+            var i = +l.from, j = +l.to;
+            if (!(i >= 0 && j >= 0 && i < n && j < n) || i === j) return;
+            var k = Math.max(third(i), third(j));
+            var g = groups[k].append('g');
+            var x1 = xOf(Math.min(i, j)), x2 = xOf(Math.max(i, j)), span = x2 - x1;
+            var h = Math.min(ARC, Math.max(44, span * 0.42));
+            var last = k === 2;
+            g.append('path')
+                .attr('d', 'M ' + x1 + ' ' + (AY - 6) + ' A ' + (span / 2) + ' ' + h + ' 0 0 1 ' + x2 + ' ' + (AY - 6))
+                .attr('fill', 'none').attr('stroke', last ? P.copper : P.ink)
+                .attr('stroke-width', last ? 1.5 : 1).attr('opacity', last ? 0.9 : 0.5);
+            if (l.label) halo(tufteSmallCaps(g, (x1 + x2) / 2, AY - 6 - h - 7, String(l.label).toUpperCase(), last ? copper : P.muted)
+                .attr('text-anchor', 'middle').attr('font-size', '11px'));
+        });
+
+        // ── the anchors: dot on the line, name and point below, two rows
+        A.forEach(function (a, i) {
+            var x = xOf(i), k = third(i), g = groups[k].append('g');
+            var color = k === 2 ? P.copper : P.slate;
+            g.append('circle').attr('cx', x).attr('cy', AY).attr('r', 7).attr('fill', color);
+            var lower = i % 2 === 1;
+            var y0 = lower ? AY + 172 : AY + 52;
+            if (lower) g.append('line').attr('x1', x).attr('y1', AY + 32).attr('x2', x).attr('y2', y0 - 22)
+                .attr('stroke', P.rule).attr('stroke-width', 1).attr('stroke-dasharray', '2 3');
+            var nm = g.append('text').attr('x', x).attr('y', y0).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '16px').attr('font-weight', '700').attr('fill', P.ink);
+            wsiWrap(nm, a.name || '', TW, 19);
+            var nLines = nm.selectAll('tspan').size() || 1;
+            var pt = g.append('text').attr('x', x).attr('y', y0 + nLines * 19 + 3).attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', '14px').attr('font-style', 'italic').attr('fill', P.muted);
+            wsiWrap(pt, a.point || '', TW, 18);
+        });
+
+        var closing = svg.append('g').style('opacity', 0);
+        closing.append('text').attr('x', W / 2).attr('y', 640).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '21px').attr('font-weight', '700').attr('fill', P.ink)
+            .text(c.closing || '');
+        if (c.source) aiosSource(svg, 80, 670, c.source);
+
+        function show(sel, on, delay, fast) {
+            sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : (delay || 0)).style('opacity', on ? 1 : 0);
+        }
+        infraStepper(container, svg, W, H, 4, function (step, fast) {
+            groups.forEach(function (g, k) { show(g, step >= k + 1, 120, fast); });
+            show(closing, step >= 3, 320, fast);
+        }, c);
+    }
+
+    // ─── I24. knowledge-enters ──────────────────────────────────
+    //  Where the pathologist's knowledge enters the software. One rail
+    //  (a case enters · the software judges · it acts · it reports) and
+    //  a column under each station for the system whose expert sentence
+    //  enters there: the question answered at that point, the system and
+    //  what it does on its own, then, as a fragment, the sentence a
+    //  pathologist had to write, with the track from the rail turning
+    //  copper as it arrives. A closing line for the room.
+    //    config.columns[] = { station, stage, system, alone, sentence }
+    //    config.closing, config.source, config.title, config.subtitle,
+    //    config.hint, config.step
+    //  Steps: 0 rail, stations, questions, systems · 1 the first half of
+    //  the sentences · 2 the second half · 3 the closing line.
+    function knowledgeEnters(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var C = c.columns || [];
+        var svg = aiosStage(container, W, H);
+        var arrow = aiosArrowDef(svg, 'infra-arrow-knowledge', P.ink);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'Where the pathologist’s knowledge enters.', c.subtitle || '');
+        if (!C.length) {
+            aiosNote(svg, 80, 160, 900, 'No columns supplied in vizConfig.columns.', P.crimson, 14);
+            return;
+        }
+        var n = C.length, GAP = 40, cw = (W - 160 - GAP * (n - 1)) / n, half = Math.ceil(n / 2);
+        var copper = textInk(P.copper, P.bg, 4.6);
+        var RY = 170, IND = 20;
+
+        // The rail every column hangs from.
+        svg.append('line').attr('x1', 80).attr('y1', RY + 0.5).attr('x2', W - 80).attr('y2', RY + 0.5)
+            .attr('stroke', P.ink).attr('stroke-width', 1).attr('marker-end', arrow);
+
+        var cols = C.map(function (k, i) {
+            var x0 = 80 + i * (cw + GAP), tx = x0 + 5, x = x0 + IND, w = cw - IND;
+            var g = svg.append('g');
+            g.append('text').attr('x', tx + 12).attr('y', RY - 11)
+                .attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink).text(k.station || '');
+            var dot = g.append('circle').attr('cx', tx).attr('cy', RY).attr('r', 5.5)
+                .attr('fill', P.bg).attr('stroke', P.ink).attr('stroke-width', 1.2);
+            tufteSmallCaps(g, x, RY + 42, String(k.stage || '').toUpperCase(), copper);
+            g.append('text').attr('x', x).attr('y', RY + 78)
+                .attr('font-family', SERIF).attr('font-size', '17px').attr('font-weight', '700').attr('fill', P.ink)
+                .text(k.system || '');
+            var a = infraPara(g, x, RY + 100, w, k.alone || '', { size: 14, lh: 18, italic: true, color: P.muted });
+            aiosReveal(g, i, 200, 150);
+            return { g: g, dot: dot, tx: tx, x: x, w: w, bottom: a.bottom };
+        });
+
+        // The sentences start on one line across the columns; the track
+        // from the rail stays faint until the sentence arrives.
+        var y2 = (d3.max(cols, function (k) { return k.bottom; }) || RY + 100) + 46;
+        cols.forEach(function (k, i) {
+            k.track = svg.append('line').attr('x1', k.tx).attr('y1', RY + 7).attr('x2', k.tx).attr('y2', y2 - 16)
+                .attr('stroke', P.rule).attr('stroke-width', 1).attr('stroke-dasharray', '2 4');
+            k.t = svg.append('g').style('opacity', 0);
+            var s = infraPara(k.t, k.x, y2, k.w, C[i].sentence || '', { size: 16, lh: 21, color: P.ink });
+            k.t.append('rect').attr('x', k.tx - 1).attr('y', y2 - 14).attr('width', 2).attr('height', s.bottom - y2 + 20)
+                .attr('fill', P.copper);
+            k.sBottom = s.bottom;
+        });
+
+        var closing = svg.append('g').style('opacity', 0);
+        var cy = Math.max(560, (d3.max(cols, function (k) { return k.sBottom; }) || 0) + 60);
+        closing.append('line').attr('x1', 80).attr('x2', W - 80).attr('y1', cy - 26).attr('y2', cy - 26)
+            .attr('stroke', P.rule).attr('stroke-width', 0.7);
+        closing.append('text').attr('x', W / 2).attr('y', cy).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '15.5px').attr('font-weight', '700').attr('fill', P.ink)
+            .text(c.closing || '');
+        if (c.source) aiosSource(svg, 80, H * 0.905, c.source);
+
+        function show(sel, on, delay, fast) {
+            sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : (delay || 0)).style('opacity', on ? 1 : 0);
+        }
+        infraStepper(container, svg, W, H, 4, function (step, fast) {
+            cols.forEach(function (k, i) {
+                var on = step >= (i < half ? 1 : 2), d = 120 + (i % half) * 200;
+                show(k.t, on, d, fast);
+                k.track.transition().duration(fast ? 0 : 450).delay(fast ? 0 : d)
+                    .attr('stroke', on ? P.copper : P.rule).attr('stroke-dasharray', on ? null : '2 4');
+                k.dot.transition().duration(fast ? 0 : 450).delay(fast ? 0 : d)
+                    .attr('fill', on ? P.copper : P.bg).attr('stroke', on ? P.copper : P.ink);
+            });
+            show(closing, step >= 3, 150, fast);
+        }, c);
+    }
+
+    // ─── I23. security-ratchet ──────────────────────────────────
+    //  The image mover on the Paige slide, already in use: a manifest
+    //  names a slide and the loader copies it. Its versions as columns;
+    //  in each, the pipeline's step count as a bar that only grows and
+    //  the test count beneath it; then the question that was put to the
+    //  code and the assumption it surfaced, as fragments. Closing lines
+    //  for the day after. Drawn from the loader's own security-evolution
+    //  record; the counts are the record's.
+    //    config.versions[] = { label, steps, tests, asked, found, gap }
+    //    config.maxSteps, config.stepsLabel, config.testsLabel,
+    //    config.askedLabel, config.foundLabel, config.closing,
+    //    config.closingNote, config.source, config.title,
+    //    config.subtitle, config.hint, config.step
+    //  Steps: 0 the ratchet (labels, bars, counts) · 1 the first half of
+    //  the columns' question and finding · 2 the second half · 3 the
+    //  closing lines.
+    function securityRatchet(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var V = c.versions || [];
+        var svg = aiosStage(container, W, H);
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'Copy one file.', c.subtitle || '');
+        if (!V.length) {
+            aiosNote(svg, 80, 160, 900, 'No versions supplied in vizConfig.versions.', P.crimson, 14);
+            return;
+        }
+        var n = V.length, GAP = 44, cw = (W - 160 - GAP * (n - 1)) / n, half = Math.ceil(n / 2);
+        var slate = textInk(P.slate, P.bg, 4.6), green = textInk(P.green, P.bg, 4.6),
+            copper = textInk(P.copper, P.bg, 4.6), crimson = textInk(P.crimson, P.bg, 4.6);
+        var maxSteps = c.maxSteps || d3.max(V, function (v) { return +v.steps || 0; }) || 1;
+        var BASE = 322, BARH = 112, BW = 44;
+
+        // The baseline every bar stands on.
+        svg.append('line').attr('x1', 80).attr('x2', W - 80).attr('y1', BASE + 0.5).attr('y2', BASE + 0.5)
+            .attr('stroke', P.rule).attr('stroke-width', 0.8);
+
+        var cols = V.map(function (v, i) {
+            var x0 = 80 + i * (cw + GAP);
+            var g = svg.append('g');
+            g.append('text').attr('x', x0).attr('y', 152)
+                .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.8px').attr('fill', P.ink).text(String(v.label || '').toUpperCase());
+
+            // The bar: the pipeline's step count at this version.
+            var h = BARH * (+v.steps || 0) / maxSteps;
+            g.append('rect').attr('x', x0).attr('y', BASE - h).attr('width', BW).attr('height', h)
+                .attr('fill', P.slate).attr('fill-opacity', 0.14).attr('stroke', P.slate).attr('stroke-width', 1);
+            var num = g.append('text').attr('x', x0).attr('y', BASE - h - 9)
+                .attr('font-family', SERIF).attr('font-size', '30px').attr('font-weight', '700').attr('fill', slate)
+                .text(v.steps == null ? '' : String(v.steps));
+            var bb = num.node().getBBox ? num.node().getBBox() : null;
+            var numW = bb && bb.width ? bb.width : String(v.steps == null ? '' : v.steps).length * 17;
+            g.append('text').attr('x', x0 + numW + 8).attr('y', BASE - h - 9)
+                .attr('font-family', SANS).attr('font-size', '10.5px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', P.muted)
+                .text(String(c.stepsLabel || 'steps').toUpperCase());
+            g.append('text').attr('x', x0).attr('y', BASE + 22)
+                .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700')
+                .attr('letter-spacing', '1.6px').attr('fill', (+v.tests || 0) > 0 ? green : P.muted)
+                .text((v.tests == null ? '' : String(v.tests)) + ' ' + String(c.testsLabel || 'tests').toUpperCase());
+
+            // A long silence before this version, marked in the gap.
+            if (v.gap && i > 0) {
+                var gx = x0 - GAP / 2;
+                g.append('line').attr('x1', gx).attr('x2', gx).attr('y1', 140).attr('y2', BASE)
+                    .attr('stroke', P.rule).attr('stroke-width', 0.8).attr('stroke-dasharray', '3 4');
+                g.append('text').attr('x', gx).attr('y', BASE + 46).attr('text-anchor', 'middle')
+                    .attr('font-family', SANS).attr('font-size', '10px').attr('letter-spacing', '1.4px')
+                    .attr('fill', P.muted).text(String(v.gap).toUpperCase());
+            }
+            aiosReveal(g, i, 200, 120);
+
+            // The question and what it surfaced, hidden until their step.
+            var t = svg.append('g').style('opacity', 0);
+            var y = BASE + 74;
+            tufteSmallCaps(t, x0, y, String(c.askedLabel || 'asked').toUpperCase(), copper);
+            var a = infraPara(t, x0, y + 20, cw, v.asked || '', { size: 14.5, lh: 19, italic: true, color: P.ink });
+            return { g: g, t: t, x0: x0, asked: a, bottom: a.bottom };
+        });
+        // The findings start on one line across the columns, under the longest question.
+        var y2 = (d3.max(cols, function (k) { return k.asked.bottom; }) || BASE + 94) + 28;
+        cols.forEach(function (k, i) {
+            tufteSmallCaps(k.t, k.x0, y2, String(c.foundLabel || 'surfaced').toUpperCase(), crimson);
+            var f = infraPara(k.t, k.x0, y2 + 20, cw, V[i].found || '', { size: 14, lh: 19, color: P.ink });
+            k.bottom = f.bottom;
+        });
+
+        // The day after, across the width.
+        var closing = svg.append('g').style('opacity', 0);
+        var cy = Math.max(560, (d3.max(cols, function (k) { return k.bottom; }) || 0) + 42);
+        closing.append('line').attr('x1', 80).attr('x2', W - 80).attr('y1', cy - 26).attr('y2', cy - 26)
+            .attr('stroke', P.rule).attr('stroke-width', 0.7);
+        closing.append('text').attr('x', W / 2).attr('y', cy).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '15.5px').attr('font-weight', '700').attr('fill', P.ink)
+            .text(c.closing || '');
+        if (c.closingNote) closing.append('text').attr('x', W / 2).attr('y', cy + 22).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '13px').attr('font-style', 'italic').attr('fill', P.muted)
+            .text(c.closingNote);
+        if (c.source) aiosSource(svg, 80, H * 0.905, c.source);
+
+        function show(sel, on, delay, fast) {
+            sel.transition().duration(fast ? 0 : 450).delay(fast ? 0 : (delay || 0)).style('opacity', on ? 1 : 0);
+        }
+        infraStepper(container, svg, W, H, 4, function (step, fast) {
+            cols.forEach(function (k, i) {
+                show(k.t, step >= (i < half ? 1 : 2), 120 + (i % half) * 180, fast);
+            });
+            show(closing, step >= 3, 150, fast);
+        }, c);
+    }
+
+    // ─── I19. paige-architecture ────────────────────────────────
+    //  A bought AI model, installed: the integration's own architecture
+    //  diagram, redrawn. The Yale and YNHH environment on the left, the
+    //  vendor on the right, the hospital systems beneath and the shared
+    //  infrastructure along the foot. Everything already in use is drawn
+    //  first, with the one new service as an empty slot. Click: the new
+    //  service fills in and the connections draw. Click: one biopsy's path
+    //  lights up in order, numbered, ending at the pathologist's decision.
+    //    config.parts = { portal, aion, stevedore, bridge, paige, lis,
+    //        archive, directory } each { name, role, text }
+    //    config.infra = { label, text }, config.slot, config.boundary
+    //    config.links = { case, manifest, register, read, status, access, launch }
+    //    config.path[] = five labels, config.captions[] = three strings
+    //    config.yaleLabel, config.vendorLabel, config.source, config.hint, config.step
+    //  Steps: 0 already in use · 1 the one new service · 2 one biopsy's path.
+    function paigeArchitecture(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {}, Q = c.parts || {}, L = c.links || {};
+        var svg = aiosStage(container, W, H);
+
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'The prediction, installed.', c.subtitle || '');
+
+        var wash = d3.interpolateRgb(P.bg, P.copper)(0.1);
+        var yaleWash = d3.interpolateRgb(P.bg, P.slate)(0.05);
+        var vendorWash = d3.interpolateRgb(P.bg, P.amber)(0.08);
+        var sysFill = d3.interpolateRgb(P.bg, P.slate)(0.1);
+        var badgeInk = textInk(P.copper, vendorWash, 4.8);
+        var mk = {
+            ink: aiosArrowDef(svg, 'paige-arch-ink', P.ink),
+            muted: aiosArrowDef(svg, 'paige-arch-muted', P.muted),
+            amber: aiosArrowDef(svg, 'paige-arch-amber', P.amber),
+            copper: aiosArrowDef(svg, 'paige-arch-copper', badgeInk)
+        };
+
+        // The two environments and the boundary between them.
+        var YX = 56, YW = 910, VX = 998, VW = 226, RY = 124, RH = 474, BX = 982;
+        svg.append('rect').attr('x', YX).attr('y', RY).attr('width', YW).attr('height', RH).attr('rx', 4)
+            .attr('fill', yaleWash).attr('stroke', P.fine).attr('stroke-width', 0.8);
+        svg.append('rect').attr('x', VX).attr('y', RY).attr('width', VW).attr('height', RH).attr('rx', 4)
+            .attr('fill', vendorWash).attr('stroke', d3.interpolateRgb(P.bg, P.amber)(0.3)).attr('stroke-width', 0.8);
+        svg.append('line').attr('x1', BX).attr('y1', RY + 4).attr('x2', BX).attr('y2', RY + RH - 4)
+            .attr('stroke', P.amber).attr('stroke-width', 1).attr('stroke-dasharray', '5 4').style('opacity', 0.7);
+        tufteSmallCaps(svg, YX + 24, RY + 22, String(c.yaleLabel || 'YALE AND YNHH').toUpperCase(), textInk(P.slate, yaleWash, 4.6));
+        tufteSmallCaps(svg, VX + 16, RY + 22, String(c.vendorLabel || 'VENDOR').toUpperCase(), textInk(P.amber, vendorWash, 4.6));
+        if (c.boundary) infraPara(svg, VX + 16, RY + RH - 30, VW - 30, c.boundary,
+            { size: 11, lh: 14, italic: true, color: textInk(P.muted, vendorWash, 4.6) });
+
+        // A component: name, role in small caps, a short description.
+        function part(parent, key, x, y, w, h, kind) {
+            var p = Q[key] || {};
+            var stroke = kind === 'new' ? P.copper : kind === 'vendor' ? P.amber : kind === 'system' ? P.muted : P.ink;
+            var fill = kind === 'new' ? wash : kind === 'system' ? sysFill : P.bg;
+            var g = parent.append('g');
+            g.append('rect').attr('x', x).attr('y', y).attr('width', w).attr('height', h).attr('rx', 4)
+                .attr('fill', fill).attr('stroke', stroke).attr('stroke-width', kind === 'system' ? 0.9 : kind === 'new' ? 1.8 : 1.3);
+            var sys = kind === 'system';
+            g.append('text').attr('x', x + w / 2).attr('y', y + (sys ? 24 : 28)).attr('text-anchor', 'middle')
+                .attr('font-family', SERIF).attr('font-size', (sys ? 15 : 18) + 'px').attr('font-weight', '700')
+                .attr('fill', P.ink).text(p.name || key);
+            if (p.role) g.append('text').attr('x', x + w / 2).attr('y', y + 46).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700').attr('letter-spacing', '1.1px')
+                .attr('fill', textInk(stroke === P.ink ? P.slate : stroke, fill, 4.6)).text(String(p.role).toUpperCase());
+            if (p.text) infraPara(g, x + w / 2, y + (sys ? 43 : 70), w - 28, p.text,
+                { size: sys ? 12.5 : 13, lh: sys ? 16 : 17, anchor: 'middle', color: P.ink });
+            return g;
+        }
+
+        var X = [80, 386, 692], BW = 250, MY = 272, MH = 132, SY = 466, SH = 56;
+        var PX = 1016, PW = 190;
+
+        // The worklist, across the top: where the pathologist already is.
+        var PO = Q.portal || {};
+        var portalY = 160, portalH = 54;
+        svg.append('rect').attr('x', 80).attr('y', portalY).attr('width', 862).attr('height', portalH).attr('rx', 4)
+            .attr('fill', P.slate);
+        svg.append('text').attr('x', 511).attr('y', portalY + 23).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '18px').attr('font-weight', '700').attr('fill', P.bg)
+            .text(PO.name || 'Pathology Portal');
+        if (PO.text) svg.append('text').attr('x', 511).attr('y', portalY + 42).attr('text-anchor', 'middle')
+            .attr('font-family', SERIF).attr('font-size', '13px').attr('fill', d3.interpolateRgb(P.bg, P.slate)(0.08))
+            .text(PO.text);
+        if (PO.role) svg.append('text').attr('x', 928).attr('y', portalY + 20).attr('text-anchor', 'end')
+            .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700').attr('letter-spacing', '1.1px')
+            .attr('fill', d3.interpolateRgb(P.bg, P.slate)(0.14)).text(String(PO.role).toUpperCase());
+
+        // The public form: config.omit names parts that are not drawn (the
+        // arrows and path stops that touch them go too); config.parts.filler,
+        // if present, takes the middle slot in their place.
+        var omit = c.omit || [];
+        function has(k) { return omit.indexOf(k) < 0; }
+        part(svg, 'aion', X[0], MY, BW, MH, 'reused');
+        if (has('stevedore')) part(svg, 'stevedore', X[1], MY, BW, MH, 'reused');
+        else if (Q.filler) part(svg, 'filler', X[1], MY, BW, MH, 'reused');
+        part(svg, 'paige', PX, MY, PW, MH, 'vendor');
+        part(svg, 'lis', X[0], SY, BW, SH, 'system');
+        if (has('archive')) part(svg, 'archive', X[1], SY, BW, SH, 'system');
+        if (has('directory')) part(svg, 'directory', X[2], SY, BW, SH, 'system');
+
+        // Shared infrastructure, along the foot of the environment.
+        var I = c.infra || {};
+        svg.append('rect').attr('x', 80).attr('y', 538).attr('width', 862).attr('height', 46).attr('rx', 3)
+            .attr('fill', sysFill);
+        tufteSmallCaps(svg, 96, 556, String(I.label || 'INSTITUTIONAL INFRASTRUCTURE').toUpperCase(), textInk(P.slate, sysFill, 4.6));
+        if (I.text) svg.append('text').attr('x', 96).attr('y', 575).attr('font-family', SERIF).attr('font-size', '13px')
+            .attr('fill', P.ink).text(I.text);
+
+        // The one new service: an empty slot first, then the service.
+        var slot = svg.append('g');
+        slot.append('rect').attr('x', X[2]).attr('y', MY).attr('width', BW).attr('height', MH).attr('rx', 4)
+            .attr('fill', 'none').attr('stroke', P.muted).attr('stroke-width', 1.1).attr('stroke-dasharray', '5 4');
+        if (c.slot) infraPara(slot, X[2] + BW / 2, MY + MH / 2 + 5, BW - 40, c.slot,
+            { size: 14, lh: 18, italic: true, anchor: 'middle', color: P.muted });
+        var bridge = part(svg, 'bridge', X[2], MY, BW, MH, 'new');
+
+        // Connections. Each belongs to a stretch of one biopsy's path.
+        var arrows = [
+            { d: 'M205,466 L205,406', col: P.muted, m: 'muted', g: 0, parts: ['lis', 'aion'] },
+            { d: 'M290,272 C330,232 692,232 732,270', col: P.ink, m: 'ink', g: 1, lab: [511, 236, L.case, 'middle', true], parts: ['aion', 'bridge'] },
+            { d: 'M942,318 L1013,318', col: P.ink, m: 'ink', g: 1, lab: [978, 310, L.register, 'middle'], parts: ['bridge', 'paige'] },
+            { d: 'M330,338 L383,338', col: P.ink, m: 'ink', g: 2, lab: [357, 330, L.manifest, 'middle'], parts: ['aion', 'stevedore'] },
+            { d: 'M511,466 L511,406', col: P.muted, m: 'muted', g: 2, parts: ['archive', 'stevedore'] },
+            { d: 'M560,404 L758,463', col: P.muted, m: 'muted', g: 2, parts: ['stevedore', 'directory'] },
+            { d: 'M942,494 C990,494 1030,460 1050,407', col: P.muted, m: 'muted', g: 3, dash: true, lab: [1033, 466, L.access, 'start', true], parts: ['directory', 'paige'] },
+            { d: 'M1016,358 L945,358', col: P.amber, m: 'amber', g: 4, lab: [978, 376, L.read, 'middle'], parts: ['paige', 'bridge'] },
+            { d: 'M900,272 L900,217', col: P.ink, m: 'ink', g: 4, lab: [914, 250, L.status, 'start'], parts: ['bridge', 'portal'] },
+            { d: 'M942,187 C1000,187 1080,215 1100,269', col: P.ink, m: 'ink', g: -1, dash: true, lab: [1108, 238, L.launch, 'start'], parts: ['portal', 'paige'] }
+        ].filter(function (a) { return a.parts.every(has); });
+        // The path's stretches are renumbered over the arrows that remain.
+        var groupIds = arrows.map(function (a) { return a.g; })
+            .filter(function (g, i, arr) { return g >= 0 && arr.indexOf(g) === i; })
+            .sort(function (a, b) { return a - b; });
+        arrows.forEach(function (a) { if (a.g >= 0) a.g = groupIds.indexOf(a.g); });
+        function label(parent, x, y, text, color, anchor, size) {
+            return parent.append('text').attr('x', x).attr('y', y).attr('text-anchor', anchor || 'middle')
+                .attr('font-family', SANS).attr('font-size', (size || 11) + 'px').attr('font-weight', '700')
+                .attr('fill', color).attr('stroke', P.bg).attr('stroke-width', 3).attr('paint-order', 'stroke')
+                .text(text);
+        }
+        var wires = svg.append('g'), tags = svg.append('g');
+        arrows.forEach(function (a) {
+            a.path = wires.append('path').attr('d', a.d).attr('fill', 'none').attr('stroke', a.col)
+                .attr('stroke-width', 1.5).attr('stroke-dasharray', a.dash ? '5 4' : null).attr('marker-end', mk[a.m]);
+            if (a.lab && a.lab[2]) a.tag = label(tags, a.lab[0], a.lab[1], a.lab[2], textInk(a.col, yaleWash, 4.6), a.lab[3]);
+        });
+
+        // One biopsy's path: five numbered stretches.
+        var PATH = c.path || [];
+        // A stop that sits on an omitted part takes its `alt` position if it
+        // has one (the read in the vendor's cloud moves onto the vendor box),
+        // and is dropped otherwise.
+        var stops = [
+            { x: 205, y: 436, lx: 221, ly: 440, anchor: 'start', parts: ['lis', 'aion'] },
+            { x: 511, y: 242, lx: 527, ly: 232, anchor: 'start', parts: ['aion', 'bridge'] },
+            { x: 660, y: 434, lx: 644, ly: 454, anchor: 'end', parts: ['stevedore', 'directory'] },
+            { x: 1017, y: 460, lx: 1033, ly: 466, anchor: 'start', parts: ['directory', 'paige'],
+              alt: { x: PX + PW / 2, y: MY + MH, lx: PX + PW / 2, ly: MY + MH + 24, anchor: 'middle' } },
+            { x: 900, y: 244, lx: 884, ly: 248, anchor: 'end', parts: ['bridge', 'portal'] }
+        ].filter(function (s) { return s.parts.every(has) || s.alt; })
+         .map(function (s) { return s.parts.every(has) ? s : s.alt; });
+        var badges = stops.map(function (s, i) {
+            var g = svg.append('g').style('opacity', 0);
+            g.append('circle').attr('cx', s.x).attr('cy', s.y).attr('r', 10).attr('fill', badgeInk)
+                .attr('stroke', P.bg).attr('stroke-width', 2);
+            g.append('text').attr('x', s.x).attr('y', s.y + 4).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', '700').attr('fill', P.bg)
+                .text(String(i + 1));
+            if (PATH[i]) label(g, s.lx, s.ly, PATH[i], badgeInk, s.anchor, 12);
+            return g;
+        });
+
+        // The caption beneath, one per step.
+        var caps = (c.captions || []).map(function (t, i) {
+            return infraPara(svg, 80, 624, W - 160, t, { size: 16, weight: i === 2 ? 700 : 400, lh: 20 }).sel.style('opacity', 0);
+        });
+        if (c.source) aiosSource(svg, 80, H * 0.905, c.source);
+
+        function fade(sel, on, delay, fast) {
+            if (fast) return sel.interrupt().style('opacity', on ? 1 : 0);
+            return sel.transition().delay(delay || 0).duration(450).style('opacity', on ? 1 : 0);
+        }
+
+        infraStepper(container, svg, W, H, 3, function (step, immediate) {
+            var fast = immediate || REDUCED_MOTION;
+            // The decision waits until the whole path has lit.
+            caps.forEach(function (t, i) { fade(t, i === step, i !== step ? 0 : step === 2 ? 300 + stops.length * 650 : 250, fast); });
+            fade(slot, step < 1, 0, fast);
+            fade(bridge, step >= 1, 0, fast);
+            if (step === 1 && !fast) {
+                var ring = svg.append('rect').attr('x', X[2]).attr('y', MY).attr('width', BW).attr('height', MH).attr('rx', 4)
+                    .attr('fill', 'none').attr('stroke', P.copper).attr('stroke-width', 2);
+                ring.transition().delay(200).duration(900).attr('x', X[2] - 10).attr('y', MY - 10)
+                    .attr('width', BW + 20).attr('height', MH + 20).style('opacity', 0).remove();
+            }
+            arrows.forEach(function (a, i) {
+                var lit = step >= 2 && a.g >= 0;
+                var col = lit ? badgeInk : a.col;
+                var delay = lit && !fast ? 300 + a.g * 650 : 0;
+                fade(a.path, step >= 1, step === 1 ? 400 + i * 70 : 0, fast);
+                if (fast) a.path.attr('stroke', col).attr('stroke-width', lit ? 2.2 : 1.5).attr('marker-end', mk[lit ? 'copper' : a.m]);
+                else a.path.transition('lit').delay(delay).duration(350).attr('stroke', col).attr('stroke-width', lit ? 2.2 : 1.5)
+                    .on('end', function () { d3.select(this).attr('marker-end', mk[lit ? 'copper' : a.m]); });
+                // A label that would sit under a numbered stop gives way to it.
+                if (a.tag) fade(a.tag, step >= 1 && !(step >= 2 && a.lab[4]), step === 1 ? 400 + i * 70 : 0, fast);
+            });
+            badges.forEach(function (b, i) { fade(b, step >= 2, 300 + i * 650, fast); });
+        }, c);
+    }
+
+    // ─── I20. risk-file ─────────────────────────────────────────
+    //  An integration's own hazard analysis as a dot plot: each risk a
+    //  row, grouped by what the pathologist would experience, with its
+    //  priority score before controls; click, and each dot moves to its
+    //  score after controls. A last click names what is not in the file
+    //  at all — whether the model reads the slide correctly.
+    //    config.groups[] = { label, rows[] = { label, s, pre, post } }
+    //    config.axis = { label, max, bands[] = { from, to, label } }
+    //    config.sevLabel, config.absent = { label, text, note },
+    //    config.counts[] = { value, label }, config.caption, config.source,
+    //    config.preLabel, config.postLabel, config.hint, config.step
+    //  Steps: 0 before controls · 1 after controls · 2 what the file leaves out.
+    function riskFile(container, config) {
+        var W = 1280, H = 720, P = TUFTE;
+        var c = config || {};
+        var svg = aiosStage(container, W, H);
+        var groups = c.groups || [];
+
+        tufteTitleBlock(svg, 80, 70, W - 160, c.title || 'What could go wrong.', c.subtitle || '');
+        if (!groups.length) {
+            aiosNote(svg, 80, 160, 900, 'No risks supplied in vizConfig.groups.', P.crimson, 14);
+            return;
+        }
+        var A = c.axis || {};
+        var max = +A.max || 30;
+        var px0 = 470, px1 = 830;
+        var x = d3.scaleLinear().domain([0, max]).range([px0, px1]);
+        var top = 160, rowH = 20, headH = 24;
+
+        // Count the rows first, so the bands can span the plot.
+        var nRows = 0;
+        groups.forEach(function (g) { nRows += (g.rows || []).length; });
+        var plotBottom = top + groups.length * headH + nRows * rowH + 6;
+
+        (A.bands || []).forEach(function (b) {
+            var bx0 = x(Math.max(0, +b.from || 0)), bx1 = x(Math.min(max, +b.to || max));
+            if (b.shade) svg.append('rect').attr('x', bx0).attr('y', top - 20).attr('width', Math.max(0, bx1 - bx0))
+                .attr('height', plotBottom - top + 20).attr('fill', d3.interpolateRgb(P.bg, P.crimson)(0.07));
+            svg.append('text').attr('x', b.shade ? bx0 + 6 : bx1 - 6).attr('y', top - 6)
+                .attr('text-anchor', b.shade ? 'start' : 'end')
+                .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700')
+                .attr('letter-spacing', '1px').attr('fill', b.shade ? P.crimson : P.muted)
+                .text(String(b.label || '').toUpperCase());
+        });
+        d3.range(0, max + 1, 5).forEach(function (t) {
+            svg.append('line').attr('x1', x(t)).attr('y1', top - 2).attr('x2', x(t)).attr('y2', plotBottom)
+                .attr('stroke', P.fine).attr('stroke-width', 0.6);
+            svg.append('text').attr('x', x(t)).attr('y', plotBottom + 16).attr('text-anchor', 'middle')
+                .attr('font-family', SANS).attr('font-size', '10px').attr('fill', P.muted).text(String(t));
+        });
+        if (A.label) svg.append('text').attr('x', (px0 + px1) / 2).attr('y', plotBottom + 34).attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '10px').attr('letter-spacing', '1px')
+            .attr('fill', P.muted).text(String(A.label).toUpperCase());
+        if (c.sevLabel) svg.append('text').attr('x', 440).attr('y', top - 6).attr('text-anchor', 'middle')
+            .attr('font-family', SANS).attr('font-size', '10px').attr('font-weight', '700').attr('letter-spacing', '1px')
+            .attr('fill', P.muted).text(String(c.sevLabel).toUpperCase());
+
+        var dots = [], y = top;
+        groups.forEach(function (g, gi) {
+            var gg = svg.append('g');
+            y += headH;
+            tufteSmallCaps(gg, 80, y - 6, String(g.label || '').toUpperCase(), gi === 0 ? P.crimson : P.ink);
+            (g.rows || []).forEach(function (r) {
+                var ry = y + rowH / 2;
+                gg.append('text').attr('x', 80).attr('y', ry + 4.5)
+                    .attr('font-family', SERIF).attr('font-size', '13px').attr('fill', P.ink).text(r.label || '');
+                var s5 = +r.s >= 5;
+                gg.append('text').attr('x', 440).attr('y', ry + 4.5).attr('text-anchor', 'middle')
+                    .attr('font-family', SANS).attr('font-size', '11px').attr('font-weight', s5 ? '700' : '400')
+                    .attr('fill', s5 ? P.crimson : P.muted).text(r.s != null ? String(r.s) : '');
+                var link = gg.append('line').attr('x1', x(+r.pre)).attr('y1', ry).attr('x2', x(+r.pre)).attr('y2', ry)
+                    .attr('stroke', P.copper).attr('stroke-width', 1.6);
+                var ghost = gg.append('circle').attr('cx', x(+r.pre)).attr('cy', ry).attr('r', 4.5)
+                    .attr('fill', P.bg).attr('stroke', P.muted).attr('stroke-width', 1).style('opacity', 0);
+                var d = gg.append('circle').attr('cx', x(+r.pre)).attr('cy', ry).attr('r', 5.5)
+                    .attr('fill', s5 ? P.crimson : P.ink);
+                dots.push({ d: d, ghost: ghost, link: link, r: r, s5: s5 });
+                y += rowH;
+            });
+            aiosReveal(gg, gi, 250, 200);
+        });
+
+        // Right: the counts, and what the file leaves out.
+        var rx = 880, rw = W - 80 - rx;
+        var cy = top + 4;
+        (c.counts || []).forEach(function (k) {
+            svg.append('text').attr('x', rx).attr('y', cy + 22)
+                .attr('font-family', SERIF).attr('font-size', '26px').attr('font-weight', '700')
+                .attr('fill', P.ink).text(k.value || '');
+            infraPara(svg, rx + 70, cy + 20, rw - 70, k.label || '', { size: 12.5, lh: 15, color: P.muted });
+            cy += 44;
+        });
+        var keyY = cy + 10;
+        var kg = svg.append('g');
+        kg.append('circle').attr('cx', rx + 6).attr('cy', keyY).attr('r', 5.5).attr('fill', P.ink);
+        var keyNow = kg.append('text').attr('x', rx + 20).attr('y', keyY + 4).attr('font-family', SERIF).attr('font-size', '12px')
+            .attr('fill', P.muted).text(c.preLabel || 'before controls');
+        var postKey = kg.append('g').style('opacity', 0);
+        postKey.append('circle').attr('cx', rx + 6).attr('cy', keyY + 20).attr('r', 4.5)
+            .attr('fill', P.bg).attr('stroke', P.muted).attr('stroke-width', 1);
+        postKey.append('text').attr('x', rx + 20).attr('y', keyY + 24).attr('font-family', SERIF).attr('font-size', '12px')
+            .attr('fill', P.muted).text(c.preLabel || 'before controls');
+
+        var B = c.absent || {};
+        var ag = svg.append('g').style('opacity', 0);
+        var ay = keyY + 56;
+        var card = infraCard(ag, rx - 14, ay - 26, rw + 14, 40, P.crimson, '5 4');
+        tufteSmallCaps(ag, rx, ay, String(B.label || 'NOT IN THIS FILE').toUpperCase(), P.crimson);
+        var at = infraPara(ag, rx, ay + 26, rw - 14, B.text || '', { size: 15, weight: 700, lh: 19, color: P.ink });
+        var abottom = at.bottom;
+        if (B.note) abottom = infraPara(ag, rx, at.bottom + 24, rw - 14, B.note, { size: 12.5, lh: 16, color: P.muted }).bottom;
+        card.attr('height', abottom + 22 - (ay - 26));
+
+        var capG = svg.append('g').style('opacity', 0);
+        if (c.caption) infraPara(capG, 80, plotBottom + 58, W - 160, c.caption, { size: 14.5, italic: true, color: P.copper, lh: 19 });
+        if (c.source) aiosSource(svg, 80, H * 0.905, c.source);
+
+        infraStepper(container, svg, W, H, 3, function (step, immediate) {
+            var fast = immediate || REDUCED_MOTION;
+            var after = step >= 1;
+            dots.forEach(function (o, i) {
+                var to = x(after ? +o.r.post : +o.r.pre);
+                o.ghost.style('opacity', after ? 1 : 0);
+                if (fast) { o.d.attr('cx', to); o.link.attr('x2', to); }
+                else {
+                    o.d.transition().delay(120 + i * 60).duration(700).attr('cx', to);
+                    o.link.transition().delay(120 + i * 60).duration(700).attr('x2', to);
+                }
+            });
+            keyNow.text(after ? (c.postLabel || 'after controls') : (c.preLabel || 'before controls'));
+            infraShow(postKey, after, immediate);
+            infraShow(ag, step >= 2, immediate);
+            infraShow(capG, step >= 2, immediate);
+        }, c);
+    }
+
+    registry['dialogue-eras']        = dialogueEras;
+    registry['changed-after-review'] = changedAfterReview;
+    registry['paige-architecture']   = paigeArchitecture;
+    registry['effort-shift']         = effortShift;
+    registry['questions-to-rules']   = questionsToRules;
+    registry['security-ratchet']     = securityRatchet;
+    registry['knowledge-enters']     = knowledgeEnters;
+    registry['safety-boundary']      = safetyBoundary;
+    registry['two-programs']         = twoPrograms;
+    registry['memory-trail']         = memoryTrail;
+    registry['takeaways-board']      = takeawaysBoard;
+    registry['risk-file']            = riskFile;
 
     registry['harm-record']     = harmRecord;
     registry['swiss-cheese']    = swissCheese;

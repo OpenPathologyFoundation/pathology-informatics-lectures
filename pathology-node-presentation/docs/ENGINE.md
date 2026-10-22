@@ -38,7 +38,7 @@ Presenter.init(cb) → SlideEngine.loadLecture(jsonUrl, cb) → Glossary.init(da
 }
 ```
 
-`meta.title` sets `document.title`. `meta.presenter` / `institution` / `date` are fallbacks only — the Presenter profile in localStorage overrides them.
+`meta.title` sets `document.title`. `meta.optionalDefault: "hidden"` opens the lecture on its core slides; without it optional slides show. Either way the title-slide toggle, once used, overrides it for the browser tab (`sessionStorage.showOptional`). `meta.presenter` / `institution` / `date` are fallbacks only — the Presenter profile in localStorage overrides them.
 
 > `meta.theme` is currently inert. `slide-engine.js` writes `--intro-primary/-secondary/-accent` onto the root element, but no stylesheet reads them. Per-lecture look is set by `bgColor` / `theme: "light"` per slide and by the visualization palettes.
 
@@ -48,13 +48,14 @@ Presenter.init(cb) → SlideEngine.loadLecture(jsonUrl, cb) → Glossary.init(da
 |---|---|
 | `type` | Dispatcher key (§3). Unknown types are warned and dropped. |
 | `id` | Becomes `section.id`, and the container ids `viz-<id>`, `poll-<id>`, `vote-<id>`, `timer-<id>`. Must be unique and non-empty. |
-| `transition` | `data-transition`; defaults to `fade` (`zoom` for `title` and `qa`). |
+| `transition` | `data-transition`; defaults to `fade` for every type (the `title` and `qa` renderers ask for `zoom`, but the common path overwrites it unless the slide sets `transition` itself). The `ai_infrastructure` deck sets `fade` on every slide so the deck moves in one way. |
+| `signpost` | `data-signpost` — a short label for where the slide sits in the argument ("2 · Name · First pass: Dialogue"). The top-left chip shows it in place of the badge; see §5. |
 | `backgroundGradient` | `data-background-gradient`. |
 | `badge` | `data-badge` — see §5. |
-| `isOptional` | Adds `.optional-slide`; hidden when the title-slide toggle is off, and shown as a grey ghost dot in the dock. |
+| `isOptional` | Adds `.optional-slide`; hidden when the title-slide toggle is off (the default with `meta.optionalDefault: "hidden"`), and shown as a grey ghost dot in the dock. |
 | `dockTitle` | Dock hover label for slides with no H2 (full-bleed visualizations need this). |
 | `takeaway` | String, or `{ text, comment }` — see §6. |
-| `speakerNotes` | Rendered into `<aside class="notes">` for Reveal's `S` speaker view. |
+| `speakerNotes` | Rendered into `<aside class="notes">` for Reveal's `S` speaker view. Newlines become `<br>`, so a line written on its own (the `NEXT →` bridge at the end of the `ai_infrastructure` notes) stays on its own line in the speaker window, which otherwise collapses white space. |
 
 ---
 
@@ -88,15 +89,15 @@ Fourteen renderers.
 
 **`takeaways`** — `title`, `items[]` (auto-numbered), `cta: { label, text }`.
 
-**`qa`** — `title`, `subtitle`, `contact`, `qrCode: { src, url, label, caption }`. Presenter data overrides `contact`.
+**`qa`** — `title`, `subtitle`, `contact`, `qrCode: { src, url, label, caption }`, `acknowledgments: { label, lineage[] = { name, when, text }, groups[] = { role, names[] }, note }`. Presenter data overrides `contact`. `subtitle` renders under the title as the question for the discussion (since 2026-10-22; before that the renderer ignored it in both layouts). With `acknowledgments`, the QR code moves beside the card and a panel of names takes the lower half: the lineage as a short timeline, then one column per group.
 
 ---
 
 ## 4. Visualizations
 
-`VizLibrary.render(name, container, config)` looks `name` up in the registry and calls `fn(container, config || {})`. Unknown names warn and no-op. **115 vizTypes are registered**, in two places: an object literal (`var registry = { … }`) and a run of `registry['name'] = fn;` assignments at the end of the file. Both forms are equivalent; the assignment block is where anything added since the orchestration lecture lives.
+`VizLibrary.render(name, container, config)` looks `name` up in the registry and calls `fn(container, config || {})`. Unknown names warn and no-op. **124 vizTypes are registered**, in two places: an object literal (`var registry = { … }`) and a run of `registry['name'] = fn;` assignments at the end of the file. Both forms are equivalent; the assignment block is where anything added since the orchestration lecture lives.
 
-Most of the older visualizations hard-code their content and ignore `config` entirely — they can be reused verbatim but not re-datad from JSON. Everything added for the `ai_operating_system` and `ai_infrastructure` lectures is config-driven: labels, lists and numbers arrive through `vizConfig` so the deck JSON, not the JS, owns the words. The `ai_infrastructure` block also adds a small click-to-advance stepper (`infraStepper`): a viz draws every step up front and an `apply(step)` callback shows or hides groups; `vizConfig.step` renders a fixed step for screenshots, and `prefers-reduced-motion` starts at the last step.
+Most of the older visualizations hard-code their content and ignore `config` entirely — they can be reused verbatim but not re-datad from JSON. Everything added for the `ai_operating_system` and `ai_infrastructure` lectures is config-driven: labels, lists and numbers arrive through `vizConfig` so the deck JSON, not the JS, owns the words. The `ai_infrastructure` block also adds a small click-to-advance stepper (`infraStepper`): a viz draws every step up front and an `apply(step)` callback shows or hides groups; `vizConfig.step` renders a fixed step for screenshots, and `prefers-reduced-motion` starts at the last step. **Builds are Reveal fragments** (`infraBuild`, 2026-10-21): while the presentation is running, a stepper registers its steps as hidden `.fragment.viz-build-step` spans on the slide, so the arrow keys, a clicker, the speaker view and the URL hash advance the build exactly as they advance any other slide, and a click on the stage still works (it calls `Reveal.next()`). The engine listens for `fragmentshown`/`fragmenthidden` and, on arrival at a slide, tells the figure to match the visible fragments (all of them when the slide is reached from ahead, none from behind), so `apply(step)` must be idempotent in both directions. The two figures with their own step logic (`case-coherence`, `dialogue-eras`) use the same helper. `?build=all` in the page URL starts every build at its last step, for reading the deck through without clicking. Before this change a build advanced only on a mouse click on the SVG; arrow keys and clickers skipped it, which is what a presenter flipping through with the keyboard saw as half-empty slides. **Figures render per slide, when the slide is reached** (2026-10-22): the engine keys its once-only rendering by the slide, not by the figure type, and draws only the container `viz-<slide id>`. It used to key by `vizType` and draw every queued container of that type at once, so when two slides shared a figure (the objectives and the contributions both use the board) reaching the first drew the second while its section was still hidden; text measured in a hidden section has no length, so its lines never wrapped and the final slide arrived broken. The first figure of a deck opened at a deep link also waits for `document.fonts.ready`, because a figure that wraps text by measuring it lays out for the fallback face if the webfont is still in flight.
 
 ### Writing one
 
@@ -126,7 +127,7 @@ Rules the static analyzer enforces (§8):
 - **Lazy rendering dedups by `vizType`, not slide id.** If two slides share a vizType, both containers are filled the first time either is reached, and the second slide's animation will already have played. Give each slide a distinct vizType.
 - **Sizing is viewBox-only.** There is no `ResizeObserver` and no re-render on resize.
 - **A takeaway bar covers the bottom ~9% of the SVG box.** On a slide with a `takeaway`, keep content above roughly `0.90 × H`.
-- **Reveal fragments are not used inside visualizations.** Step reveals are D3-timed.
+- **Reveal fragments inside visualizations are the hidden build steps registered by `infraBuild`, nothing else.** The reveal itself is D3-timed; the fragment only says which step is current.
 - **Respect `prefers-reduced-motion`** for continuous animation (sweeping hands, looping transitions).
 
 ### Palettes
@@ -137,7 +138,7 @@ Two, and they should not be mixed within a visualization.
 
 *Older dark*: background `#0f172a`, text `#e2e8f0` / `#94a3b8`, accents `#3b82f6 #22c55e #ef4444 #8b5cf6 #f59e0b`.
 
-Shared tooltip helpers: `_createTooltip(container)`, `_showTooltip(tip, html, x, y)`, `_hideTooltip(tip)`. Position with `d3.pointer(event, container)`.
+Shared tooltip helpers: `_createTooltip(container)`, `_showTooltip(tip, html, x, y, anchor)`, `_hideTooltip(tip)`. Position with `_vizPointer(event, container)`, not `d3.pointer`: Reveal scales the slide with a transform, and `_vizPointer` divides the cursor's screen offset by that scale so the tooltip lands beside the cursor at every window size. Pass the pointer as `anchor` and a tooltip that would run past the container's right or bottom edge flips to the cursor's other side.
 
 ### Visualizations that are not SVG
 
@@ -152,6 +153,8 @@ Shared tooltip helpers: `_createTooltip(container)`, `_showTooltip(tip, html, x,
 `badge` sets `data-badge`; a single fixed overlay chip outside `.slides` picks it up on slide change. Eleven values are styled in `css/intro.css` and coloured in the dock: `workflow`, `automation`, `data`, `ecosystem`, `ai`, `interactive`, `debate`, `evidence`, `framework`, `technical`, `meta`. Anything else renders as text on the default chip with a grey dock dot — and free-text badges with spaces produce an invalid CSS class, so prefer the eleven.
 
 `poll`, `micro-case`, `timer`, `workshop` and `snippets` force `interactive`.
+
+`signpost` (2026-10-22) takes precedence on the chip: when a slide has one, the chip shows the signpost text on the default colour (`badge-overlay--signpost`) and the badge only colours the dock dot. The chip is also refreshed right after initialization, not only on `ready` and `slidechanged`, so a deck opened at a deep link, or inside the speaker view's iframes, shows its label before the first slide change. A signpost is a landmark for the room ("1 · Recognize", "2 · Name · Third pass: Paige", "Contributions"), not a category; keep it under about forty characters so it stays one short chip.
 
 ---
 
