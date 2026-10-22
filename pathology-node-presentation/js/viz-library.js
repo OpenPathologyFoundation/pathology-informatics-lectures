@@ -19419,7 +19419,11 @@ const VizLibrary = (function () {
         var y = 158, bottom = y, rows = [], glosses = [];
         items.forEach(function (it, i) {
             var g = svg.append('g');
-            g.append('text').attr('x', NX).attr('y', y)
+            // The numeral is centered in the gutter between the spine and the
+            // text (a left-aligned "1" drifts right of a "4"), and its
+            // baseline sits 5 px under the claim's, so the 30 px figure's
+            // optical center lands on the 17 px first line rather than above it.
+            g.append('text').attr('x', (SX + SW + TX) / 2).attr('y', y + 5).attr('text-anchor', 'middle')
                 .attr('font-family', SANS).attr('font-size', '30px').attr('font-weight', '800')
                 .attr('fill', P.ink).text(String(i + 1));
             var cl = infraPara(g, TX, y, TW, it.claim || '', { size: 17, lh: 21, weight: 700, color: P.ink });
